@@ -1,0 +1,119 @@
+{
+  "connection": {
+    "description": "连接与权限",
+    "type": "object",
+    "items": {
+      "enabled": {"description": "启用 ComfyUI 工作台", "type": "bool", "default": true},
+      "comfyui_url": {"description": "ComfyUI 服务地址", "type": "string", "default": "http://127.0.0.1:8188", "hint": "同机运行可保持默认。"},
+      "api_token": {"description": "认证令牌（可留空）", "type": "string", "default": "", "secret": true, "hint": "ComfyUI 反向代理启用 Bearer 认证时填写。"},
+      "anima_workspace": {"description": "ComfyUI 工作目录", "type": "string", "default": "G:\\ComfyUI", "hint": "用于读取 Anima 画布和扫描 LoRA。"},
+      "admin_only": {"description": "仅限 AstrBot 管理员使用", "type": "bool", "default": false}
+    }
+  },
+  "workflows": {
+    "description": "默认工作流",
+    "type": "object",
+    "items": {
+      "default_workflow": {"description": "默认工作流名称", "type": "string", "default": "Anima_T2I_AstrBot", "hint": "填写工作流文件名，不带 .json。Anima 按有无参考图自动选择文生图或重绘。"},
+      "default_t2v_workflow": {"description": "文生视频默认工作流", "type": "string", "default": "WAN22_T2V_AstrBot", "hint": "/comfy gen --wf t2v 使用；不带 .json。"},
+      "default_i2v_workflow": {"description": "图生视频默认工作流", "type": "string", "default": "WAN22_I2V_AstrBot", "hint": "/comfy gen --wf i2v 使用；必须提供本次参考图片。"}
+    }
+  },
+  "prompts": {
+    "description": "词库与提示词",
+    "type": "object",
+    "items": {
+      "prompt_library_directory": {"description": "提示词词库路径", "type": "string", "default": "", "hint": "填写词库文件夹路径。留空查找插件同级的 prompt_library。相对路径从插件目录起算，保存后重载插件。"},
+      "positive_prefix": {"description": "全局正向提示词前缀", "type": "string", "default": "", "hint": "默认留空，避免改变用户画面风格。"},
+      "translate_command_prompt": {"description": "指令描述自动整理成英文提示词", "type": "bool", "default": true, "hint": "用于生成与重绘指令，--raw 可单次跳过。失败时提示并使用原文。"},
+      "prompt_provider_id": {"description": "提示词整理模型 ID（可留空）", "type": "string", "default": "", "hint": "填写已配置的提供商 ID；留空使用当前会话聊天模型。", "condition": {"translate_command_prompt": true}},
+      "prompt_timeout": {"description": "提示词整理超时（秒）", "type": "int", "default": 30, "condition": {"translate_command_prompt": true}}
+    }
+  },
+  "remote_studio": {
+    "description": "手机远程工作台",
+    "type": "object",
+    "items": {
+      "remote_studio_enabled": {"description": "启用手机远程工作台", "type": "bool", "default": false, "hint": "开启后设置访问口令，保存并重载插件。"},
+      "remote_studio_token": {"description": "远程工作台独立口令", "type": "string", "default": "", "secret": true, "hint": "使用 6 位随机数字，或 24–128 位字母、数字、下划线、连字符。", "condition": {"remote_studio_enabled": true}},
+      "remote_studio_host": {"description": "远程工作台监听 IP", "type": "string", "default": "0.0.0.0", "hint": "可填写指定的局域网 IP。使用 0.0.0.0 时，手机通过电脑的实际 IP 访问。", "condition": {"remote_studio_enabled": true}},
+      "remote_studio_port": {"description": "远程工作台端口", "type": "int", "default": 8790, "condition": {"remote_studio_enabled": true}}
+    }
+  },
+  "queue": {
+    "description": "任务队列与超时",
+    "type": "object",
+    "items": {
+      "max_concurrent": {"description": "并发执行任务数", "type": "int", "default": 1, "hint": "范围 1–4。同一显卡建议保持 1。修改后重载插件。", "slider": {"min": 1, "max": 4, "step": 1}},
+      "max_pending": {"description": "最多受理任务数（含运行中）", "type": "int", "default": 16, "hint": "范围 1–128，工作台和聊天共用。包含等待和运行中的任务。"},
+      "workflow_queue_limits": {"description": "按工作流设置队列上限", "type": "text", "default": "{}", "hint": "例如 {\"wai\": 12, \"lightning\": 4}。可用简称或完整名称。每项 1–128，同时受总上限约束。", "editor_mode": true, "editor_language": "json"},
+      "request_timeout": {"description": "单次网络请求超时（秒）", "type": "int", "default": 20},
+      "generation_timeout": {"description": "ComfyUI 排队与执行总超时（秒）", "type": "int", "default": 500, "hint": "首次加载模型较慢时可提高，范围 5–3600。"},
+      "video_generation_timeout": {"description": "视频排队与生成总超时（秒）", "type": "int", "default": 1500, "hint": "范围 5–7200。视频使用独立超时。"},
+      "queue_timeout": {"description": "本地反推任务的队列等待上限（秒）", "type": "int", "default": 120, "hint": "已受理的生成任务会排队等待执行位置。"}
+    }
+  },
+  "media": {
+    "description": "媒体回传与归档",
+    "type": "object",
+    "items": {
+      "review_task_limit": {"description": "网页同时显示的待评价任务数", "type": "int", "default": 5, "hint": "范围 1–50。一个任务的图片全部评价后，下一项待评价任务会补位。", "slider": {"min": 1, "max": 50, "step": 1}},
+      "favorites_directory": {"description": "旧版归档与视频收藏文件夹路径", "type": "string", "default": "", "hint": "填写 AstrBot 所在电脑的完整路径。留空使用 ComfyUI 的 output/Favorites，远程或本机输出目录不可用时用插件的 outputs/Favorites。修改后重载插件。"},
+      "max_images": {"description": "单任务最多回传图片数", "type": "int", "default": 4, "hint": "范围 1–16，不改变 batch_size；超出部分可在待评价页面查看。"},
+      "max_videos": {"description": "单任务最多回传视频数", "type": "int", "default": 1, "hint": "范围 1–4，不改变工作流。"},
+      "max_image_mb": {"description": "单张下载图片大小上限（MB）", "type": "int", "default": 20},
+      "max_video_mb": {"description": "单个视频下载大小上限（MB）", "type": "int", "default": 100, "hint": "范围 1–1024，流式下载到缓存文件；聊天平台可能另有限制。"},
+      "output_retention_hours": {"description": "本地回传图片缓存保留小时数", "type": "int", "default": 24, "hint": "启动和处理任务时清理；不会删除 ComfyUI 的输出。"}
+    }
+  },
+  "assistant_tools": {
+    "description": "AI 绘图工具",
+    "type": "object",
+    "items": {
+      "enable_llm_tools": {"description": "启用自然语言图片与视频工具", "type": "bool", "default": true, "hint": "提供绘图、重绘、反推提示词和任务查询。需要模型支持工具调用。"},
+      "tool_wait_seconds": {"description": "AI 按任务 ID 查询时的等待秒数", "type": "int", "default": 20, "hint": "范围 1–45 秒。任务完成后会自动回传，查最近任务时立即返回。", "condition": {"enable_llm_tools": true}}
+    }
+  },
+  "advanced": {
+    "description": "高级设置",
+    "type": "object",
+    "items": {
+      "node_mappings": {"description": "高级：按工作流名指定节点映射", "type": "text", "default": "{}", "hint": "通常无需填写。示例：{\"SDXL_Turbo_T2I_AstrBot\":{\"positive\":[\"29.string\"],\"negative\":[\"7.text\"],\"seed\":[\"13.noise_seed\"]}}。修改后重载插件。", "editor_mode": true, "editor_language": "json"}
+    }
+  },
+  "enabled": {"type": "bool", "default": true, "invisible": true},
+  "comfyui_url": {"type": "string", "default": "http://127.0.0.1:8188", "invisible": true},
+  "api_token": {"type": "string", "default": "", "invisible": true, "secret": true},
+  "anima_workspace": {"type": "string", "default": "G:\\ComfyUI", "invisible": true},
+  "prompt_library_directory": {"type": "string", "default": "", "invisible": true},
+  "default_workflow": {"type": "string", "default": "Anima_T2I_AstrBot", "invisible": true},
+  "default_t2v_workflow": {"type": "string", "default": "WAN22_T2V_AstrBot", "invisible": true},
+  "default_i2v_workflow": {"type": "string", "default": "WAN22_I2V_AstrBot", "invisible": true},
+  "translate_command_prompt": {"type": "bool", "default": true, "invisible": true},
+  "prompt_provider_id": {"type": "string", "default": "", "invisible": true},
+  "prompt_timeout": {"type": "int", "default": 30, "invisible": true},
+  "positive_prefix": {"type": "string", "default": "", "invisible": true},
+  "remote_studio_enabled": {"type": "bool", "default": false, "invisible": true},
+  "remote_studio_token": {"type": "string", "default": "", "invisible": true, "secret": true},
+  "remote_studio_host": {"type": "string", "default": "0.0.0.0", "invisible": true},
+  "remote_studio_port": {"type": "int", "default": 8790, "invisible": true},
+  "admin_only": {"type": "bool", "default": false, "invisible": true},
+  "enable_llm_tools": {"type": "bool", "default": true, "invisible": true},
+  "tool_wait_seconds": {"type": "int", "default": 20, "invisible": true},
+  "request_timeout": {"type": "int", "default": 20, "invisible": true},
+  "generation_timeout": {"type": "int", "default": 500, "invisible": true},
+  "video_generation_timeout": {"type": "int", "default": 1500, "invisible": true},
+  "timeout_defaults_migrated": {"type": "bool", "default": false, "invisible": true},
+  "queue_timeout": {"type": "int", "default": 120, "invisible": true},
+  "max_concurrent": {"type": "int", "default": 1, "invisible": true},
+  "max_pending": {"type": "int", "default": 16, "invisible": true},
+  "workflow_queue_limits": {"type": "text", "default": "{}", "invisible": true},
+  "review_task_limit": {"type": "int", "default": 5, "invisible": true},
+  "favorites_directory": {"type": "string", "default": "", "invisible": true},
+  "max_images": {"type": "int", "default": 4, "invisible": true},
+  "max_videos": {"type": "int", "default": 1, "invisible": true},
+  "max_image_mb": {"type": "int", "default": 20, "invisible": true},
+  "max_video_mb": {"type": "int", "default": 100, "invisible": true},
+  "output_retention_hours": {"type": "int", "default": 24, "invisible": true},
+  "node_mappings": {"type": "text", "default": "{}", "invisible": true}
+}

@@ -1,0 +1,115 @@
+{
+  "prompt": {
+    "398": {
+      "inputs": {
+        "image": ""
+      },
+      "class_type": "LoadImage",
+      "_meta": {
+        "title": "QQ image"
+      }
+    },
+    "416": {
+      "inputs": {
+        "image": [
+          "398",
+          0
+        ],
+        "include_style": true,
+        "character_threshold": 0.27,
+        "threshold_mode": "custom",
+        "config_override": "auto",
+        "general_threshold": 0.17,
+        "copyright_threshold": 0.24,
+        "exclude_tags": "",
+        "include_rating": false,
+        "style_threshold": 0.15,
+        "replace_underscore": true,
+        "character_first": false,
+        "meta_threshold": 0.17,
+        "sort_by_confidence": true,
+        "rating_threshold": 0.41,
+        "model": "pixai-tagger-v1.0",
+        "include_meta": false,
+        "device": "auto"
+      },
+      "class_type": "PixAITaggerPlus",
+      "_meta": {
+        "title": "PixAI"
+      }
+    },
+    "443": {
+      "inputs": {
+        "string": [
+          "416",
+          0
+        ],
+        "regex_pattern": "(?<!\\\\)([()])",
+        "replace": "\\\\\\1"
+      },
+      "class_type": "RegexReplace",
+      "_meta": {
+        "title": "Escape tag parentheses"
+      }
+    },
+    "445": {
+      "inputs": {
+        "source": [
+          "443",
+          0
+        ]
+      },
+      "class_type": "PreviewAny",
+      "_meta": {
+        "title": "Anima prompt"
+      }
+    },
+    "400": {
+      "inputs": {
+        "nl_length": "long",
+        "seed": 1367,
+        "tag_length": "long",
+        "format": "<|extended|>",
+        "nl_prompt": "",
+        "tags": [
+          "416",
+          0
+        ],
+        "top_p": 0.95,
+        "min_p": 0.05,
+        "top_k": 80,
+        "width": 1024,
+        "temperature": 0.5,
+        "ban_tags": "",
+        "device": "cuda",
+        "tipo_model": "KBlueLeaf/TIPO-v2.1-1B-A200M | TIPO-v2.1-1B-A200M-f16.gguf",
+        "height": 1024
+      },
+      "class_type": "TIPO",
+      "_meta": {
+        "title": "TIPO"
+      }
+    },
+    "444": {
+      "inputs": {
+        "string_a": [
+          "443",
+          0
+        ],
+        "string_b": [
+          "400",
+          0
+        ],
+        "delimiter": "\n"
+      },
+      "class_type": "StringConcatenate",
+      "_meta": {
+        "title": "Tags and TIPO"
+      }
+    }
+  },
+  "astrbot": {
+    "reference_source": "qq",
+    "expand_caption": false
+  }
+}

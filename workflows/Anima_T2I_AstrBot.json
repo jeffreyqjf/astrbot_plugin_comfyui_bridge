@@ -1,0 +1,376 @@
+{
+  "22": {
+    "inputs": {
+      "unet_name": "anima-aesthetic-v1.1.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "26": {
+    "inputs": {
+      "model": [
+        "22",
+        0
+      ],
+      "➕ Add Lora": "",
+      "clip": [
+        "40",
+        0
+      ],
+      "text": "",
+      "loras": {
+        "__value__": []
+      }
+    },
+    "class_type": "Lora Loader (LoraManager)",
+    "_meta": {
+      "title": "Lora Loader (LoraManager)"
+    }
+  },
+  "27": {
+    "inputs": {
+      "model": [
+        "84",
+        0
+      ],
+      "seed": [
+        "50",
+        0
+      ],
+      "steps": [
+        "50",
+        1
+      ],
+      "cfg": [
+        "50",
+        2
+      ],
+      "sampler_name": [
+        "69",
+        0
+      ],
+      "scheduler": [
+        "68",
+        0
+      ],
+      "positive": [
+        "79",
+        0
+      ],
+      "negative": [
+        "83",
+        0
+      ],
+      "latent_image": [
+        "499",
+        0
+      ],
+      "denoise": [
+        "50",
+        5
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "40": {
+    "inputs": {
+      "clip_name": "qwen_3_06b_base.safetensors",
+      "type": "stable_diffusion",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "48": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "50": {
+    "inputs": {
+      "seed": 42,
+      "steps": 30,
+      "cfg": 4,
+      "sampler": "er_sde",
+      "scheduler": "simple",
+      "denoise": 1
+    },
+    "class_type": "Input Parameters (Image Saver)",
+    "_meta": {
+      "title": "Input Parameters (Image Saver)"
+    }
+  },
+  "65": {
+    "inputs": {
+      "group_mode": true,
+      "default_active": false,
+      "allow_strength_adjustment": false,
+      "trigger_words": [
+        "26",
+        2
+      ],
+      "toggle_trigger_words": {
+        "__value__": []
+      }
+    },
+    "class_type": "TriggerWord Toggle (LoraManager)",
+    "_meta": {
+      "title": "TriggerWord Toggle (LoraManager)"
+    }
+  },
+  "67": {
+    "inputs": {
+      "value": 1024
+    },
+    "class_type": "easy int",
+    "_meta": {
+      "title": "Width"
+    }
+  },
+  "68": {
+    "inputs": {
+      "anything": [
+        "50",
+        4
+      ]
+    },
+    "class_type": "easy showAnything",
+    "_meta": {
+      "title": "easy showAnything"
+    }
+  },
+  "69": {
+    "inputs": {
+      "anything": [
+        "50",
+        3
+      ]
+    },
+    "class_type": "easy showAnything",
+    "_meta": {
+      "title": "easy showAnything"
+    }
+  },
+  "73": {
+    "inputs": {
+      "samples": [
+        "27",
+        0
+      ],
+      "vae": [
+        "48",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "74": {
+    "inputs": {
+      "value": 1536
+    },
+    "class_type": "easy int",
+    "_meta": {
+      "title": "Height"
+    }
+  },
+  "77": {
+    "inputs": {
+      "value": 1
+    },
+    "class_type": "easy int",
+    "_meta": {
+      "title": "Batch Size"
+    }
+  },
+  "78": {
+    "inputs": {
+      "delimiter": ",",
+      "string_a": [
+        "65",
+        0
+      ],
+      "string_b": [
+        "504",
+        1
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Concatenate Text"
+    }
+  },
+  "79": {
+    "inputs": {
+      "text": [
+        "82",
+        0
+      ],
+      "clip": [
+        "84",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive Prompt)"
+    }
+  },
+  "82": {
+    "inputs": {
+      "regex_pattern": "^,|,$",
+      "replace": "",
+      "case_insensitive": true,
+      "multiline": false,
+      "dotall": false,
+      "count": 0,
+      "string": [
+        "78",
+        0
+      ]
+    },
+    "class_type": "RegexReplace",
+    "_meta": {
+      "title": "Replace Text (Regex)"
+    }
+  },
+  "83": {
+    "inputs": {
+      "text": [
+        "507",
+        1
+      ],
+      "clip": [
+        "84",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "84": {
+    "inputs": {
+      "model": [
+        "26",
+        0
+      ],
+      "clip": [
+        "26",
+        1
+      ]
+    },
+    "class_type": "CLIPNegPip",
+    "_meta": {
+      "title": "CLIP NegPip"
+    }
+  },
+  "85": {
+    "inputs": {
+      "width": [
+        "67",
+        0
+      ],
+      "height": [
+        "74",
+        0
+      ],
+      "batch_size": [
+        "77",
+        0
+      ]
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "497": {
+    "inputs": {
+      "any_01": [
+        "73",
+        0
+      ],
+      "any_02": [
+        "73",
+        0
+      ]
+    },
+    "class_type": "Any Switch (rgthree)",
+    "_meta": {
+      "title": "Any Switch (rgthree)"
+    }
+  },
+  "499": {
+    "inputs": {
+      "any_02": [
+        "85",
+        0
+      ]
+    },
+    "class_type": "Any Switch (rgthree)",
+    "_meta": {
+      "title": "Any Switch (rgthree)"
+    }
+  },
+  "504": {
+    "inputs": {
+      "text": "newest, masterpiece, best quality, score_7,\n1girl, solo, looking at viewer,",
+      "Select to add LoRA": "Select the LoRA to add to the text",
+      "Select to add Wildcard": "Select the Wildcard to add to the text",
+      "multiline_mode": false,
+      "seed": [
+        "50",
+        0
+      ]
+    },
+    "class_type": "easy wildcards",
+    "_meta": {
+      "title": "Positive · AstrBot 正向提示词"
+    }
+  },
+  "507": {
+    "inputs": {
+      "text": "worst quality, low quality, lowres, score_1, score_2, score_3, blurry, jpeg artifacts, bad anatomy, watermark, artist name,",
+      "Select to add LoRA": "Select the LoRA to add to the text",
+      "Select to add Wildcard": "Select the Wildcard to add to the text",
+      "multiline_mode": false,
+      "seed": [
+        "50",
+        0
+      ]
+    },
+    "class_type": "easy wildcards",
+    "_meta": {
+      "title": "Negative · 默认负向提示词"
+    }
+  },
+  "510": {
+    "inputs": {
+      "filename_prefix": "AstrBot/AnimaAdvancedV10_AstrBot",
+      "images": [
+        "497",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image · AstrBot 回传"
+    }
+  }
+}

@@ -1,0 +1,4888 @@
+{
+  "prompt": {
+    "62": {
+      "inputs": {
+        "image": "example.png"
+      },
+      "class_type": "LoadImage",
+      "_meta": {
+        "title": "参考图 · AstrBot 会替换为 QQ 图片"
+      }
+    },
+    "193": {
+      "inputs": {
+        "value": 1
+      },
+      "class_type": "INTConstant",
+      "_meta": {
+        "title": "no lightning end step"
+      }
+    },
+    "194": {
+      "inputs": {
+        "value": 4
+      },
+      "class_type": "INTConstant",
+      "_meta": {
+        "title": "lightning high end step"
+      }
+    },
+    "507": {
+      "inputs": {
+        "ckpt_name": "rife49",
+        "multiplier": 4,
+        "ensemble": false,
+        "images": [
+          "562:561",
+          0
+        ]
+      },
+      "class_type": "FL_RIFE",
+      "_meta": {
+        "title": "FL RIFE Frame Interpolation"
+      }
+    },
+    "510": {
+      "inputs": {
+        "model_name": "RealESRGAN_x4plus_anime_6B.pth"
+      },
+      "class_type": "UpscaleModelLoader",
+      "_meta": {
+        "title": "Load Upscale Model"
+      }
+    },
+    "511": {
+      "inputs": {
+        "upscale_method": "nearest-exact",
+        "scale_by": 0.5,
+        "image": [
+          "509",
+          0
+        ]
+      },
+      "class_type": "ImageScaleBy",
+      "_meta": {
+        "title": "Upscale Image By"
+      }
+    },
+    "509": {
+      "inputs": {
+        "upscale_model": [
+          "510",
+          0
+        ],
+        "image": [
+          "562:561",
+          0
+        ]
+      },
+      "class_type": "ImageUpscaleWithModel",
+      "_meta": {
+        "title": "Upscale Image (using Model)"
+      }
+    },
+    "370": {
+      "inputs": {
+        "unet_name": "wan2.2\\Wan2_2-I2V-A14B-NSFW_fast_move-LOW_Q8lightning_edition)V2.gguf"
+      },
+      "class_type": "UnetLoaderGGUF",
+      "_meta": {
+        "title": "Unet Loader (GGUF) LOW"
+      }
+    },
+    "56": {
+      "inputs": {
+        "unet_name": "wan2.2\\Wan2_2-I2V-A14B-LOW_fp8_e4m3fn_scaled_KJ.safetensors",
+        "weight_dtype": "default"
+      },
+      "class_type": "UNETLoader",
+      "_meta": {
+        "title": "Load Diffusion Model low"
+      }
+    },
+    "37": {
+      "inputs": {
+        "unet_name": "wan2.2\\Wan2_2-I2V-A14B-HIGH_fp8_e4m3fn_scaled_KJ.safetensors",
+        "weight_dtype": "default"
+      },
+      "class_type": "UNETLoader",
+      "_meta": {
+        "title": "Load Diffusion Model high"
+      }
+    },
+    "314": {
+      "inputs": {
+        "value": 4
+      },
+      "class_type": "FloatConstant",
+      "_meta": {
+        "title": "cfg first ksampler without lightning"
+      }
+    },
+    "533": {
+      "inputs": {
+        "switch": true,
+        "on_false": [
+          "562:551",
+          0
+        ],
+        "on_true": [
+          "562:557",
+          0
+        ]
+      },
+      "class_type": "LazySwitchKJ",
+      "_meta": {
+        "title": "2ksampler:false/3ksampler:true"
+      }
+    },
+    "566": {
+      "inputs": {
+        "value": 3
+      },
+      "class_type": "INTConstant",
+      "_meta": {
+        "title": "step high double K"
+      }
+    },
+    "564": {
+      "inputs": {
+        "value": 6
+      },
+      "class_type": "INTConstant",
+      "_meta": {
+        "title": "total step double ksampler"
+      }
+    },
+    "547": {
+      "inputs": {
+        "switch": true,
+        "on_false": [
+          "585:581",
+          0
+        ],
+        "on_true": [
+          "585:579",
+          0
+        ]
+      },
+      "class_type": "LazySwitchKJ",
+      "_meta": {
+        "title": "2ksampler:false/3ksampler:true"
+      }
+    },
+    "512": {
+      "inputs": {
+        "frame_rate": 16,
+        "loop_count": 0,
+        "filename_prefix": "vedio/wan22_svi_i2v",
+        "format": "video/h264-mp4",
+        "pingpong": false,
+        "save_output": true,
+        "images": [
+          "562:561",
+          0
+        ],
+        "pix_fmt": "yuv420p",
+        "crf": 18,
+        "save_metadata": true,
+        "trim_to_audio": false
+      },
+      "class_type": "VHS_VideoCombine",
+      "_meta": {
+        "title": "AstrBot · H.264 MP4 输出"
+      }
+    },
+    "745": {
+      "inputs": {
+        "switch": true,
+        "on_false": [
+          "755:872",
+          0
+        ],
+        "on_true": [
+          "755:870",
+          0
+        ]
+      },
+      "class_type": "LazySwitchKJ",
+      "_meta": {
+        "title": "2ksampler:false/3ksampler:true"
+      }
+    },
+    "755:864": {
+      "inputs": {
+        "add_noise": "enable",
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:366",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "cfg": [
+          "314",
+          0
+        ],
+        "positive": [
+          "755:865",
+          0
+        ],
+        "negative": [
+          "755:865",
+          1
+        ],
+        "latent_image": [
+          "755:865",
+          2
+        ],
+        "end_at_step": [
+          "193",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) just svi"
+      }
+    },
+    "755:865": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "755:866",
+          0
+        ],
+        "negative": [
+          "755:867",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "728",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "755:866": {
+      "inputs": {
+        "text": [
+          "1012",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Positive Prompt)"
+      }
+    },
+    "755:867": {
+      "inputs": {
+        "text": [
+          "1112",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative Prompt)"
+      }
+    },
+    "755:868": {
+      "inputs": {
+        "overlap": 5,
+        "overlap_side": "source",
+        "overlap_mode": "linear_blend",
+        "source_images": [
+          "738:856",
+          2
+        ],
+        "new_images": [
+          "755:875",
+          0
+        ]
+      },
+      "class_type": "ImageBatchExtendWithOverlap",
+      "_meta": {
+        "title": "Image Batch Extend With Overlap"
+      }
+    },
+    "755:869": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "755:865",
+          0
+        ],
+        "negative": [
+          "755:865",
+          1
+        ],
+        "latent_image": [
+          "755:864",
+          0
+        ],
+        "start_at_step": [
+          "193",
+          0
+        ],
+        "end_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "755:870": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "755:865",
+          0
+        ],
+        "negative": [
+          "755:865",
+          1
+        ],
+        "latent_image": [
+          "755:869",
+          0
+        ],
+        "start_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "755:871": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "755:866",
+          0
+        ],
+        "negative": [
+          "755:867",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "728",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "755:872": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "755:871",
+          0
+        ],
+        "negative": [
+          "755:871",
+          1
+        ],
+        "latent_image": [
+          "755:873",
+          0
+        ],
+        "start_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "755:873": {
+      "inputs": {
+        "add_noise": "enable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "755:871",
+          0
+        ],
+        "negative": [
+          "755:871",
+          1
+        ],
+        "latent_image": [
+          "755:871",
+          2
+        ],
+        "end_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "755:875": {
+      "inputs": {
+        "samples": [
+          "745",
+          0
+        ],
+        "vae": [
+          "368:353",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "592": {
+      "inputs": {
+        "switch": true,
+        "on_false": [
+          "602:764",
+          0
+        ],
+        "on_true": [
+          "602:762",
+          0
+        ]
+      },
+      "class_type": "LazySwitchKJ",
+      "_meta": {
+        "title": "2ksampler:false/3ksampler:true"
+      }
+    },
+    "602:756": {
+      "inputs": {
+        "add_noise": "enable",
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:366",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "cfg": [
+          "314",
+          0
+        ],
+        "positive": [
+          "602:757",
+          0
+        ],
+        "negative": [
+          "602:757",
+          1
+        ],
+        "latent_image": [
+          "602:757",
+          2
+        ],
+        "end_at_step": [
+          "193",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) just svi"
+      }
+    },
+    "602:757": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "602:758",
+          0
+        ],
+        "negative": [
+          "602:759",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "547",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "602:758": {
+      "inputs": {
+        "text": [
+          "1003",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Positive Prompt)"
+      }
+    },
+    "602:759": {
+      "inputs": {
+        "text": [
+          "1103",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative Prompt)"
+      }
+    },
+    "602:760": {
+      "inputs": {
+        "overlap": 5,
+        "overlap_side": "source",
+        "overlap_mode": "linear_blend",
+        "source_images": [
+          "585:577",
+          2
+        ],
+        "new_images": [
+          "602:767",
+          0
+        ]
+      },
+      "class_type": "ImageBatchExtendWithOverlap",
+      "_meta": {
+        "title": "Image Batch Extend With Overlap"
+      }
+    },
+    "602:761": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "602:757",
+          0
+        ],
+        "negative": [
+          "602:757",
+          1
+        ],
+        "latent_image": [
+          "602:756",
+          0
+        ],
+        "start_at_step": [
+          "193",
+          0
+        ],
+        "end_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "602:762": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "602:757",
+          0
+        ],
+        "negative": [
+          "602:757",
+          1
+        ],
+        "latent_image": [
+          "602:761",
+          0
+        ],
+        "start_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "602:763": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "602:758",
+          0
+        ],
+        "negative": [
+          "602:759",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "547",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "602:764": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "602:763",
+          0
+        ],
+        "negative": [
+          "602:763",
+          1
+        ],
+        "latent_image": [
+          "602:765",
+          0
+        ],
+        "start_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "602:765": {
+      "inputs": {
+        "add_noise": "enable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "602:763",
+          0
+        ],
+        "negative": [
+          "602:763",
+          1
+        ],
+        "latent_image": [
+          "602:763",
+          2
+        ],
+        "end_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "602:767": {
+      "inputs": {
+        "samples": [
+          "592",
+          0
+        ],
+        "vae": [
+          "368:353",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "609": {
+      "inputs": {
+        "switch": true,
+        "on_false": [
+          "619:776",
+          0
+        ],
+        "on_true": [
+          "619:774",
+          0
+        ]
+      },
+      "class_type": "LazySwitchKJ",
+      "_meta": {
+        "title": "2ksampler:false/3ksampler:true"
+      }
+    },
+    "619:768": {
+      "inputs": {
+        "add_noise": "enable",
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:366",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "cfg": [
+          "314",
+          0
+        ],
+        "positive": [
+          "619:769",
+          0
+        ],
+        "negative": [
+          "619:769",
+          1
+        ],
+        "latent_image": [
+          "619:769",
+          2
+        ],
+        "end_at_step": [
+          "193",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) just svi"
+      }
+    },
+    "619:769": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "619:770",
+          0
+        ],
+        "negative": [
+          "619:771",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "592",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "619:770": {
+      "inputs": {
+        "text": [
+          "1004",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Positive Prompt)"
+      }
+    },
+    "619:771": {
+      "inputs": {
+        "text": [
+          "1104",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative Prompt)"
+      }
+    },
+    "619:772": {
+      "inputs": {
+        "overlap": 5,
+        "overlap_side": "source",
+        "overlap_mode": "linear_blend",
+        "source_images": [
+          "602:760",
+          2
+        ],
+        "new_images": [
+          "619:779",
+          0
+        ]
+      },
+      "class_type": "ImageBatchExtendWithOverlap",
+      "_meta": {
+        "title": "Image Batch Extend With Overlap"
+      }
+    },
+    "619:773": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "619:769",
+          0
+        ],
+        "negative": [
+          "619:769",
+          1
+        ],
+        "latent_image": [
+          "619:768",
+          0
+        ],
+        "start_at_step": [
+          "193",
+          0
+        ],
+        "end_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "619:774": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "619:769",
+          0
+        ],
+        "negative": [
+          "619:769",
+          1
+        ],
+        "latent_image": [
+          "619:773",
+          0
+        ],
+        "start_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "619:775": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "619:770",
+          0
+        ],
+        "negative": [
+          "619:771",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "592",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "619:776": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "619:775",
+          0
+        ],
+        "negative": [
+          "619:775",
+          1
+        ],
+        "latent_image": [
+          "619:777",
+          0
+        ],
+        "start_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "619:777": {
+      "inputs": {
+        "add_noise": "enable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "619:775",
+          0
+        ],
+        "negative": [
+          "619:775",
+          1
+        ],
+        "latent_image": [
+          "619:775",
+          2
+        ],
+        "end_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "619:779": {
+      "inputs": {
+        "samples": [
+          "609",
+          0
+        ],
+        "vae": [
+          "368:353",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "626": {
+      "inputs": {
+        "switch": true,
+        "on_false": [
+          "636:788",
+          0
+        ],
+        "on_true": [
+          "636:786",
+          0
+        ]
+      },
+      "class_type": "LazySwitchKJ",
+      "_meta": {
+        "title": "2ksampler:false/3ksampler:true"
+      }
+    },
+    "636:780": {
+      "inputs": {
+        "add_noise": "enable",
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:366",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "cfg": [
+          "314",
+          0
+        ],
+        "positive": [
+          "636:781",
+          0
+        ],
+        "negative": [
+          "636:781",
+          1
+        ],
+        "latent_image": [
+          "636:781",
+          2
+        ],
+        "end_at_step": [
+          "193",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) just svi"
+      }
+    },
+    "636:781": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "636:782",
+          0
+        ],
+        "negative": [
+          "636:783",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "609",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "636:782": {
+      "inputs": {
+        "text": [
+          "1005",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Positive Prompt)"
+      }
+    },
+    "636:783": {
+      "inputs": {
+        "text": [
+          "1105",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative Prompt)"
+      }
+    },
+    "636:784": {
+      "inputs": {
+        "overlap": 5,
+        "overlap_side": "source",
+        "overlap_mode": "linear_blend",
+        "source_images": [
+          "619:772",
+          2
+        ],
+        "new_images": [
+          "636:791",
+          0
+        ]
+      },
+      "class_type": "ImageBatchExtendWithOverlap",
+      "_meta": {
+        "title": "Image Batch Extend With Overlap"
+      }
+    },
+    "636:785": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "636:781",
+          0
+        ],
+        "negative": [
+          "636:781",
+          1
+        ],
+        "latent_image": [
+          "636:780",
+          0
+        ],
+        "start_at_step": [
+          "193",
+          0
+        ],
+        "end_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "636:786": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "636:781",
+          0
+        ],
+        "negative": [
+          "636:781",
+          1
+        ],
+        "latent_image": [
+          "636:785",
+          0
+        ],
+        "start_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "636:787": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "636:782",
+          0
+        ],
+        "negative": [
+          "636:783",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "609",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "636:788": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "636:787",
+          0
+        ],
+        "negative": [
+          "636:787",
+          1
+        ],
+        "latent_image": [
+          "636:789",
+          0
+        ],
+        "start_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "636:789": {
+      "inputs": {
+        "add_noise": "enable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "636:787",
+          0
+        ],
+        "negative": [
+          "636:787",
+          1
+        ],
+        "latent_image": [
+          "636:787",
+          2
+        ],
+        "end_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "636:791": {
+      "inputs": {
+        "samples": [
+          "626",
+          0
+        ],
+        "vae": [
+          "368:353",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "643": {
+      "inputs": {
+        "switch": true,
+        "on_false": [
+          "653:800",
+          0
+        ],
+        "on_true": [
+          "653:798",
+          0
+        ]
+      },
+      "class_type": "LazySwitchKJ",
+      "_meta": {
+        "title": "2ksampler:false/3ksampler:true"
+      }
+    },
+    "653:792": {
+      "inputs": {
+        "add_noise": "enable",
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:366",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "cfg": [
+          "314",
+          0
+        ],
+        "positive": [
+          "653:793",
+          0
+        ],
+        "negative": [
+          "653:793",
+          1
+        ],
+        "latent_image": [
+          "653:793",
+          2
+        ],
+        "end_at_step": [
+          "193",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) just svi"
+      }
+    },
+    "653:793": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "653:794",
+          0
+        ],
+        "negative": [
+          "653:795",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "626",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "653:794": {
+      "inputs": {
+        "text": [
+          "1006",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Positive Prompt)"
+      }
+    },
+    "653:795": {
+      "inputs": {
+        "text": [
+          "1106",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative Prompt)"
+      }
+    },
+    "653:796": {
+      "inputs": {
+        "overlap": 5,
+        "overlap_side": "source",
+        "overlap_mode": "linear_blend",
+        "source_images": [
+          "636:784",
+          2
+        ],
+        "new_images": [
+          "653:803",
+          0
+        ]
+      },
+      "class_type": "ImageBatchExtendWithOverlap",
+      "_meta": {
+        "title": "Image Batch Extend With Overlap"
+      }
+    },
+    "653:797": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "653:793",
+          0
+        ],
+        "negative": [
+          "653:793",
+          1
+        ],
+        "latent_image": [
+          "653:792",
+          0
+        ],
+        "start_at_step": [
+          "193",
+          0
+        ],
+        "end_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "653:798": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "653:793",
+          0
+        ],
+        "negative": [
+          "653:793",
+          1
+        ],
+        "latent_image": [
+          "653:797",
+          0
+        ],
+        "start_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "653:799": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "653:794",
+          0
+        ],
+        "negative": [
+          "653:795",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "626",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "653:800": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "653:799",
+          0
+        ],
+        "negative": [
+          "653:799",
+          1
+        ],
+        "latent_image": [
+          "653:801",
+          0
+        ],
+        "start_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "653:801": {
+      "inputs": {
+        "add_noise": "enable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "653:799",
+          0
+        ],
+        "negative": [
+          "653:799",
+          1
+        ],
+        "latent_image": [
+          "653:799",
+          2
+        ],
+        "end_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "653:803": {
+      "inputs": {
+        "samples": [
+          "643",
+          0
+        ],
+        "vae": [
+          "368:353",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "660": {
+      "inputs": {
+        "switch": true,
+        "on_false": [
+          "670:812",
+          0
+        ],
+        "on_true": [
+          "670:810",
+          0
+        ]
+      },
+      "class_type": "LazySwitchKJ",
+      "_meta": {
+        "title": "2ksampler:false/3ksampler:true"
+      }
+    },
+    "670:804": {
+      "inputs": {
+        "add_noise": "enable",
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:366",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "cfg": [
+          "314",
+          0
+        ],
+        "positive": [
+          "670:805",
+          0
+        ],
+        "negative": [
+          "670:805",
+          1
+        ],
+        "latent_image": [
+          "670:805",
+          2
+        ],
+        "end_at_step": [
+          "193",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) just svi"
+      }
+    },
+    "670:805": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "670:806",
+          0
+        ],
+        "negative": [
+          "670:807",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "643",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "670:806": {
+      "inputs": {
+        "text": [
+          "1007",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Positive Prompt)"
+      }
+    },
+    "670:807": {
+      "inputs": {
+        "text": [
+          "1107",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative Prompt)"
+      }
+    },
+    "670:808": {
+      "inputs": {
+        "overlap": 5,
+        "overlap_side": "source",
+        "overlap_mode": "linear_blend",
+        "source_images": [
+          "653:796",
+          2
+        ],
+        "new_images": [
+          "670:815",
+          0
+        ]
+      },
+      "class_type": "ImageBatchExtendWithOverlap",
+      "_meta": {
+        "title": "Image Batch Extend With Overlap"
+      }
+    },
+    "670:809": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "670:805",
+          0
+        ],
+        "negative": [
+          "670:805",
+          1
+        ],
+        "latent_image": [
+          "670:804",
+          0
+        ],
+        "start_at_step": [
+          "193",
+          0
+        ],
+        "end_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "670:810": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "670:805",
+          0
+        ],
+        "negative": [
+          "670:805",
+          1
+        ],
+        "latent_image": [
+          "670:809",
+          0
+        ],
+        "start_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "670:811": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "670:806",
+          0
+        ],
+        "negative": [
+          "670:807",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "643",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "670:812": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "670:811",
+          0
+        ],
+        "negative": [
+          "670:811",
+          1
+        ],
+        "latent_image": [
+          "670:813",
+          0
+        ],
+        "start_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "670:813": {
+      "inputs": {
+        "add_noise": "enable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "670:811",
+          0
+        ],
+        "negative": [
+          "670:811",
+          1
+        ],
+        "latent_image": [
+          "670:811",
+          2
+        ],
+        "end_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "670:815": {
+      "inputs": {
+        "samples": [
+          "660",
+          0
+        ],
+        "vae": [
+          "368:353",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "687:816": {
+      "inputs": {
+        "add_noise": "enable",
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:366",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "cfg": [
+          "314",
+          0
+        ],
+        "positive": [
+          "687:817",
+          0
+        ],
+        "negative": [
+          "687:817",
+          1
+        ],
+        "latent_image": [
+          "687:817",
+          2
+        ],
+        "end_at_step": [
+          "193",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) just svi"
+      }
+    },
+    "687:817": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "687:818",
+          0
+        ],
+        "negative": [
+          "687:819",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "660",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "687:818": {
+      "inputs": {
+        "text": [
+          "1008",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Positive Prompt)"
+      }
+    },
+    "687:819": {
+      "inputs": {
+        "text": [
+          "1108",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative Prompt)"
+      }
+    },
+    "687:820": {
+      "inputs": {
+        "overlap": 5,
+        "overlap_side": "source",
+        "overlap_mode": "linear_blend",
+        "source_images": [
+          "670:808",
+          2
+        ],
+        "new_images": [
+          "687:827",
+          0
+        ]
+      },
+      "class_type": "ImageBatchExtendWithOverlap",
+      "_meta": {
+        "title": "Image Batch Extend With Overlap"
+      }
+    },
+    "687:821": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "687:817",
+          0
+        ],
+        "negative": [
+          "687:817",
+          1
+        ],
+        "latent_image": [
+          "687:816",
+          0
+        ],
+        "start_at_step": [
+          "193",
+          0
+        ],
+        "end_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "687:822": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "687:817",
+          0
+        ],
+        "negative": [
+          "687:817",
+          1
+        ],
+        "latent_image": [
+          "687:821",
+          0
+        ],
+        "start_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "687:823": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "687:818",
+          0
+        ],
+        "negative": [
+          "687:819",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "660",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "687:824": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "687:823",
+          0
+        ],
+        "negative": [
+          "687:823",
+          1
+        ],
+        "latent_image": [
+          "687:825",
+          0
+        ],
+        "start_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "687:825": {
+      "inputs": {
+        "add_noise": "enable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "687:823",
+          0
+        ],
+        "negative": [
+          "687:823",
+          1
+        ],
+        "latent_image": [
+          "687:823",
+          2
+        ],
+        "end_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "687:827": {
+      "inputs": {
+        "samples": [
+          "677",
+          0
+        ],
+        "vae": [
+          "368:353",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "677": {
+      "inputs": {
+        "switch": true,
+        "on_false": [
+          "687:824",
+          0
+        ],
+        "on_true": [
+          "687:822",
+          0
+        ]
+      },
+      "class_type": "LazySwitchKJ",
+      "_meta": {
+        "title": "2ksampler:false/3ksampler:true"
+      }
+    },
+    "694": {
+      "inputs": {
+        "switch": true,
+        "on_false": [
+          "704:836",
+          0
+        ],
+        "on_true": [
+          "704:834",
+          0
+        ]
+      },
+      "class_type": "LazySwitchKJ",
+      "_meta": {
+        "title": "2ksampler:false/3ksampler:true"
+      }
+    },
+    "704:828": {
+      "inputs": {
+        "add_noise": "enable",
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:366",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "cfg": [
+          "314",
+          0
+        ],
+        "positive": [
+          "704:829",
+          0
+        ],
+        "negative": [
+          "704:829",
+          1
+        ],
+        "latent_image": [
+          "704:829",
+          2
+        ],
+        "end_at_step": [
+          "193",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) just svi"
+      }
+    },
+    "704:829": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "704:830",
+          0
+        ],
+        "negative": [
+          "704:831",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "677",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "704:830": {
+      "inputs": {
+        "text": [
+          "1009",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Positive Prompt)"
+      }
+    },
+    "704:831": {
+      "inputs": {
+        "text": [
+          "1109",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative Prompt)"
+      }
+    },
+    "704:832": {
+      "inputs": {
+        "overlap": 5,
+        "overlap_side": "source",
+        "overlap_mode": "linear_blend",
+        "source_images": [
+          "687:820",
+          2
+        ],
+        "new_images": [
+          "704:839",
+          0
+        ]
+      },
+      "class_type": "ImageBatchExtendWithOverlap",
+      "_meta": {
+        "title": "Image Batch Extend With Overlap"
+      }
+    },
+    "704:833": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "704:829",
+          0
+        ],
+        "negative": [
+          "704:829",
+          1
+        ],
+        "latent_image": [
+          "704:828",
+          0
+        ],
+        "start_at_step": [
+          "193",
+          0
+        ],
+        "end_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "704:834": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "704:829",
+          0
+        ],
+        "negative": [
+          "704:829",
+          1
+        ],
+        "latent_image": [
+          "704:833",
+          0
+        ],
+        "start_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "704:835": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "704:830",
+          0
+        ],
+        "negative": [
+          "704:831",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "677",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "704:836": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "704:835",
+          0
+        ],
+        "negative": [
+          "704:835",
+          1
+        ],
+        "latent_image": [
+          "704:837",
+          0
+        ],
+        "start_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "704:837": {
+      "inputs": {
+        "add_noise": "enable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "704:835",
+          0
+        ],
+        "negative": [
+          "704:835",
+          1
+        ],
+        "latent_image": [
+          "704:835",
+          2
+        ],
+        "end_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "704:839": {
+      "inputs": {
+        "samples": [
+          "694",
+          0
+        ],
+        "vae": [
+          "368:353",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "711": {
+      "inputs": {
+        "switch": true,
+        "on_false": [
+          "721:848",
+          0
+        ],
+        "on_true": [
+          "721:846",
+          0
+        ]
+      },
+      "class_type": "LazySwitchKJ",
+      "_meta": {
+        "title": "2ksampler:false/3ksampler:true"
+      }
+    },
+    "721:840": {
+      "inputs": {
+        "add_noise": "enable",
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:366",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "cfg": [
+          "314",
+          0
+        ],
+        "positive": [
+          "721:841",
+          0
+        ],
+        "negative": [
+          "721:841",
+          1
+        ],
+        "latent_image": [
+          "721:841",
+          2
+        ],
+        "end_at_step": [
+          "193",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) just svi"
+      }
+    },
+    "721:841": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "721:842",
+          0
+        ],
+        "negative": [
+          "721:843",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "694",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "721:842": {
+      "inputs": {
+        "text": [
+          "1010",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Positive Prompt)"
+      }
+    },
+    "721:843": {
+      "inputs": {
+        "text": [
+          "1110",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative Prompt)"
+      }
+    },
+    "721:844": {
+      "inputs": {
+        "overlap": 5,
+        "overlap_side": "source",
+        "overlap_mode": "linear_blend",
+        "source_images": [
+          "704:832",
+          2
+        ],
+        "new_images": [
+          "721:851",
+          0
+        ]
+      },
+      "class_type": "ImageBatchExtendWithOverlap",
+      "_meta": {
+        "title": "Image Batch Extend With Overlap"
+      }
+    },
+    "721:845": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "721:841",
+          0
+        ],
+        "negative": [
+          "721:841",
+          1
+        ],
+        "latent_image": [
+          "721:840",
+          0
+        ],
+        "start_at_step": [
+          "193",
+          0
+        ],
+        "end_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "721:846": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "721:841",
+          0
+        ],
+        "negative": [
+          "721:841",
+          1
+        ],
+        "latent_image": [
+          "721:845",
+          0
+        ],
+        "start_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "721:847": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "721:842",
+          0
+        ],
+        "negative": [
+          "721:843",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "694",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "721:848": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "721:847",
+          0
+        ],
+        "negative": [
+          "721:847",
+          1
+        ],
+        "latent_image": [
+          "721:849",
+          0
+        ],
+        "start_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "721:849": {
+      "inputs": {
+        "add_noise": "enable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "721:847",
+          0
+        ],
+        "negative": [
+          "721:847",
+          1
+        ],
+        "latent_image": [
+          "721:847",
+          2
+        ],
+        "end_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "721:851": {
+      "inputs": {
+        "samples": [
+          "711",
+          0
+        ],
+        "vae": [
+          "368:353",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "738:852": {
+      "inputs": {
+        "add_noise": "enable",
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:366",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "cfg": [
+          "314",
+          0
+        ],
+        "positive": [
+          "738:853",
+          0
+        ],
+        "negative": [
+          "738:853",
+          1
+        ],
+        "latent_image": [
+          "738:853",
+          2
+        ],
+        "end_at_step": [
+          "193",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) just svi"
+      }
+    },
+    "738:853": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "738:854",
+          0
+        ],
+        "negative": [
+          "738:855",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "711",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "738:854": {
+      "inputs": {
+        "text": [
+          "1011",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Positive Prompt)"
+      }
+    },
+    "738:855": {
+      "inputs": {
+        "text": [
+          "1111",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative Prompt)"
+      }
+    },
+    "738:856": {
+      "inputs": {
+        "overlap": 5,
+        "overlap_side": "source",
+        "overlap_mode": "linear_blend",
+        "source_images": [
+          "721:844",
+          2
+        ],
+        "new_images": [
+          "738:863",
+          0
+        ]
+      },
+      "class_type": "ImageBatchExtendWithOverlap",
+      "_meta": {
+        "title": "Image Batch Extend With Overlap"
+      }
+    },
+    "738:857": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "738:853",
+          0
+        ],
+        "negative": [
+          "738:853",
+          1
+        ],
+        "latent_image": [
+          "738:852",
+          0
+        ],
+        "start_at_step": [
+          "193",
+          0
+        ],
+        "end_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "738:858": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "738:853",
+          0
+        ],
+        "negative": [
+          "738:853",
+          1
+        ],
+        "latent_image": [
+          "738:857",
+          0
+        ],
+        "start_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "738:859": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "738:854",
+          0
+        ],
+        "negative": [
+          "738:855",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "711",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "738:860": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "738:859",
+          0
+        ],
+        "negative": [
+          "738:859",
+          1
+        ],
+        "latent_image": [
+          "738:861",
+          0
+        ],
+        "start_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "738:861": {
+      "inputs": {
+        "add_noise": "enable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "738:859",
+          0
+        ],
+        "negative": [
+          "738:859",
+          1
+        ],
+        "latent_image": [
+          "738:859",
+          2
+        ],
+        "end_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "738:863": {
+      "inputs": {
+        "samples": [
+          "728",
+          0
+        ],
+        "vae": [
+          "368:353",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "728": {
+      "inputs": {
+        "switch": true,
+        "on_false": [
+          "738:860",
+          0
+        ],
+        "on_true": [
+          "738:858",
+          0
+        ]
+      },
+      "class_type": "LazySwitchKJ",
+      "_meta": {
+        "title": "2ksampler:false/3ksampler:true"
+      }
+    },
+    "195": {
+      "inputs": {
+        "value": 7
+      },
+      "class_type": "INTConstant",
+      "_meta": {
+        "title": "total step"
+      }
+    },
+    "369": {
+      "inputs": {
+        "unet_name": "wan2.2\\Wan2_2-I2V-A14B-NSFW_fast_move-HIGH_Q8(lightning_edition)V2.gguf"
+      },
+      "class_type": "UnetLoaderGGUF",
+      "_meta": {
+        "title": "Unet Loader (GGUF) HIGH"
+      }
+    },
+    "585:573": {
+      "inputs": {
+        "add_noise": "enable",
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:366",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "cfg": [
+          "314",
+          0
+        ],
+        "positive": [
+          "585:574",
+          0
+        ],
+        "negative": [
+          "585:574",
+          1
+        ],
+        "latent_image": [
+          "585:574",
+          2
+        ],
+        "end_at_step": [
+          "193",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) just svi"
+      }
+    },
+    "585:574": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "585:575",
+          0
+        ],
+        "negative": [
+          "585:576",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "533",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "585:575": {
+      "inputs": {
+        "text": [
+          "1002",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Positive Prompt)"
+      }
+    },
+    "585:576": {
+      "inputs": {
+        "text": [
+          "1102",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative Prompt)"
+      }
+    },
+    "585:577": {
+      "inputs": {
+        "overlap": 5,
+        "overlap_side": "source",
+        "overlap_mode": "linear_blend",
+        "source_images": [
+          "562:561",
+          0
+        ],
+        "new_images": [
+          "585:584",
+          0
+        ]
+      },
+      "class_type": "ImageBatchExtendWithOverlap",
+      "_meta": {
+        "title": "Image Batch Extend With Overlap"
+      }
+    },
+    "585:578": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "585:574",
+          0
+        ],
+        "negative": [
+          "585:574",
+          1
+        ],
+        "latent_image": [
+          "585:573",
+          0
+        ],
+        "start_at_step": [
+          "193",
+          0
+        ],
+        "end_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "585:579": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "585:574",
+          0
+        ],
+        "negative": [
+          "585:574",
+          1
+        ],
+        "latent_image": [
+          "585:578",
+          0
+        ],
+        "start_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "585:580": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 1,
+        "positive": [
+          "585:575",
+          0
+        ],
+        "negative": [
+          "585:576",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ],
+        "prev_samples": [
+          "533",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "585:581": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "585:580",
+          0
+        ],
+        "negative": [
+          "585:580",
+          1
+        ],
+        "latent_image": [
+          "585:582",
+          0
+        ],
+        "start_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "585:582": {
+      "inputs": {
+        "add_noise": "enable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "564",
+          0
+        ],
+        "positive": [
+          "585:580",
+          0
+        ],
+        "negative": [
+          "585:580",
+          1
+        ],
+        "latent_image": [
+          "585:580",
+          2
+        ],
+        "end_at_step": [
+          "566",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "585:584": {
+      "inputs": {
+        "samples": [
+          "547",
+          0
+        ],
+        "vae": [
+          "368:353",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "562:551": {
+      "inputs": {
+        "add_noise": "disable",
+        "steps": [
+          "564",
+          0
+        ],
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": [
+          "566",
+          0
+        ],
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "positive": [
+          "562:555",
+          0
+        ],
+        "negative": [
+          "562:555",
+          1
+        ],
+        "latent_image": [
+          "562:560",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "562:552": {
+      "inputs": {
+        "text": [
+          "1001",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Positive Prompt)"
+      }
+    },
+    "562:553": {
+      "inputs": {
+        "text": [
+          "1101",
+          0
+        ],
+        "clip": [
+          "368:355",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative Prompt)"
+      }
+    },
+    "562:554": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 0,
+        "positive": [
+          "562:552",
+          0
+        ],
+        "negative": [
+          "562:553",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "562:556": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "562:554",
+          0
+        ],
+        "negative": [
+          "562:554",
+          1
+        ],
+        "latent_image": [
+          "562:559",
+          0
+        ],
+        "start_at_step": [
+          "193",
+          0
+        ],
+        "end_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "562:557": {
+      "inputs": {
+        "add_noise": "disable",
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "end_at_step": 1000,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "368:365",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "positive": [
+          "562:554",
+          0
+        ],
+        "negative": [
+          "562:554",
+          1
+        ],
+        "latent_image": [
+          "562:556",
+          0
+        ],
+        "start_at_step": [
+          "194",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning low"
+      }
+    },
+    "562:558": {
+      "inputs": {
+        "pixels": [
+          "110",
+          2
+        ],
+        "vae": [
+          "368:353",
+          0
+        ]
+      },
+      "class_type": "VAEEncode",
+      "_meta": {
+        "title": "VAE Encode"
+      }
+    },
+    "562:560": {
+      "inputs": {
+        "add_noise": "enable",
+        "steps": [
+          "564",
+          0
+        ],
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "end_at_step": [
+          "566",
+          0
+        ],
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:359",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "positive": [
+          "562:555",
+          0
+        ],
+        "negative": [
+          "562:555",
+          1
+        ],
+        "latent_image": [
+          "562:555",
+          2
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) svi lightning high"
+      }
+    },
+    "562:561": {
+      "inputs": {
+        "samples": [
+          "533",
+          0
+        ],
+        "vae": [
+          "368:353",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "562:559": {
+      "inputs": {
+        "add_noise": "enable",
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "368:366",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": [
+          "195",
+          0
+        ],
+        "cfg": [
+          "314",
+          0
+        ],
+        "positive": [
+          "562:554",
+          0
+        ],
+        "negative": [
+          "562:554",
+          1
+        ],
+        "latent_image": [
+          "562:554",
+          2
+        ],
+        "end_at_step": [
+          "193",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "KSampler (Advanced) just svi"
+      }
+    },
+    "562:555": {
+      "inputs": {
+        "length": 81,
+        "motion_latent_count": 0,
+        "positive": [
+          "562:552",
+          0
+        ],
+        "negative": [
+          "562:553",
+          0
+        ],
+        "anchor_samples": [
+          "562:558",
+          0
+        ]
+      },
+      "class_type": "WanImageToVideoSVIPro",
+      "_meta": {
+        "title": "WanImageToVideoSVIPro"
+      }
+    },
+    "110": {
+      "inputs": {
+        "desired_width": 720,
+        "desired_height": 720,
+        "divisible_by": 16,
+        "upscale": false,
+        "upscale_method": "lanczos",
+        "small_image_mode": "none",
+        "pad_color": "#000000",
+        "image": [
+          "62",
+          0
+        ]
+      },
+      "class_type": "FindPerfectResolution",
+      "_meta": {
+        "title": "Find Perfect Resolution"
+      }
+    },
+    "368:366": {
+      "inputs": {
+        "lora_name": "WAN-N\\SVI_v2_PRO_Wan2.2-I2V-A14B_HIGH_lora_rank_128_fp16.safetensors",
+        "strength_model": 1,
+        "model": [
+          "368:364",
+          0
+        ]
+      },
+      "class_type": "LoraLoaderModelOnly",
+      "_meta": {
+        "title": "svi pro high"
+      }
+    },
+    "368:356": {
+      "inputs": {
+        "lora_name": "WAN-N\\SVI_v2_PRO_Wan2.2-I2V-A14B_LOW_lora_rank_128_fp16.safetensors",
+        "strength_model": 1,
+        "model": [
+          "370",
+          0
+        ]
+      },
+      "class_type": "LoraLoaderModelOnly",
+      "_meta": {
+        "title": "svi pro low"
+      }
+    },
+    "368:359": {
+      "inputs": {
+        "lora_name": "WAN-N\\wan2.2_i2v_A14b_high_noise_lora_rank64_lightx2v_4step_1022.safetensors",
+        "strength_model": 1,
+        "model": [
+          "368:366",
+          0
+        ]
+      },
+      "class_type": "LoraLoaderModelOnly",
+      "_meta": {
+        "title": "lightning high"
+      }
+    },
+    "368:365": {
+      "inputs": {
+        "lora_name": "WAN-N\\Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors",
+        "strength_model": 1,
+        "model": [
+          "368:356",
+          0
+        ]
+      },
+      "class_type": "LoraLoaderModelOnly",
+      "_meta": {
+        "title": "lightning low"
+      }
+    },
+    "368:355": {
+      "inputs": {
+        "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+        "type": "wan",
+        "device": "default"
+      },
+      "class_type": "CLIPLoader",
+      "_meta": {
+        "title": "Load CLIP"
+      }
+    },
+    "368:353": {
+      "inputs": {
+        "vae_name": "wan_2.1_vae.safetensors"
+      },
+      "class_type": "VAELoader",
+      "_meta": {
+        "title": "Load VAE"
+      }
+    },
+    "368:364": {
+      "inputs": {
+        "shift": 8,
+        "model": [
+          "369",
+          0
+        ]
+      },
+      "class_type": "ModelSamplingSD3",
+      "_meta": {
+        "title": "ModelSamplingSD3"
+      }
+    },
+    "900": {
+      "class_type": "PrimitiveInt",
+      "inputs": {
+        "value": 315759798112378
+      },
+      "_meta": {
+        "title": "固定种子"
+      }
+    },
+    "901": {
+      "class_type": "PrimitiveString",
+      "inputs": {
+        "value": ""
+      },
+      "_meta": {
+        "title": "QQ 正向提示词"
+      }
+    },
+    "902": {
+      "class_type": "PrimitiveStringMultiline",
+      "inputs": {
+        "value": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走, 说话, 说吧, 唱歌, 猫\n"
+      },
+      "_meta": {
+        "title": "通用负向提示词"
+      }
+    },
+    "1001": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "901",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 1 段 · 附加正向词"
+      }
+    },
+    "1101": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "902",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 1 段 · 附加负向词"
+      }
+    },
+    "1002": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "901",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 2 段 · 附加正向词"
+      }
+    },
+    "1102": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "902",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 2 段 · 附加负向词"
+      }
+    },
+    "1003": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "901",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 3 段 · 附加正向词"
+      }
+    },
+    "1103": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "902",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 3 段 · 附加负向词"
+      }
+    },
+    "1004": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "901",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 4 段 · 附加正向词"
+      }
+    },
+    "1104": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "902",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 4 段 · 附加负向词"
+      }
+    },
+    "1005": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "901",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 5 段 · 附加正向词"
+      }
+    },
+    "1105": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "902",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 5 段 · 附加负向词"
+      }
+    },
+    "1006": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "901",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 6 段 · 附加正向词"
+      }
+    },
+    "1106": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "902",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 6 段 · 附加负向词"
+      }
+    },
+    "1007": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "901",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 7 段 · 附加正向词"
+      }
+    },
+    "1107": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "902",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 7 段 · 附加负向词"
+      }
+    },
+    "1008": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "901",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 8 段 · 附加正向词"
+      }
+    },
+    "1108": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "902",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 8 段 · 附加负向词"
+      }
+    },
+    "1009": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "901",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 9 段 · 附加正向词"
+      }
+    },
+    "1109": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "902",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 9 段 · 附加负向词"
+      }
+    },
+    "1010": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "901",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 10 段 · 附加正向词"
+      }
+    },
+    "1110": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "902",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 10 段 · 附加负向词"
+      }
+    },
+    "1011": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "901",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 11 段 · 附加正向词"
+      }
+    },
+    "1111": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "902",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 11 段 · 附加负向词"
+      }
+    },
+    "1012": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "901",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 12 段 · 附加正向词"
+      }
+    },
+    "1112": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "902",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      },
+      "_meta": {
+        "title": "第 12 段 · 附加负向词"
+      }
+    }
+  },
+  "astrbot": {
+    "svi": {
+      "segments": 1,
+      "samplers": 3,
+      "model_format": "gguf",
+      "upscale": false,
+      "interpolate": false
+    },
+    "node_mapping": {
+      "positive": [
+        "901.value"
+      ],
+      "negative": [
+        "902.value"
+      ],
+      "image": [
+        "62.image"
+      ],
+      "seed": [
+        "900.value"
+      ]
+    }
+  }
+}

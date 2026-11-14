@@ -1,0 +1,167 @@
+{
+  "5": {
+    "inputs": {
+      "width": 512,
+      "height": 512,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "空Latent图像",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "6": {
+    "inputs": {
+      "text": [
+        "29",
+        0
+      ],
+      "clip": [
+        "20",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP文本编码",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "7": {
+    "inputs": {
+      "text": "text, watermark",
+      "clip": [
+        "20",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP文本编码",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "13",
+        0
+      ],
+      "vae": [
+        "20",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE解码",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "13": {
+    "inputs": {
+      "add_noise": true,
+      "noise_seed": 0,
+      "cfg": 1,
+      "model": [
+        "20",
+        0
+      ],
+      "positive": [
+        "6",
+        0
+      ],
+      "negative": [
+        "7",
+        0
+      ],
+      "sampler": [
+        "14",
+        0
+      ],
+      "sigmas": [
+        "22",
+        0
+      ],
+      "latent_image": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "SamplerCustom",
+    "_meta": {
+      "title": "自定义采样器",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "14": {
+    "inputs": {
+      "sampler_name": "euler_ancestral"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "K采样器选择",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "20": {
+    "inputs": {
+      "ckpt_name": "sd_xl_turbo_1.0_fp16.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Checkpoint加载器（简易）",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "22": {
+    "inputs": {
+      "steps": 1,
+      "denoise": 1,
+      "model": [
+        "20",
+        0
+      ]
+    },
+    "class_type": "SDTurboScheduler",
+    "_meta": {
+      "title": "SDTurbo调度器",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "27": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "保存图像",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "29": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "Primitive string [Crystools]",
+    "_meta": {
+      "title": "🪛 Primitive string",
+      "cnr_id": "ComfyUI-Crystools",
+      "ver": "2f18256c5b5063937106f29a8e0a7db3ae3869b7"
+    }
+  }
+}

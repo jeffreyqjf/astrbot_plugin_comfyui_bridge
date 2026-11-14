@@ -1,0 +1,620 @@
+{
+  "prompt": {
+    "1758": {
+      "inputs": {
+        "unet_name": "anima-aesthetic-v1.1.safetensors",
+        "weight_dtype": "default"
+      },
+      "class_type": "UNETLoader",
+      "_meta": {
+        "title": "Load Diffusion Model"
+      }
+    },
+    "1077": {
+      "inputs": {
+        "model_name": "anima-aesthetic-v1.1.safetensors",
+        "sage_attention": "disabled",
+        "torch_compile": false
+      },
+      "class_type": "AnimaBoosterLoader",
+      "_meta": {
+        "title": "Anima Booster Loader (BSS)"
+      }
+    },
+    "1076": {
+      "inputs": {
+        "threshold": 0.15,
+        "teacache_version": "v2 (Standard Precise)",
+        "adaptive_mode": true,
+        "early_steps_factor": 0.4,
+        "late_steps_factor": 1.8,
+        "start_percent": 0,
+        "end_percent": 1,
+        "cache_device": "cuda",
+        "model": [
+          "1758",
+          0
+        ]
+      },
+      "class_type": "AnimaTeaCache",
+      "_meta": {
+        "title": "Anima TeaCache (BSS)"
+      }
+    },
+    "1073": {
+      "inputs": {
+        "clip_name": "qwen_3_06b_base.safetensors",
+        "type": "stable_diffusion",
+        "device": "default"
+      },
+      "class_type": "CLIPLoader",
+      "_meta": {
+        "title": "Load CLIP"
+      }
+    },
+    "1074": {
+      "inputs": {
+        "vae_name": "qwen_image_vae.safetensors"
+      },
+      "class_type": "VAELoader",
+      "_meta": {
+        "title": "Load VAE"
+      }
+    },
+    "1687": {
+      "inputs": {
+        "sage_attention": "auto",
+        "allow_compile": false,
+        "model": [
+          "1758",
+          0
+        ]
+      },
+      "class_type": "PathchSageAttentionKJ",
+      "_meta": {
+        "title": "Patch Sage Attention KJ"
+      }
+    },
+    "1610": {
+      "inputs": {
+        "String": "masterpiece, best quality, very aesthetic"
+      },
+      "class_type": "String",
+      "_meta": {
+        "title": "POS Prompt"
+      }
+    },
+    "1611": {
+      "inputs": {
+        "String": "worst quality, low quality, score_1, score_2, score_3, artist name, blurry, jpeg artifacts, lowres, censor, sepia, signature, artist name"
+      },
+      "class_type": "String",
+      "_meta": {
+        "title": "NEG Prompt"
+      }
+    },
+    "1690": {
+      "inputs": {
+        "clip": [
+          "1073",
+          0
+        ],
+        "artist_chain": "",
+        "base_prompt": [
+          "1610",
+          0
+        ]
+      },
+      "class_type": "AnimaArtistPack",
+      "_meta": {
+        "title": "Anima Artist Pack (Split + Encode)"
+      }
+    },
+    "1691": {
+      "inputs": {
+        "strength": 1,
+        "normalize_weights": true,
+        "alignment_mode": "base_anchored",
+        "enabled": true,
+        "apply_to_uncond": false,
+        "uncond_strength": 0,
+        "model": [
+          "1758",
+          0
+        ],
+        "artist_pack": [
+          "1690",
+          0
+        ],
+        "advanced_options": [
+          "1689",
+          0
+        ]
+      },
+      "class_type": "AnimaArtistAdapterMixer",
+      "_meta": {
+        "title": "Anima Artist Adapter Mixer (Experimental)"
+      }
+    },
+    "1689": {
+      "inputs": {
+        "start_block": 0,
+        "end_block": -1,
+        "start_percent": 0,
+        "end_percent": 1,
+        "normalize_weights": true,
+        "artist_ema_alpha": 0,
+        "lowrank_k": 1,
+        "artist_static_capture": false,
+        "static_capture_k": 6,
+        "artist_anchor_q": false,
+        "anchor_seed_list": "",
+        "anchor_seeds_count": 1,
+        "anchor_user_blend": 0,
+        "anchor_deep_layer_threshold": -1,
+        "stabilizer_end_percent": 1,
+        "anchor_refresh_mode": "once",
+        "anchor_cache_points": 8,
+        "layer_filter": "",
+        "anchor_keyframe_mode": "uniform_sigma"
+      },
+      "class_type": "AnimaArtistOptions",
+      "_meta": {
+        "title": "Anima Artist Options (Advanced)"
+      }
+    },
+    "1608": {
+      "inputs": {
+        "image": "example.png"
+      },
+      "class_type": "LoadImage",
+      "_meta": {
+        "title": "图生图图像-用于二采模式"
+      }
+    },
+    "1424": {
+      "inputs": {
+        "grow_mask_by": 22,
+        "pixels": [
+          "1608",
+          0
+        ],
+        "vae": [
+          "1074",
+          0
+        ],
+        "mask": [
+          "1608",
+          1
+        ]
+      },
+      "class_type": "VAEEncodeForInpaint",
+      "_meta": {
+        "title": "①VAE编码（局部重绘）"
+      }
+    },
+    "1426": {
+      "inputs": {
+        "pixels": [
+          "1608",
+          0
+        ],
+        "vae": [
+          "1074",
+          0
+        ]
+      },
+      "class_type": "VAEEncode",
+      "_meta": {
+        "title": "②VAE编码（图生图）"
+      }
+    },
+    "1427": {
+      "inputs": {
+        "width": 1024,
+        "height": 1024,
+        "batch_size": 1
+      },
+      "class_type": "EmptyLatentImage",
+      "_meta": {
+        "title": "④空Latent图像"
+      }
+    },
+    "1428": {
+      "inputs": {
+        "batch_size": 1,
+        "width": [
+          "1425",
+          0
+        ],
+        "height": [
+          "1425",
+          1
+        ]
+      },
+      "class_type": "EmptyLatentImage",
+      "_meta": {
+        "title": "③空Latent图像"
+      }
+    },
+    "1425": {
+      "inputs": {
+        "aspect_ratio": "9:16 (Portrait Widescreen)",
+        "megapixels": 1,
+        "multiple": 8
+      },
+      "class_type": "ResolutionSelector",
+      "_meta": {
+        "title": "Resolution Selector"
+      }
+    },
+    "1038": {
+      "inputs": {
+        "lllite_name": "anima-lllite-any-test-like-v2.safetensors",
+        "strength": 1,
+        "start_percent": 0,
+        "end_percent": 1,
+        "preserve_wrapper": false,
+        "model": [
+          "1758",
+          0
+        ],
+        "image": [
+          "1608",
+          0
+        ]
+      },
+      "class_type": "AnimaLLLiteApply_sdscripts",
+      "_meta": {
+        "title": "Apply Anima ControlNet-LLLite (sd-scripts)"
+      }
+    },
+    "1039": {
+      "inputs": {
+        "lllite_name": "anima-lllite-inpainting-v1.safetensors",
+        "strength": 1,
+        "start_percent": 0,
+        "end_percent": 1,
+        "preserve_wrapper": true,
+        "model": [
+          "1758",
+          0
+        ],
+        "image": [
+          "1608",
+          0
+        ],
+        "mask": [
+          "1608",
+          1
+        ]
+      },
+      "class_type": "AnimaLLLiteApply_sdscripts",
+      "_meta": {
+        "title": "Apply Anima ControlNet-LLLite (sd-scripts)"
+      }
+    },
+    "1370": {
+      "inputs": {
+        "preprocessor": "DepthAnythingV2Preprocessor",
+        "resolution": 1024,
+        "image": [
+          "1608",
+          0
+        ]
+      },
+      "class_type": "AIO_Preprocessor",
+      "_meta": {
+        "title": "AIO Aux Preprocessor"
+      }
+    },
+    "118": {
+      "inputs": {
+        "seed": 958529747332218,
+        "steps": 21,
+        "cfg": 4.4,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "denoise": 0.55,
+        "model": [
+          "1758",
+          0
+        ],
+        "positive": [
+          "1636",
+          0
+        ],
+        "negative": [
+          "1638",
+          0
+        ],
+        "latent_image": [
+          "1426",
+          0
+        ]
+      },
+      "class_type": "KSampler",
+      "_meta": {
+        "title": "KSampler"
+      }
+    },
+    "119": {
+      "inputs": {
+        "samples": [
+          "118",
+          0
+        ],
+        "vae": [
+          "1074",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "279": {
+      "inputs": {
+        "model_name": "RealESRGAN_x4plus_anime_6B.pth"
+      },
+      "class_type": "UpscaleModelLoader",
+      "_meta": {
+        "title": "Load Upscale Model"
+      }
+    },
+    "1665": {
+      "inputs": {
+        "seed": 1010208906416057,
+        "steps": 15,
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "denoise": 0.2,
+        "mode_type": "Linear",
+        "tile_width": 512,
+        "tile_height": 512,
+        "mask_blur": 8,
+        "tile_padding": 32,
+        "seam_fix_mode": "None",
+        "seam_fix_denoise": 1,
+        "seam_fix_width": 64,
+        "seam_fix_mask_blur": 8,
+        "seam_fix_padding": 16,
+        "force_uniform_tiles": true,
+        "tiled_decode": false,
+        "batch_size": 1,
+        "image": [
+          "119",
+          0
+        ],
+        "model": [
+          "1758",
+          0
+        ],
+        "positive": [
+          "1636",
+          0
+        ],
+        "negative": [
+          "1638",
+          0
+        ],
+        "vae": [
+          "1074",
+          0
+        ],
+        "upscale_by": 2,
+        "upscale_model": [
+          "279",
+          0
+        ]
+      },
+      "class_type": "UltimateSDUpscale",
+      "_meta": {
+        "title": "Ultimate SD Upscale"
+      }
+    },
+    "1818": {
+      "inputs": {
+        "resize_type": "scale by multiplier",
+        "quality": "ULTRA",
+        "images": [
+          "119",
+          0
+        ],
+        "resize_type.scale": 2
+      },
+      "class_type": "RTXVideoSuperResolution",
+      "_meta": {
+        "title": "RTX Video Super Resolution Pro"
+      }
+    },
+    "1824": {
+      "inputs": {
+        "upscale": 2,
+        "seed": 385960473423751,
+        "color_alignment": "wavelet",
+        "tile_size": 512,
+        "tile_overlap": 32,
+        "vae_tile_size": 0,
+        "vae_tile_overlap": 32,
+        "model": [
+          "1825",
+          0
+        ],
+        "image": [
+          "119",
+          0
+        ]
+      },
+      "class_type": "VOSR2Upscale",
+      "_meta": {
+        "title": "VOSR 2.0 Upscale"
+      }
+    },
+    "1825": {
+      "inputs": {
+        "model": "VOSR2",
+        "dtype": "default"
+      },
+      "class_type": "VOSR2ModelLoader",
+      "_meta": {
+        "title": "VOSR 2.0 Model Loader"
+      }
+    },
+    "1011": {
+      "inputs": {
+        "offload_model": true,
+        "offload_cache": true,
+        "anything": [
+          "119",
+          0
+        ]
+      },
+      "class_type": "VRAMCleanup",
+      "_meta": {
+        "title": "🎈VRAM-Cleanup"
+      }
+    },
+    "1649": {
+      "inputs": {
+        "filename_prefix": "AstrBot/Anima_I2I_AIO_AstrBot",
+        "images": [
+          "119",
+          0
+        ]
+      },
+      "class_type": "SaveImage",
+      "_meta": {
+        "title": "生图保存结果"
+      }
+    },
+    "1636": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": [
+          "1610",
+          0
+        ],
+        "clip": [
+          "1073",
+          0
+        ]
+      }
+    },
+    "1638": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": [
+          "1611",
+          0
+        ],
+        "clip": [
+          "1073",
+          0
+        ]
+      }
+    },
+    "1846": {
+      "class_type": "LoraLoader",
+      "inputs": {
+        "model": [
+          "1758",
+          0
+        ],
+        "clip": [
+          "1073",
+          0
+        ],
+        "lora_name": "anima\\alisa_mikhailovna_kujou-roshidere_s1-ana-anime-soralz.safetensors",
+        "strength_model": 0.8,
+        "strength_clip": 0.8
+      },
+      "_meta": {
+        "title": "lora 1 人物"
+      }
+    },
+    "1850": {
+      "class_type": "LoraLoader",
+      "inputs": {
+        "model": [
+          "1758",
+          0
+        ],
+        "clip": [
+          "1073",
+          0
+        ],
+        "lora_name": "anima\\alisa_mikhailovna_kujou-roshidere_s1-ana-anime-soralz.safetensors",
+        "strength_model": 0.8,
+        "strength_clip": 0.8
+      },
+      "_meta": {
+        "title": "lora 2-1 画风质量"
+      }
+    },
+    "1849": {
+      "class_type": "LoraLoader",
+      "inputs": {
+        "model": [
+          "1758",
+          0
+        ],
+        "clip": [
+          "1073",
+          0
+        ],
+        "lora_name": "anima\\alisa_mikhailovna_kujou-roshidere_s1-ana-anime-soralz.safetensors",
+        "strength_model": 0.8,
+        "strength_clip": 0.8
+      },
+      "_meta": {
+        "title": "lora 2-2 动漫系画风"
+      }
+    },
+    "1847": {
+      "class_type": "LoraLoader",
+      "inputs": {
+        "model": [
+          "1758",
+          0
+        ],
+        "clip": [
+          "1073",
+          0
+        ],
+        "lora_name": "anima\\alisa_mikhailovna_kujou-roshidere_s1-ana-anime-soralz.safetensors",
+        "strength_model": 0.8,
+        "strength_clip": 0.8
+      },
+      "_meta": {
+        "title": "lora 2-3 真实系画风"
+      }
+    },
+    "1848": {
+      "class_type": "LoraLoader",
+      "inputs": {
+        "model": [
+          "1758",
+          0
+        ],
+        "clip": [
+          "1073",
+          0
+        ],
+        "lora_name": "anima\\alisa_mikhailovna_kujou-roshidere_s1-ana-anime-soralz.safetensors",
+        "strength_model": 0.8,
+        "strength_clip": 0.8
+      },
+      "_meta": {
+        "title": "lora 3 杂项"
+      }
+    }
+  },
+  "astrbot": {
+    "reference_source": "qq",
+    "aio": {},
+    "positive_prefix": "masterpiece, best quality, very aesthetic"
+  }
+}

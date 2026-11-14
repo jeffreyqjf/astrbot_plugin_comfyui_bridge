@@ -1,0 +1,6 @@
+**最可能的共同原因是 WAI 主采样启用了 `Automatic CFG`（节点 `#258`，Hard Mode 和 Boost 都开着）。** 它会在去噪过程中按通道动态调整引导强度。本机对照里，这套设置会让衣料原本平滑的色块出现斑驳纹理。 [WAI 工作流](D:/QQbot/插件/astrbot_plugin_comfyui_bridge/workflows/WAI-Illustrious_T2I_AstrBot.json:487)
+
+- **固定提示词、种子和 CFG 10**，启用 Automatic CFG 时，底图衣服上能看到斑驳。只旁路这个节点，衣料明显更平整。保留 Automatic CFG、把 CFG 降到 6，斑驳仍在。 [主采样对照图](G:/ComfyUI/temp/astrbot_wai_spot_diagnostic_cfg_compare.jpg)
+- **测试图在放大、修脸、修眼和 ControlNet 之前就有斑驳。** 同一张底图分别用 Canny、原图引导和关闭 ControlNet 做重采样，三组都让斑驳变淡。原任务 `03c6d6ad` 没有加载 LoRA，修脸也没有检测到目标，但原图仍有花斑。 [分阶段对照图](G:/ComfyUI/temp/astrbot_wai_spot_diagnostic_stage_compare.jpg) · [运行日志](G:/ComfyUI/user/comfyui.log:358)
+
+这五次任务只保存了成图，所以对照确认的是 **Automatic CFG 能在这条工作流的主采样阶段复现同类花斑**。原图逐张最早在哪一步出现花斑，以及 Hard Mode 和 Boost 各自的影响，目前还没单独验证。排查只用了临时预览，工作流、配置和代码均未修改。

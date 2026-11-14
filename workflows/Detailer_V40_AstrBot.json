@@ -1,0 +1,3379 @@
+{
+  "prompt": {
+    "132": {
+      "inputs": {
+        "fragment_shader": "#version 300 es\nprecision highp float;\n\nuniform sampler2D u_image0;\nuniform vec2 u_resolution;\n\nin vec2 v_texCoord;\nlayout(location = 0) out vec4 fragColor0;\n\nvoid main() {\n    // Original Gameboy horizontal resolution was 160 pixels\n    float pixels = 160.0; \n    \n    vec2 grid = vec2(pixels, pixels * (u_resolution.y / u_resolution.x));\n    vec2 uv = floor(v_texCoord * grid) / grid;\n    \n    vec3 col = texture(u_image0, uv).rgb;\n    float luma = dot(col, vec3(0.299, 0.587, 0.114));\n    \n    // Crunch the brightness into exactly 4 steps\n    float stepVal = floor(luma * 3.99); \n    \n    vec3 outCol;\n    \n    // Apply the classic 4 Gameboy Green colors\n    if (stepVal == 0.0) outCol = vec3(0.06, 0.22, 0.06);      // Darkest\n    else if (stepVal == 1.0) outCol = vec3(0.19, 0.38, 0.19); // Dark\n    else if (stepVal == 2.0) outCol = vec3(0.55, 0.67, 0.20); // Light\n    else outCol = vec3(0.61, 0.74, 0.20);                     // Lightest\n    \n    // Draw the tiny physical LCD gaps between the pixels\n    vec2 pixelPos = fract(v_texCoord * grid);\n    float border = step(0.05, pixelPos.x) * step(0.05, pixelPos.y);\n    outCol *= mix(0.7, 1.0, border); // slightly darkens the gaps\n    \n    fragColor0 = vec4(outCol, 1.0);\n}",
+        "size_mode": "from_input",
+        "images.image0": [
+          "131",
+          0
+        ]
+      },
+      "class_type": "GLSLShader",
+      "_meta": {
+        "title": "Gameboy",
+        "branch": "128"
+      }
+    },
+    "131": {
+      "inputs": {
+        "fragment_shader": "#version 300 es\nprecision highp float;\n\nuniform sampler2D u_image0;\nuniform vec2 u_resolution;\n\nin vec2 v_texCoord;\nlayout(location = 0) out vec4 fragColor0;\n\nfloat luma(vec3 color) {\n    return dot(color, vec3(0.299, 0.587, 0.114));\n}\n\nvoid main() {\n    vec2 uv = v_texCoord;\n    vec2 dx = vec2(1.0 / u_resolution.x, 0.0);\n    vec2 dy = vec2(0.0, 1.0 / u_resolution.y);\n\n    // Sobel Edge Detection\n    float s00 = luma(texture(u_image0, uv - dx - dy).rgb);\n    float s10 = luma(texture(u_image0, uv - dy).rgb);\n    float s20 = luma(texture(u_image0, uv + dx - dy).rgb);\n    float s01 = luma(texture(u_image0, uv - dx).rgb);\n    float s21 = luma(texture(u_image0, uv + dx).rgb);\n    float s02 = luma(texture(u_image0, uv - dx + dy).rgb);\n    float s12 = luma(texture(u_image0, uv + dy).rgb);\n    float s22 = luma(texture(u_image0, uv + dx + dy).rgb);\n\n    float sx = s00 + 2.0 * s01 + s02 - (s20 + 2.0 * s21 + s22);\n    float sy = s00 + 2.0 * s10 + s20 - (s02 + 2.0 * s12 + s22);\n    float edge = sqrt(sx * sx + sy * sy);\n\n    // TWEAK THESE: Change the background or line colors!\n    vec3 bgColor = vec3(0.05, 0.20, 0.60); // Classic Blueprint Blue\n    vec3 lineColor = vec3(1.0, 1.0, 1.0);  // White Lines\n    \n    // Draw a subtle engineering grid in the background\n    float grid = step(0.98, fract(uv.x * 20.0)) + step(0.98, fract(uv.y * 20.0 * (u_resolution.y / u_resolution.x)));\n    bgColor += vec3(grid * 0.15); \n\n    // Mix the blue background with the white edges\n    float edgeIntensity = clamp(edge * 2.5, 0.0, 1.0);\n    vec3 finalColor = mix(bgColor, lineColor, edgeIntensity);\n\n    fragColor0 = vec4(finalColor, 1.0);\n}",
+        "size_mode": "from_input",
+        "images.image0": [
+          "129",
+          0
+        ]
+      },
+      "class_type": "GLSLShader",
+      "_meta": {
+        "title": "Blueprint",
+        "branch": "127"
+      }
+    },
+    "129": {
+      "inputs": {
+        "fragment_shader": "#version 300 es\nprecision highp float;\n\nuniform sampler2D u_image0;\nuniform vec2 u_resolution;\n\nin vec2 v_texCoord;\nlayout(location = 0) out vec4 fragColor0;\n\nvoid main() {\n    vec2 uv = v_texCoord;\n    \n    // Sample original image\n    vec3 color = texture(u_image0, uv).rgb;\n    \n    // Get brightness and crank up the contrast\n    float luma = dot(color, vec3(0.299, 0.587, 0.114));\n    luma = smoothstep(0.1, 0.8, luma); // Boost contrast\n    \n    // Multiply by bright green (phosphor color)\n    vec3 nightVisionColor = vec3(0.1, 1.0, 0.2) * luma;\n    \n    // Add subtle scanlines overlay\n    float scanline = sin(uv.y * u_resolution.y * 2.0) * 0.1;\n    nightVisionColor -= scanline;\n    \n    // Add a dark vignette around the edges for that 'goggle' look\n    float vignette = uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y);\n    nightVisionColor *= pow(vignette * 15.0, 0.3);\n    \n    fragColor0 = vec4(nightVisionColor, 1.0);\n}",
+        "size_mode": "from_input",
+        "images.image0": [
+          "128",
+          0
+        ]
+      },
+      "class_type": "GLSLShader",
+      "_meta": {
+        "title": "Night Vision",
+        "branch": "126"
+      }
+    },
+    "128": {
+      "inputs": {
+        "fragment_shader": "#version 300 es\nprecision highp float;\n\nuniform sampler2D u_image0;\nuniform vec2 u_resolution;\n\nin vec2 v_texCoord;\nlayout(location = 0) out vec4 fragColor0;\n\n// Fast math trick to generate random numbers in GLSL\nfloat random(vec2 st) {\n    return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);\n}\n\nvoid main() {\n    vec2 uv = v_texCoord;\n    \n    // TWEAK THESE:\n    float glitchAmount = 0.03; // How far the screen tears sideways\n    float glitchRows = 40.0;   // How many glitch blocks split the screen vertically\n    \n    // Create random glitch blocks\n    float blockyY = floor(uv.y * glitchRows);\n    float offset = (random(vec2(blockyY, 1.0)) - 0.5) * glitchAmount;\n    \n    // Only apply the glitch to random horizontal rows (approx 20% of the screen)\n    float mask = step(0.8, random(vec2(blockyY, 2.0))); \n    uv.x += offset * mask;\n\n    // Split the RGB channels for a harsh digital chromatic aberration\n    float colR = texture(u_image0, vec2(uv.x + 0.015 * mask, uv.y)).r;\n    float colG = texture(u_image0, uv).g;\n    float colB = texture(u_image0, vec2(uv.x - 0.015 * mask, uv.y)).b;\n\n    fragColor0 = vec4(colR, colG, colB, 1.0);\n}",
+        "size_mode": "from_input",
+        "images.image0": [
+          "127",
+          0
+        ]
+      },
+      "class_type": "GLSLShader",
+      "_meta": {
+        "title": "Glitch",
+        "branch": "125"
+      }
+    },
+    "127": {
+      "inputs": {
+        "fragment_shader": "#version 300 es\nprecision highp float;\n\nuniform sampler2D u_image0;\nuniform vec2 u_resolution;\n\nin vec2 v_texCoord;\nlayout(location = 0) out vec4 fragColor0;\n\nvoid main() {\n    // Determine how many \"blocks\" across the screen should be\n    float pixels = 120.0; // CHANGE THIS NUMBER for chunkier/smaller pixels!\n    \n    // Calculate aspect ratio so the pixels are perfectly square\n    vec2 grid = vec2(pixels, pixels * (u_resolution.y / u_resolution.x));\n    \n    // Math trick: Round the UV coordinates to the nearest grid block\n    vec2 uv = floor(v_texCoord * grid) / grid;\n    \n    // Sample the image using the blocky UVs\n    vec3 color = texture(u_image0, uv).rgb;\n    \n    fragColor0 = vec4(color, 1.0);\n}",
+        "size_mode": "from_input",
+        "images.image0": [
+          "124",
+          0
+        ]
+      },
+      "class_type": "GLSLShader",
+      "_meta": {
+        "title": "Pixelation",
+        "branch": "124"
+      }
+    },
+    "126": {
+      "inputs": {
+        "sharpen_radius": 1,
+        "sigma": 0.5,
+        "alpha": 0.5,
+        "image": [
+          "125",
+          0
+        ]
+      },
+      "class_type": "ImageSharpen",
+      "_meta": {
+        "title": "Sharpen Image",
+        "branch": "121"
+      }
+    },
+    "125": {
+      "inputs": {
+        "colors": 256,
+        "dither": "none",
+        "image": [
+          "122",
+          0
+        ]
+      },
+      "class_type": "ImageQuantize",
+      "_meta": {
+        "title": "Quantize Image",
+        "branch": "119"
+      }
+    },
+    "124": {
+      "inputs": {
+        "fragment_shader": "#version 300 es\nprecision highp float;\n\nuniform sampler2D u_image0;\nuniform vec2 u_resolution;\n\nin vec2 v_texCoord;\nlayout(location = 0) out vec4 fragColor0;\n\n// Function to curve the screen\nvec2 curve(vec2 uv) {\n    uv = (uv - 0.5) * 2.0;\n    uv *= 1.05; // zoom out slightly to see the TV borders\n    uv.x *= 1.0 + pow((abs(uv.y) / 6.0), 2.0);\n    uv.y *= 1.0 + pow((abs(uv.x) / 5.0), 2.0);\n    uv  = (uv / 2.0) + 0.5;\n    return uv;\n}\n\nvoid main() {\n    vec2 uv = curve(v_texCoord);\n    \n    // Create black borders where the screen curves away\n    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {\n        fragColor0 = vec4(0.0, 0.0, 0.0, 1.0);\n        return;\n    }\n    \n    // Sample colors with slight offset for Chromatic Aberration\n    float colR = texture(u_image0, vec2(uv.x + 0.003, uv.y)).r;\n    float colG = texture(u_image0, uv).g;\n    float colB = texture(u_image0, vec2(uv.x - 0.003, uv.y)).b;\n    \n    // Add moving TV Scanlines\n    float scanline = sin(uv.y * u_resolution.y * 1.5) * 0.04;\n    vec3 col = vec3(colR, colG, colB) - scanline;\n    \n    // Add TV screen vignette (darken edges)\n    float vig = uv.x * uv.y * (1.0 - uv.x) * (1.0 - uv.y);\n    col *= pow(vig * 15.0, 0.25);\n    \n    fragColor0 = vec4(col, 1.0);\n}",
+        "size_mode": "from_input",
+        "images.image0": [
+          "123:413",
+          0
+        ]
+      },
+      "class_type": "GLSLShader",
+      "_meta": {
+        "title": "VHS TV",
+        "branch": "123"
+      }
+    },
+    "123:413": {
+      "inputs": {
+        "fragment_shader": "#version 300 es\nprecision highp float;\n\nuniform sampler2D u_image0;\nuniform vec2 u_resolution;\nuniform int u_int0;      // Mode\nuniform float u_float0;  // Amount (0 to 100)\n\nin vec2 v_texCoord;\nout vec4 fragColor;\n\nconst int MODE_LINEAR   = 0;\nconst int MODE_RADIAL   = 1;\nconst int MODE_BARREL   = 2;\nconst int MODE_SWIRL    = 3;\nconst int MODE_DIAGONAL = 4;\n\nconst float AMOUNT_SCALE = 0.0005;\nconst float RADIAL_MULT = 4.0;\nconst float BARREL_MULT = 8.0;\nconst float INV_SQRT2 = 0.70710678118;\n\nvoid main() {\n    vec2 uv = v_texCoord;\n    vec4 original = texture(u_image0, uv);\n\n    float amount = u_float0 * AMOUNT_SCALE;\n\n    if (amount < 0.000001) {\n        fragColor = original;\n        return;\n    }\n\n    // Aspect-corrected coordinates for circular effects\n    float aspect = u_resolution.x / u_resolution.y;\n    vec2 centered = uv - 0.5;\n    vec2 corrected = vec2(centered.x * aspect, centered.y);\n    float r = length(corrected);\n    vec2 dir = r > 0.0001 ? corrected / r : vec2(0.0);\n    vec2 offset = vec2(0.0);\n\n    if (u_int0 == MODE_LINEAR) {\n        // Horizontal shift (no aspect correction needed)\n        offset = vec2(amount, 0.0);\n    }\n    else if (u_int0 == MODE_RADIAL) {\n        // Outward from center, stronger at edges\n        offset = dir * r * amount * RADIAL_MULT;\n        offset.x /= aspect;  // Convert back to UV space\n    }\n    else if (u_int0 == MODE_BARREL) {\n        // Lens distortion simulation (r² falloff)\n        offset = dir * r * r * amount * BARREL_MULT;\n        offset.x /= aspect;  // Convert back to UV space\n    }\n    else if (u_int0 == MODE_SWIRL) {\n        // Perpendicular to radial (rotational aberration)\n        vec2 perp = vec2(-dir.y, dir.x);\n        offset = perp * r * amount * RADIAL_MULT;\n        offset.x /= aspect;  // Convert back to UV space\n    }\n    else if (u_int0 == MODE_DIAGONAL) {\n        // 45° offset (no aspect correction needed)\n        offset = vec2(amount, amount) * INV_SQRT2;\n    }\n    \n    float red = texture(u_image0, uv + offset).r;\n    float green = original.g;\n    float blue = texture(u_image0, uv - offset).b;\n    \n    fragColor = vec4(red, green, blue, original.a);\n}",
+        "size_mode": "from_input",
+        "images.image0": [
+          "121:184",
+          0
+        ],
+        "floats.u_float0": [
+          "123:414",
+          0
+        ],
+        "ints.u_int0": [
+          "123:415",
+          1
+        ]
+      },
+      "class_type": "GLSLShader",
+      "_meta": {
+        "title": "GLSL Shader",
+        "branch": "120"
+      }
+    },
+    "123:414": {
+      "inputs": {
+        "value": 30
+      },
+      "class_type": "PrimitiveFloat",
+      "_meta": {
+        "title": "amount",
+        "branch": "120"
+      }
+    },
+    "123:415": {
+      "inputs": {
+        "choice": "Linear",
+        "index": -1,
+        "option1": "Linear",
+        "option2": "Radial",
+        "option3": "Barrel",
+        "option4": "Swirl",
+        "option5": "Diagonal",
+        "option6": ""
+      },
+      "class_type": "CustomCombo",
+      "_meta": {
+        "title": "mode",
+        "branch": "120"
+      }
+    },
+    "122": {
+      "inputs": {
+        "operation": "erode",
+        "kernel_size": 3,
+        "image": [
+          "119",
+          0
+        ]
+      },
+      "class_type": "Morphology",
+      "_meta": {
+        "title": "Apply Morphology",
+        "branch": "117"
+      }
+    },
+    "121:184": {
+      "inputs": {
+        "fragment_shader": "#version 300 es\nprecision highp float;\n\nuniform sampler2D u_image0;\nuniform vec2 u_resolution;\nuniform float u_float0; // grain amount      [0.0 – 1.0]   typical: 0.2–0.8\nuniform float u_float1; // grain size        [0.3 – 3.0]   lower = finer grain\nuniform float u_float2; // color amount      [0.0 – 1.0]   0 = monochrome, 1 = RGB grain\nuniform float u_float3; // luminance bias    [0.0 – 1.0]   0 = uniform, 1 = shadows only\nuniform int   u_int0;   // noise mode        [0 or 1]      0 = smooth, 1 = grainy\n\nin vec2 v_texCoord;\nlayout(location = 0) out vec4 fragColor0;\n\n// High-quality integer hash (pcg-like)\nuint pcg(uint v) {\n    uint state = v * 747796405u + 2891336453u;\n    uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;\n    return (word >> 22u) ^ word;\n}\n\n// 2D -> 1D hash input\nuint hash2d(uvec2 p) {\n    return pcg(p.x + pcg(p.y));\n}\n\n// Hash to float [0, 1]\nfloat hashf(uvec2 p) {\n    return float(hash2d(p)) / float(0xffffffffu);\n}\n\n// Hash to float with offset (for RGB channels)\nfloat hashf(uvec2 p, uint offset) {\n    return float(pcg(hash2d(p) + offset)) / float(0xffffffffu);\n}\n\n// Convert uniform [0,1] to roughly Gaussian distribution\n// Using simple approximation: average of multiple samples\nfloat toGaussian(uvec2 p) {\n    float sum = hashf(p, 0u) + hashf(p, 1u) + hashf(p, 2u) + hashf(p, 3u);\n    return (sum - 2.0) * 0.7;  // Centered, scaled\n}\n\nfloat toGaussian(uvec2 p, uint offset) {\n    float sum = hashf(p, offset) + hashf(p, offset + 1u) \n              + hashf(p, offset + 2u) + hashf(p, offset + 3u);\n    return (sum - 2.0) * 0.7;\n}\n\n// Smooth noise with better interpolation\nfloat smoothNoise(vec2 p) {\n    vec2 i = floor(p);\n    vec2 f = fract(p);\n    \n    // Quintic interpolation (less banding than cubic)\n    f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);\n    \n    uvec2 ui = uvec2(i);\n    float a = toGaussian(ui);\n    float b = toGaussian(ui + uvec2(1u, 0u));\n    float c = toGaussian(ui + uvec2(0u, 1u));\n    float d = toGaussian(ui + uvec2(1u, 1u));\n    \n    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);\n}\n\nfloat smoothNoise(vec2 p, uint offset) {\n    vec2 i = floor(p);\n    vec2 f = fract(p);\n    \n    f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);\n    \n    uvec2 ui = uvec2(i);\n    float a = toGaussian(ui, offset);\n    float b = toGaussian(ui + uvec2(1u, 0u), offset);\n    float c = toGaussian(ui + uvec2(0u, 1u), offset);\n    float d = toGaussian(ui + uvec2(1u, 1u), offset);\n    \n    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);\n}\n\nvoid main() {\n    vec4 color = texture(u_image0, v_texCoord);\n    \n    // Luminance (Rec.709)\n    float luma = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));\n    \n    // Grain UV (resolution-independent)\n    vec2 grainUV = v_texCoord * u_resolution / max(u_float1, 0.01);\n    uvec2 grainPixel = uvec2(grainUV);\n    \n    float g;\n    vec3 grainRGB;\n    \n    if (u_int0 == 1) {\n        // Grainy mode: pure hash noise (no interpolation = no banding)\n        g = toGaussian(grainPixel);\n        grainRGB = vec3(\n            toGaussian(grainPixel, 100u),\n            toGaussian(grainPixel, 200u),\n            toGaussian(grainPixel, 300u)\n        );\n    } else {\n        // Smooth mode: interpolated with quintic curve\n        g = smoothNoise(grainUV);\n        grainRGB = vec3(\n            smoothNoise(grainUV, 100u),\n            smoothNoise(grainUV, 200u),\n            smoothNoise(grainUV, 300u)\n        );\n    }\n    \n    // Luminance weighting (less grain in highlights)\n    float lumWeight = mix(1.0, 1.0 - luma, clamp(u_float3, 0.0, 1.0));\n    \n    // Strength\n    float strength = u_float0 * 0.15;\n    \n    // Color vs monochrome grain\n    vec3 grainColor = mix(vec3(g), grainRGB, clamp(u_float2, 0.0, 1.0));\n    \n    color.rgb += grainColor * strength * lumWeight;\n    fragColor0 = vec4(clamp(color.rgb, 0.0, 1.0), color.a);\n}\n",
+        "size_mode": "from_input",
+        "images.image0": [
+          "120:190",
+          0
+        ],
+        "floats.u_float0": [
+          "121:186",
+          0
+        ],
+        "floats.u_float1": [
+          "121:187",
+          0
+        ],
+        "floats.u_float2": [
+          "121:188",
+          0
+        ],
+        "floats.u_float3": [
+          "121:189",
+          0
+        ],
+        "ints.u_int0": [
+          "121:185",
+          1
+        ]
+      },
+      "class_type": "GLSLShader",
+      "_meta": {
+        "title": "GLSL Shader",
+        "branch": "122"
+      }
+    },
+    "121:185": {
+      "inputs": {
+        "choice": "Smooth",
+        "index": -1,
+        "option1": "Smooth",
+        "option2": "Grainy",
+        "option3": ""
+      },
+      "class_type": "CustomCombo",
+      "_meta": {
+        "title": "grain_mode",
+        "branch": "122"
+      }
+    },
+    "121:186": {
+      "inputs": {
+        "value": 0.25
+      },
+      "class_type": "PrimitiveFloat",
+      "_meta": {
+        "title": "grain_amount",
+        "branch": "122"
+      }
+    },
+    "121:187": {
+      "inputs": {
+        "value": 0.1
+      },
+      "class_type": "PrimitiveFloat",
+      "_meta": {
+        "title": "grain_size",
+        "branch": "122"
+      }
+    },
+    "121:188": {
+      "inputs": {
+        "value": 0
+      },
+      "class_type": "PrimitiveFloat",
+      "_meta": {
+        "title": "color_amount",
+        "branch": "122"
+      }
+    },
+    "121:189": {
+      "inputs": {
+        "value": 0
+      },
+      "class_type": "PrimitiveFloat",
+      "_meta": {
+        "title": "shadow_focus",
+        "branch": "122"
+      }
+    },
+    "120:190": {
+      "inputs": {
+        "fragment_shader": "#version 300 es\nprecision highp float;\n\nuniform sampler2D u_image0;\nuniform float u_float0;   // Blur radius (0–20, default ~5)\nuniform float u_float1;   // Edge threshold (0–100, default ~30)\nuniform int u_int0;       // Step size (0/1 = every pixel, 2+ = skip pixels)\n\nin vec2 v_texCoord;\nout vec4 fragColor;\n\nconst int MAX_RADIUS = 20;\nconst float EPSILON = 0.0001;\n\n// Perceptual luminance\nfloat getLuminance(vec3 rgb) {\n    return dot(rgb, vec3(0.299, 0.587, 0.114));\n}\n\nvec4 bilateralFilter(vec2 uv, vec2 texelSize, int radius,\n                     float sigmaSpatial, float sigmaColor)\n{\n    vec4 center = texture(u_image0, uv);\n    vec3 centerRGB = center.rgb;\n\n    float invSpatial2 = -0.5 / (sigmaSpatial * sigmaSpatial);\n    float invColor2   = -0.5 / (sigmaColor * sigmaColor + EPSILON);\n\n    vec3 sumRGB = vec3(0.0);\n    float sumWeight = 0.0;\n\n    int step = max(u_int0, 1);\n    float radius2 = float(radius * radius);\n\n    for (int dy = -MAX_RADIUS; dy <= MAX_RADIUS; dy++) {\n        if (dy < -radius || dy > radius) continue;\n        if (abs(dy) % step != 0) continue;\n\n        for (int dx = -MAX_RADIUS; dx <= MAX_RADIUS; dx++) {\n            if (dx < -radius || dx > radius) continue;\n            if (abs(dx) % step != 0) continue;\n\n            vec2 offset = vec2(float(dx), float(dy));\n            float dist2 = dot(offset, offset);\n            if (dist2 > radius2) continue;\n\n            vec3 sampleRGB = texture(u_image0, uv + offset * texelSize).rgb;\n\n            // Spatial Gaussian\n            float spatialWeight = exp(dist2 * invSpatial2);\n\n            // Perceptual color distance (weighted RGB)\n            vec3 diff = sampleRGB - centerRGB;\n            float colorDist = dot(diff * diff, vec3(0.299, 0.587, 0.114));\n            float colorWeight = exp(colorDist * invColor2);\n\n            float w = spatialWeight * colorWeight;\n            sumRGB += sampleRGB * w;\n            sumWeight += w;\n        }\n    }\n\n    vec3 resultRGB = sumRGB / max(sumWeight, EPSILON);\n    return vec4(resultRGB, center.a); // preserve center alpha\n}\n\nvoid main() {\n    vec2 texelSize = 1.0 / vec2(textureSize(u_image0, 0));\n\n    float radiusF = clamp(u_float0, 0.0, float(MAX_RADIUS));\n    int radius = int(radiusF + 0.5);\n\n    if (radius == 0) {\n        fragColor = texture(u_image0, v_texCoord);\n        return;\n    }\n\n    // Edge threshold → color sigma\n    // Squared curve for better low-end control\n    float t = clamp(u_float1, 0.0, 100.0) / 100.0;\n    t *= t;\n    float sigmaColor = mix(0.01, 0.5, t);\n\n    // Spatial sigma tied to radius\n    float sigmaSpatial = max(radiusF * 0.75, 0.5);\n\n    fragColor = bilateralFilter(\n        v_texCoord,\n        texelSize,\n        radius,\n        sigmaSpatial,\n        sigmaColor\n    );\n}",
+        "size_mode": "from_input",
+        "images.image0": [
+          "126",
+          0
+        ],
+        "floats.u_float0": [
+          "120:191",
+          0
+        ],
+        "floats.u_float1": [
+          "120:192",
+          0
+        ],
+        "ints.u_int0": [
+          "120:193",
+          0
+        ],
+        "ints.u_int1": [
+          "120:193",
+          0
+        ]
+      },
+      "class_type": "GLSLShader",
+      "_meta": {
+        "title": "GLSL Shader",
+        "branch": "118"
+      }
+    },
+    "120:191": {
+      "inputs": {
+        "value": 20
+      },
+      "class_type": "PrimitiveFloat",
+      "_meta": {
+        "title": "blur_radius",
+        "branch": "118"
+      }
+    },
+    "120:192": {
+      "inputs": {
+        "value": 50
+      },
+      "class_type": "PrimitiveFloat",
+      "_meta": {
+        "title": "edge_threshold",
+        "branch": "118"
+      }
+    },
+    "120:193": {
+      "inputs": {
+        "value": 1
+      },
+      "class_type": "PrimitiveInt",
+      "_meta": {
+        "title": "step_size",
+        "branch": "118"
+      }
+    },
+    "119": {
+      "inputs": {
+        "factor": 1.1,
+        "images": [
+          "59",
+          0
+        ]
+      },
+      "class_type": "AdjustContrast",
+      "_meta": {
+        "title": "Adjust Contrast",
+        "branch": "130"
+      }
+    },
+    "117": {
+      "inputs": {
+        "resize_source": false,
+        "destination": [
+          "76",
+          0
+        ],
+        "source": [
+          "100",
+          0
+        ],
+        "x": [
+          "107",
+          0
+        ],
+        "y": [
+          "115",
+          0
+        ],
+        "mask": [
+          "105",
+          0
+        ]
+      },
+      "class_type": "ImageCompositeMasked",
+      "_meta": {
+        "title": "ImgCompositeMasked",
+        "branch": "39"
+      }
+    },
+    "116": {
+      "inputs": {
+        "expression": "max(a.width/b,0)",
+        "a": [
+          "76",
+          0
+        ],
+        "b": [
+          "70",
+          0
+        ]
+      },
+      "class_type": "MathExpression|pysssss",
+      "_meta": {
+        "title": "Sign Width 🐍",
+        "branch": "39"
+      }
+    },
+    "115": {
+      "inputs": {
+        "expression": "max(min(c,2)*(b.height-a)*0.5,0)\n",
+        "a": [
+          "100",
+          2
+        ],
+        "b": [
+          "76",
+          0
+        ],
+        "c": [
+          "81",
+          0
+        ]
+      },
+      "class_type": "MathExpression|pysssss",
+      "_meta": {
+        "title": "Sign PosY 🐍",
+        "branch": "39"
+      }
+    },
+    "114": {
+      "inputs": {
+        "wildcard": "",
+        "Select to add LoRA": "Select the LoRA to add to the text",
+        "Select to add Wildcard": "Select the Wildcard to add to the text",
+        "model": [
+          "110",
+          0
+        ],
+        "clip": [
+          "3",
+          1
+        ],
+        "vae": [
+          "85",
+          0
+        ],
+        "positive": [
+          "103",
+          0
+        ],
+        "negative": [
+          "108",
+          0
+        ],
+        "bbox_detector": [
+          "98",
+          0
+        ],
+        "sam_model_opt": [
+          "82",
+          0
+        ]
+      },
+      "class_type": "ToDetailerPipe",
+      "_meta": {
+        "title": "ToDetailerPipe"
+      }
+    },
+    "113": {
+      "inputs": {
+        "model": [
+          "110",
+          0
+        ],
+        "clip": [
+          "3",
+          1
+        ],
+        "vae": [
+          "85",
+          0
+        ],
+        "positive": [
+          "103",
+          0
+        ],
+        "negative": [
+          "108",
+          0
+        ]
+      },
+      "class_type": "ToBasicPipe",
+      "_meta": {
+        "title": "ToBasicPipe"
+      }
+    },
+    "112": {
+      "inputs": {
+        "any_01": [
+          "63",
+          0
+        ],
+        "any_02": [
+          "2",
+          0
+        ]
+      },
+      "class_type": "Any Switch (rgthree)",
+      "_meta": {
+        "title": "Any Switch (rgthree)"
+      }
+    },
+    "111": {
+      "inputs": {
+        "id": 91,
+        "widget_name": "ckpt_name",
+        "return_all": false,
+        "node_title": "",
+        "allowed_float_decimals": 2
+      },
+      "class_type": "WidgetToString",
+      "_meta": {
+        "title": "Widget To String"
+      }
+    },
+    "110": {
+      "inputs": {
+        "strength": 1,
+        "model": [
+          "74",
+          0
+        ]
+      },
+      "class_type": "DifferentialDiffusion",
+      "_meta": {
+        "title": "Differential Diffusion"
+      }
+    },
+    "109": {
+      "inputs": {
+        "regex_pattern": "^,|,$",
+        "replace": "",
+        "case_insensitive": true,
+        "multiline": false,
+        "dotall": false,
+        "count": 0,
+        "string": [
+          "104",
+          0
+        ]
+      },
+      "class_type": "RegexReplace",
+      "_meta": {
+        "title": "Replace Text (Regex)"
+      }
+    },
+    "108": {
+      "inputs": {
+        "text": [
+          "66",
+          1
+        ],
+        "clip": [
+          "3",
+          1
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative)"
+      }
+    },
+    "107": {
+      "inputs": {
+        "expression": "max(min(c,2)*(b.width-a)*0.5,0)\n",
+        "a": [
+          "100",
+          1
+        ],
+        "b": [
+          "76",
+          0
+        ],
+        "c": [
+          "78",
+          0
+        ]
+      },
+      "class_type": "MathExpression|pysssss",
+      "_meta": {
+        "title": "Sign PosX 🐍",
+        "branch": "39"
+      }
+    },
+    "106": {
+      "inputs": {
+        "any_01": [
+          "84",
+          0
+        ],
+        "any_02": [
+          "99",
+          0
+        ]
+      },
+      "class_type": "Any Switch (rgthree)",
+      "_meta": {
+        "title": "Any Switch (rgthree)"
+      }
+    },
+    "105": {
+      "inputs": {
+        "mask": [
+          "95",
+          1
+        ]
+      },
+      "class_type": "InvertMask",
+      "_meta": {
+        "title": "Invert Mask",
+        "branch": "39"
+      }
+    },
+    "104": {
+      "inputs": {
+        "delimiter": ",",
+        "string_a": [
+          "67",
+          0
+        ],
+        "string_b": [
+          "1",
+          1
+        ]
+      },
+      "class_type": "StringConcatenate",
+      "_meta": {
+        "title": "Concatenate Text"
+      }
+    },
+    "103": {
+      "inputs": {
+        "text": [
+          "109",
+          0
+        ],
+        "clip": [
+          "3",
+          1
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Positive)"
+      }
+    },
+    "102": {
+      "inputs": {
+        "value": 1536
+      },
+      "class_type": "PrimitiveFloat",
+      "_meta": {
+        "title": "Max Size"
+      }
+    },
+    "101": {
+      "inputs": {
+        "value": false
+      },
+      "class_type": "PrimitiveBoolean",
+      "_meta": {
+        "title": "Tiled Decode"
+      }
+    },
+    "100": {
+      "inputs": {
+        "height": 0,
+        "upscale_method": "nearest-exact",
+        "keep_proportion": "resize",
+        "pad_color": "0, 0, 0",
+        "crop_position": "center",
+        "divisible_by": 1,
+        "device": "cpu",
+        "image": [
+          "95",
+          0
+        ],
+        "width": [
+          "116",
+          0
+        ]
+      },
+      "class_type": "ImageResizeKJv2",
+      "_meta": {
+        "title": "Resize Image v2",
+        "branch": "39"
+      }
+    },
+    "99": {
+      "inputs": {
+        "any_01": [
+          "72",
+          0
+        ],
+        "any_02": [
+          "7",
+          1
+        ]
+      },
+      "class_type": "Any Switch (rgthree)",
+      "_meta": {
+        "title": "Any Switch (rgthree)"
+      }
+    },
+    "98": {
+      "inputs": {
+        "model_name": "bbox/face_yolov9c.pt"
+      },
+      "class_type": "UltralyticsDetectorProvider",
+      "_meta": {
+        "title": "DefaultDetectorProvider"
+      }
+    },
+    "97": {
+      "inputs": {
+        "scaling_factor": 1.005,
+        "model": [
+          "3",
+          0
+        ]
+      },
+      "class_type": "Epsilon Scaling",
+      "_meta": {
+        "title": "Epsilon Scaling",
+        "branch": "37"
+      }
+    },
+    "96": {
+      "inputs": {
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "model": [
+          "74",
+          0
+        ],
+        "seed": [
+          "79",
+          0
+        ],
+        "steps": [
+          "9",
+          0
+        ],
+        "cfg": [
+          "94",
+          0
+        ],
+        "positive": [
+          "69",
+          0
+        ],
+        "negative": [
+          "69",
+          1
+        ],
+        "latent_image": [
+          "90",
+          0
+        ],
+        "denoise": [
+          "22",
+          0
+        ]
+      },
+      "class_type": "KSampler",
+      "_meta": {
+        "title": "KSampler",
+        "branch": "28"
+      }
+    },
+    "95": {
+      "inputs": {
+        "image": "load_signature.png"
+      },
+      "class_type": "LoadImage",
+      "_meta": {
+        "title": "Load Signature",
+        "branch": "39"
+      }
+    },
+    "94": {
+      "inputs": {
+        "value": 6
+      },
+      "class_type": "PrimitiveFloat",
+      "_meta": {
+        "title": "CFG Value"
+      }
+    },
+    "93": {
+      "inputs": {
+        "value": 512
+      },
+      "class_type": "PrimitiveFloat",
+      "_meta": {
+        "title": "Guide Size"
+      }
+    },
+    "92": {
+      "inputs": {
+        "value": 2.5
+      },
+      "class_type": "PrimitiveFloat",
+      "_meta": {
+        "title": "BBOX Crop Factor"
+      }
+    },
+    "91": {
+      "inputs": {
+        "ckpt_name": "WAI-Nsfw-Illustrious-17.safetensors"
+      },
+      "class_type": "CheckpointLoaderSimple",
+      "_meta": {
+        "title": "Load Checkpoint"
+      }
+    },
+    "90": {
+      "inputs": {
+        "samples": [
+          "83",
+          0
+        ],
+        "mask": [
+          "50",
+          1
+        ]
+      },
+      "class_type": "SetLatentNoiseMask",
+      "_meta": {
+        "title": "Set Latent Noise Mask",
+        "branch": "28"
+      }
+    },
+    "88": {
+      "inputs": {
+        "any_01": [
+          "117",
+          0
+        ],
+        "any_02": [
+          "76",
+          0
+        ]
+      },
+      "class_type": "Any Switch (rgthree)",
+      "_meta": {
+        "title": "Any Switch (rgthree)"
+      }
+    },
+    "86": {
+      "inputs": {
+        "image": [
+          "2",
+          0
+        ]
+      },
+      "class_type": "GetImageSize",
+      "_meta": {
+        "title": "Image Size"
+      }
+    },
+    "85": {
+      "inputs": {
+        "any_01": [
+          "5",
+          0
+        ],
+        "any_02": [
+          "91",
+          2
+        ]
+      },
+      "class_type": "Any Switch (rgthree)",
+      "_meta": {
+        "title": "Any Switch (rgthree)"
+      }
+    },
+    "84": {
+      "inputs": {
+        "samples": [
+          "96",
+          0
+        ],
+        "vae": [
+          "85",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode",
+        "branch": "28"
+      }
+    },
+    "83": {
+      "inputs": {
+        "pixels": [
+          "50",
+          0
+        ],
+        "vae": [
+          "85",
+          0
+        ]
+      },
+      "class_type": "VAEEncode",
+      "_meta": {
+        "title": "VAE Encode",
+        "branch": "28"
+      }
+    },
+    "82": {
+      "inputs": {
+        "model_name": "sam_vit_b_01ec64.pth",
+        "device_mode": "AUTO"
+      },
+      "class_type": "SAMLoader",
+      "_meta": {
+        "title": "SAMLoader (Impact)",
+        "branch": "31"
+      }
+    },
+    "81": {
+      "inputs": {
+        "value": 0
+      },
+      "class_type": "easy int",
+      "_meta": {
+        "title": "YTop/Middle/Bottom",
+        "branch": "39"
+      }
+    },
+    "80": {
+      "inputs": {
+        "model": [
+          "97",
+          0
+        ]
+      },
+      "class_type": "CFGZeroStar",
+      "_meta": {
+        "title": "CFGZeroStar",
+        "branch": "38"
+      }
+    },
+    "79": {
+      "inputs": {
+        "seed": 0
+      },
+      "class_type": "SeedNode",
+      "_meta": {
+        "title": "Seed"
+      }
+    },
+    "78": {
+      "inputs": {
+        "value": 2
+      },
+      "class_type": "easy int",
+      "_meta": {
+        "title": "X Left/Middle/Right",
+        "branch": "39"
+      }
+    },
+    "77": {
+      "inputs": {
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "model": [
+          "74",
+          0
+        ],
+        "seed": [
+          "79",
+          0
+        ],
+        "steps": [
+          "8",
+          0
+        ],
+        "cfg": [
+          "94",
+          0
+        ],
+        "positive": [
+          "49",
+          0
+        ],
+        "negative": [
+          "49",
+          1
+        ],
+        "latent_image": [
+          "75",
+          0
+        ],
+        "denoise": [
+          "21",
+          0
+        ]
+      },
+      "class_type": "KSampler",
+      "_meta": {
+        "title": "KSampler",
+        "branch": "27"
+      }
+    },
+    "76": {
+      "inputs": {
+        "rem_mode": "BEN2",
+        "image_output": "Hide",
+        "save_prefix": "ComfyUI",
+        "torchscript_jit": false,
+        "add_background": "none",
+        "refine_foreground": true,
+        "images": [
+          "132",
+          0
+        ]
+      },
+      "class_type": "easy imageRemBg",
+      "_meta": {
+        "title": "Image Remove Bg",
+        "branch": "36"
+      }
+    },
+    "75": {
+      "inputs": {
+        "samples": [
+          "71",
+          0
+        ],
+        "mask": [
+          "2",
+          1
+        ]
+      },
+      "class_type": "SetLatentNoiseMask",
+      "_meta": {
+        "title": "Set Latent Noise Mask",
+        "branch": "27"
+      }
+    },
+    "74": {
+      "inputs": {
+        "model": [
+          "64",
+          0
+        ]
+      },
+      "class_type": "Mahiro",
+      "_meta": {
+        "title": "Mahiro",
+        "branch": "32"
+      }
+    },
+    "73": {
+      "inputs": {
+        "image_a": [
+          "500",
+          0
+        ],
+        "image_b": [
+          "2",
+          0
+        ]
+      },
+      "class_type": "Image Comparer (rgthree)",
+      "_meta": {
+        "title": "Image Compare",
+        "branch": "26"
+      }
+    },
+    "72": {
+      "inputs": {
+        "samples": [
+          "77",
+          0
+        ],
+        "vae": [
+          "85",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode",
+        "branch": "27"
+      }
+    },
+    "71": {
+      "inputs": {
+        "pixels": [
+          "7",
+          1
+        ],
+        "vae": [
+          "85",
+          0
+        ]
+      },
+      "class_type": "VAEEncode",
+      "_meta": {
+        "title": "VAE Encode",
+        "branch": "27"
+      }
+    },
+    "70": {
+      "inputs": {
+        "value": 4
+      },
+      "class_type": "easy int",
+      "_meta": {
+        "title": "Width Divisor",
+        "branch": "39"
+      }
+    },
+    "69": {
+      "inputs": {
+        "strength": 1,
+        "start_percent": 0,
+        "end_percent": 1,
+        "positive": [
+          "103",
+          0
+        ],
+        "negative": [
+          "108",
+          0
+        ],
+        "control_net": [
+          "36",
+          0
+        ],
+        "image": [
+          "44",
+          0
+        ],
+        "vae": [
+          "85",
+          0
+        ]
+      },
+      "class_type": "ControlNetApplyAdvanced",
+      "_meta": {
+        "title": "Apply ControlNet",
+        "branch": "28"
+      }
+    },
+    "68": {
+      "inputs": {
+        "guide_size_for": true,
+        "mask_mode": true,
+        "steps": 20,
+        "sampler_name": "euler_ancestral",
+        "scheduler": "normal",
+        "denoise": 0.6,
+        "feather": 16,
+        "drop_size": 12,
+        "refiner_ratio": 0.2,
+        "batch_size": 1,
+        "cycle": 1,
+        "inpaint_model": false,
+        "noise_mask_feather": 64,
+        "bbox_fill": false,
+        "contour_fill": true,
+        "image": [
+          "37",
+          0
+        ],
+        "mask": [
+          "65",
+          0
+        ],
+        "basic_pipe": [
+          "113",
+          0
+        ],
+        "guide_size": [
+          "93",
+          0
+        ],
+        "max_size": [
+          "102",
+          0
+        ],
+        "seed": [
+          "79",
+          0
+        ],
+        "cfg": [
+          "94",
+          0
+        ],
+        "crop_factor": [
+          "92",
+          0
+        ]
+      },
+      "class_type": "MaskDetailerPipe",
+      "_meta": {
+        "title": "MaskDetailer (pipe)",
+        "branch": "sam_detailer"
+      }
+    },
+    "67": {
+      "inputs": {
+        "group_mode": true,
+        "default_active": false,
+        "allow_strength_adjustment": false,
+        "trigger_words": [
+          "3",
+          2
+        ],
+        "toggle_trigger_words": {
+          "__value__": []
+        }
+      },
+      "class_type": "TriggerWord Toggle (LoraManager)",
+      "_meta": {
+        "title": "TriggerWord Toggle (LoraManager)"
+      }
+    },
+    "66": {
+      "inputs": {
+        "text": "bad quality, worst quality, worst detail, sketch, bad hands, bad anatomy, deformed, artist name, watermark, signature, patreon, twitter username",
+        "Select to add LoRA": "Select the LoRA to add to the text",
+        "Select to add Wildcard": "Select the Wildcard to add to the text",
+        "multiline_mode": false,
+        "seed": [
+          "79",
+          0
+        ]
+      },
+      "class_type": "easy wildcards",
+      "_meta": {
+        "title": "Negative"
+      }
+    },
+    "65": {
+      "inputs": {
+        "expand": 2,
+        "tapered_corners": true,
+        "mask": [
+          "45",
+          0
+        ]
+      },
+      "class_type": "GrowMask",
+      "_meta": {
+        "title": "Grow Mask",
+        "branch": "sam_detailer"
+      }
+    },
+    "64": {
+      "inputs": {
+        "sampling": "v_prediction",
+        "zsnr": true,
+        "model": [
+          "80",
+          0
+        ]
+      },
+      "class_type": "ModelSamplingDiscrete",
+      "_meta": {
+        "title": "ModelSamplingDiscrete",
+        "branch": "32"
+      }
+    },
+    "63": {
+      "inputs": {
+        "samples": [
+          "62",
+          0
+        ],
+        "vae": [
+          "85",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode",
+        "branch": "29"
+      }
+    },
+    "62": {
+      "inputs": {
+        "steps": 30,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "denoise": 1,
+        "model": [
+          "3",
+          0
+        ],
+        "seed": [
+          "79",
+          0
+        ],
+        "cfg": [
+          "94",
+          0
+        ],
+        "positive": [
+          "60",
+          0
+        ],
+        "negative": [
+          "60",
+          1
+        ],
+        "latent_image": [
+          "61",
+          0
+        ]
+      },
+      "class_type": "KSampler",
+      "_meta": {
+        "title": "KSampler",
+        "branch": "29"
+      }
+    },
+    "61": {
+      "inputs": {
+        "grow_mask_by": 8,
+        "pixels": [
+          "2",
+          0
+        ],
+        "vae": [
+          "85",
+          0
+        ],
+        "mask": [
+          "54",
+          0
+        ]
+      },
+      "class_type": "VAEEncodeForInpaint",
+      "_meta": {
+        "title": "VAE Encode (Inpainting)",
+        "branch": "29"
+      }
+    },
+    "60": {
+      "inputs": {
+        "strength": 1,
+        "start_percent": 0,
+        "end_percent": 1,
+        "positive": [
+          "103",
+          0
+        ],
+        "negative": [
+          "108",
+          0
+        ],
+        "control_net": [
+          "47",
+          0
+        ],
+        "image": [
+          "53",
+          0
+        ],
+        "vae": [
+          "85",
+          0
+        ]
+      },
+      "class_type": "ControlNetApplyAdvanced",
+      "_meta": {
+        "title": "Apply ControlNet",
+        "branch": "29"
+      }
+    },
+    "59": {
+      "inputs": {
+        "auto_detect": "enable",
+        "compression_level": 100,
+        "image": [
+          "40",
+          0
+        ]
+      },
+      "class_type": "JPEG artifacts removal FBCNN",
+      "_meta": {
+        "title": "Compression Removal",
+        "branch": "19"
+      }
+    },
+    "58": {
+      "inputs": {
+        "guide_size_for": true,
+        "steps": 14,
+        "sampler_name": "euler_ancestral",
+        "scheduler": "normal",
+        "denoise": 0.24,
+        "feather": 16,
+        "noise_mask": true,
+        "force_inpaint": true,
+        "bbox_threshold": 0.38,
+        "bbox_dilation": 8,
+        "sam_detection_hint": "none",
+        "sam_dilation": 4,
+        "sam_threshold": 0.9,
+        "sam_bbox_expansion": 0,
+        "sam_mask_hint_threshold": 0.7,
+        "sam_mask_hint_use_negative": "False",
+        "drop_size": 16,
+        "refiner_ratio": 0.2,
+        "cycle": 1,
+        "inpaint_model": false,
+        "noise_mask_feather": 64,
+        "image": [
+          "57",
+          0
+        ],
+        "detailer_pipe": [
+          "30",
+          0
+        ],
+        "guide_size": [
+          "93",
+          0
+        ],
+        "max_size": [
+          "102",
+          0
+        ],
+        "seed": [
+          "79",
+          0
+        ],
+        "cfg": [
+          "94",
+          0
+        ],
+        "bbox_crop_factor": [
+          "92",
+          0
+        ],
+        "tiled_encode": [
+          "101",
+          0
+        ],
+        "tiled_decode": [
+          "101",
+          0
+        ]
+      },
+      "class_type": "FaceDetailerPipe",
+      "_meta": {
+        "title": "EyesDetailer (pipe)",
+        "branch": "eyes"
+      }
+    },
+    "57": {
+      "inputs": {
+        "guide_size_for": true,
+        "steps": 14,
+        "sampler_name": "euler_ancestral",
+        "scheduler": "normal",
+        "denoise": 0.26,
+        "feather": 16,
+        "noise_mask": true,
+        "force_inpaint": true,
+        "bbox_threshold": 0.4,
+        "bbox_dilation": 8,
+        "sam_detection_hint": "none",
+        "sam_dilation": 4,
+        "sam_threshold": 0.9,
+        "sam_bbox_expansion": 0,
+        "sam_mask_hint_threshold": 0.7,
+        "sam_mask_hint_use_negative": "False",
+        "drop_size": 16,
+        "refiner_ratio": 0.2,
+        "cycle": 1,
+        "inpaint_model": false,
+        "noise_mask_feather": 64,
+        "image": [
+          "56",
+          0
+        ],
+        "detailer_pipe": [
+          "29",
+          0
+        ],
+        "guide_size": [
+          "93",
+          0
+        ],
+        "max_size": [
+          "102",
+          0
+        ],
+        "seed": [
+          "79",
+          0
+        ],
+        "cfg": [
+          "94",
+          0
+        ],
+        "bbox_crop_factor": [
+          "92",
+          0
+        ],
+        "tiled_encode": [
+          "101",
+          0
+        ],
+        "tiled_decode": [
+          "101",
+          0
+        ]
+      },
+      "class_type": "FaceDetailerPipe",
+      "_meta": {
+        "title": "FaceDetailer (pipe)",
+        "branch": "face"
+      }
+    },
+    "56": {
+      "inputs": {
+        "guide_size_for": true,
+        "steps": 14,
+        "sampler_name": "euler_ancestral",
+        "scheduler": "normal",
+        "denoise": 0.3,
+        "feather": 16,
+        "noise_mask": true,
+        "force_inpaint": true,
+        "bbox_threshold": 0.44,
+        "bbox_dilation": 8,
+        "sam_detection_hint": "none",
+        "sam_dilation": 4,
+        "sam_threshold": 0.9,
+        "sam_bbox_expansion": 0,
+        "sam_mask_hint_threshold": 0.7,
+        "sam_mask_hint_use_negative": "False",
+        "drop_size": 16,
+        "refiner_ratio": 0.2,
+        "cycle": 1,
+        "inpaint_model": false,
+        "noise_mask_feather": 64,
+        "image": [
+          "55",
+          0
+        ],
+        "detailer_pipe": [
+          "28",
+          0
+        ],
+        "guide_size": [
+          "93",
+          0
+        ],
+        "max_size": [
+          "102",
+          0
+        ],
+        "seed": [
+          "79",
+          0
+        ],
+        "cfg": [
+          "94",
+          0
+        ],
+        "bbox_crop_factor": [
+          "92",
+          0
+        ],
+        "tiled_encode": [
+          "101",
+          0
+        ],
+        "tiled_decode": [
+          "101",
+          0
+        ]
+      },
+      "class_type": "FaceDetailerPipe",
+      "_meta": {
+        "title": "NSFWDetailer (pipe)",
+        "branch": "nsfw_repair"
+      }
+    },
+    "55": {
+      "inputs": {
+        "guide_size_for": true,
+        "steps": 14,
+        "sampler_name": "euler_ancestral",
+        "scheduler": "normal",
+        "denoise": 0.4,
+        "feather": 16,
+        "noise_mask": true,
+        "force_inpaint": true,
+        "bbox_threshold": 0.5,
+        "bbox_dilation": 8,
+        "sam_detection_hint": "none",
+        "sam_dilation": 4,
+        "sam_threshold": 0.9,
+        "sam_bbox_expansion": 0,
+        "sam_mask_hint_threshold": 0.7,
+        "sam_mask_hint_use_negative": "False",
+        "drop_size": 16,
+        "refiner_ratio": 0.2,
+        "cycle": 1,
+        "inpaint_model": false,
+        "noise_mask_feather": 64,
+        "image": [
+          "68",
+          0
+        ],
+        "detailer_pipe": [
+          "27",
+          0
+        ],
+        "guide_size": [
+          "93",
+          0
+        ],
+        "max_size": [
+          "102",
+          0
+        ],
+        "seed": [
+          "79",
+          0
+        ],
+        "cfg": [
+          "94",
+          0
+        ],
+        "bbox_crop_factor": [
+          "92",
+          0
+        ],
+        "tiled_encode": [
+          "101",
+          0
+        ],
+        "tiled_decode": [
+          "101",
+          0
+        ]
+      },
+      "class_type": "FaceDetailerPipe",
+      "_meta": {
+        "title": "HandDetailer (pipe)",
+        "branch": "hands"
+      }
+    },
+    "54": {
+      "inputs": {
+        "segs": [
+          "26",
+          0
+        ]
+      },
+      "class_type": "SegsToCombinedMask",
+      "_meta": {
+        "title": "SEGS to MASK",
+        "branch": "29"
+      }
+    },
+    "53": {
+      "inputs": {
+        "black_pixel_for_xinsir_cn": true,
+        "image": [
+          "2",
+          0
+        ],
+        "mask": [
+          "54",
+          0
+        ]
+      },
+      "class_type": "InpaintPreprocessor",
+      "_meta": {
+        "title": "Inpaint Preprocessor",
+        "branch": "29"
+      }
+    },
+    "52": {
+      "inputs": {
+        "value": 0.16
+      },
+      "class_type": "easy float",
+      "_meta": {
+        "title": "Upscaler Denoise",
+        "branch": "30"
+      }
+    },
+    "51": {
+      "inputs": {
+        "low_threshold": 0.35,
+        "high_threshold": 0.75,
+        "image": [
+          "58",
+          0
+        ]
+      },
+      "class_type": "Canny",
+      "_meta": {
+        "title": "Detect Edges (Canny)",
+        "branch": "30"
+      }
+    },
+    "50": {
+      "inputs": {
+        "left": 256,
+        "top": 256,
+        "right": 256,
+        "bottom": 256,
+        "feathering": 96,
+        "image": [
+          "99",
+          0
+        ]
+      },
+      "class_type": "ImagePadForOutpaint",
+      "_meta": {
+        "title": "Pad Image for Outpainting",
+        "branch": "28"
+      }
+    },
+    "49": {
+      "inputs": {
+        "strength": 1,
+        "start_percent": 0,
+        "end_percent": 1,
+        "positive": [
+          "103",
+          0
+        ],
+        "negative": [
+          "108",
+          0
+        ],
+        "control_net": [
+          "35",
+          0
+        ],
+        "image": [
+          "43",
+          0
+        ],
+        "vae": [
+          "85",
+          0
+        ]
+      },
+      "class_type": "ControlNetApplyAdvanced",
+      "_meta": {
+        "title": "Apply ControlNet",
+        "branch": "27"
+      }
+    },
+    "48": {
+      "inputs": {
+        "stop_at_clip_layer": -2,
+        "clip": [
+          "91",
+          1
+        ]
+      },
+      "class_type": "CLIPSetLastLayer",
+      "_meta": {
+        "title": "CLIP Set Last Layer",
+        "branch": "33"
+      }
+    },
+    "47": {
+      "inputs": {
+        "control_net_name": "noobaiInpainting_v10.safetensors"
+      },
+      "class_type": "ControlNetLoader",
+      "_meta": {
+        "title": "Load ControlNet Model",
+        "branch": "29"
+      }
+    },
+    "46": {
+      "inputs": {
+        "value": 18
+      },
+      "class_type": "easy int",
+      "_meta": {
+        "title": "Upscaler Steps",
+        "branch": "30"
+      }
+    },
+    "45": {
+      "inputs": {
+        "threshold": 0.5,
+        "refine_iterations": 0,
+        "individual_masks": true,
+        "bboxes": {
+          "x": 0,
+          "y": 0,
+          "width": 512,
+          "height": 512
+        },
+        "model": [
+          "13",
+          0
+        ],
+        "image": [
+          "37",
+          0
+        ],
+        "conditioning": [
+          "31",
+          0
+        ]
+      },
+      "class_type": "SAM3_Detect",
+      "_meta": {
+        "title": "SAM3 Detect",
+        "branch": "sam_detailer"
+      }
+    },
+    "44": {
+      "inputs": {
+        "black_pixel_for_xinsir_cn": true,
+        "image": [
+          "50",
+          0
+        ],
+        "mask": [
+          "50",
+          1
+        ]
+      },
+      "class_type": "InpaintPreprocessor",
+      "_meta": {
+        "title": "Inpaint Preprocessor",
+        "branch": "28"
+      }
+    },
+    "43": {
+      "inputs": {
+        "black_pixel_for_xinsir_cn": true,
+        "image": [
+          "7",
+          1
+        ],
+        "mask": [
+          "2",
+          1
+        ]
+      },
+      "class_type": "InpaintPreprocessor",
+      "_meta": {
+        "title": "Inpaint Preprocessor",
+        "branch": "27"
+      }
+    },
+    "41": {
+      "inputs": {
+        "value": 2
+      },
+      "class_type": "easy float",
+      "_meta": {
+        "title": "Upscale by",
+        "branch": "30"
+      }
+    },
+    "40": {
+      "inputs": {
+        "method": "mkl",
+        "strength": 1,
+        "multithread": true,
+        "image_target": [
+          "19",
+          0
+        ],
+        "image_ref": [
+          "2",
+          0
+        ]
+      },
+      "class_type": "ColorMatchV2",
+      "_meta": {
+        "title": "ColorMatchV2",
+        "branch": "11"
+      }
+    },
+    "39": {
+      "inputs": {
+        "expression": "min(b,max(c,a.width))",
+        "a": [
+          "58",
+          0
+        ],
+        "b": [
+          "102",
+          0
+        ],
+        "c": [
+          "93",
+          0
+        ]
+      },
+      "class_type": "MathExpression|pysssss",
+      "_meta": {
+        "title": "tile width",
+        "branch": "30"
+      }
+    },
+    "38": {
+      "inputs": {
+        "expression": "min(b,max(c,a.height))",
+        "a": [
+          "58",
+          0
+        ],
+        "b": [
+          "102",
+          0
+        ],
+        "c": [
+          "93",
+          0
+        ]
+      },
+      "class_type": "MathExpression|pysssss",
+      "_meta": {
+        "title": "tile height",
+        "branch": "30"
+      }
+    },
+    "37": {
+      "inputs": {
+        "guide_size_for": true,
+        "mask_mode": true,
+        "sampler_name": "euler_ancestral",
+        "scheduler": "normal",
+        "feather": 16,
+        "drop_size": 12,
+        "refiner_ratio": 0.2,
+        "batch_size": 1,
+        "cycle": 1,
+        "inpaint_model": false,
+        "noise_mask_feather": 64,
+        "bbox_fill": false,
+        "contour_fill": true,
+        "image": [
+          "23",
+          0
+        ],
+        "mask": [
+          "2",
+          1
+        ],
+        "basic_pipe": [
+          "113",
+          0
+        ],
+        "guide_size": [
+          "93",
+          0
+        ],
+        "max_size": [
+          "102",
+          0
+        ],
+        "seed": [
+          "79",
+          0
+        ],
+        "steps": [
+          "12",
+          0
+        ],
+        "cfg": [
+          "94",
+          0
+        ],
+        "denoise": [
+          "25",
+          0
+        ],
+        "crop_factor": [
+          "92",
+          0
+        ]
+      },
+      "class_type": "MaskDetailerPipe",
+      "_meta": {
+        "title": "MaskDetailer (pipe)",
+        "branch": "mask"
+      }
+    },
+    "36": {
+      "inputs": {
+        "control_net_name": "noobaiInpainting_v10.safetensors"
+      },
+      "class_type": "ControlNetLoader",
+      "_meta": {
+        "title": "Load ControlNet Model",
+        "branch": "28"
+      }
+    },
+    "35": {
+      "inputs": {
+        "control_net_name": "noobaiInpainting_v10.safetensors"
+      },
+      "class_type": "ControlNetLoader",
+      "_meta": {
+        "title": "Load ControlNet Model",
+        "branch": "27"
+      }
+    },
+    "34": {
+      "inputs": {
+        "strength": 0.64,
+        "start_percent": 0,
+        "end_percent": 0.42,
+        "positive": [
+          "103",
+          0
+        ],
+        "negative": [
+          "108",
+          0
+        ],
+        "control_net": [
+          "18",
+          0
+        ],
+        "image": [
+          "51",
+          0
+        ],
+        "vae": [
+          "85",
+          0
+        ]
+      },
+      "class_type": "ControlNetApplyAdvanced",
+      "_meta": {
+        "title": "Apply ControlNet",
+        "branch": "30"
+      }
+    },
+    "33": {
+      "inputs": {
+        "sampler_name": "dpmpp_2m_sde",
+        "scheduler": "karras",
+        "mode_type": "Linear",
+        "mask_blur": 16,
+        "tile_padding": 64,
+        "seam_fix_mode": "Half Tile + Intersections",
+        "seam_fix_denoise": 0.42,
+        "seam_fix_width": 64,
+        "seam_fix_mask_blur": 16,
+        "seam_fix_padding": 32,
+        "force_uniform_tiles": true,
+        "batch_size": 1,
+        "image": [
+          "58",
+          0
+        ],
+        "model": [
+          "74",
+          0
+        ],
+        "positive": [
+          "34",
+          0
+        ],
+        "negative": [
+          "34",
+          1
+        ],
+        "vae": [
+          "85",
+          0
+        ],
+        "upscale_by": [
+          "41",
+          0
+        ],
+        "seed": [
+          "79",
+          0
+        ],
+        "steps": [
+          "46",
+          0
+        ],
+        "cfg": [
+          "94",
+          0
+        ],
+        "denoise": [
+          "52",
+          0
+        ],
+        "upscale_model": [
+          "24",
+          0
+        ],
+        "tile_width": [
+          "39",
+          0
+        ],
+        "tile_height": [
+          "38",
+          0
+        ],
+        "tiled_decode": [
+          "101",
+          0
+        ]
+      },
+      "class_type": "UltimateSDUpscale",
+      "_meta": {
+        "title": "Ultimate SD Upscale",
+        "branch": "30"
+      }
+    },
+    "32": {
+      "inputs": {
+        "filename_prefix": "Detailer_V40",
+        "images": [
+          "500",
+          0
+        ]
+      },
+      "class_type": "SaveImage",
+      "_meta": {
+        "title": "保存 AstrBot 结果"
+      }
+    },
+    "31": {
+      "inputs": {
+        "text": "person:9",
+        "clip": [
+          "13",
+          1
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Prompt)",
+        "branch": "sam_detailer"
+      }
+    },
+    "30": {
+      "inputs": {
+        "wildcard": "[CONCAT] {eyes|eyes,detailed eyes}",
+        "Select to add LoRA": "Select the LoRA to add to the text",
+        "Select to add Wildcard": "Select the Wildcard to add to the text",
+        "detailer_pipe": [
+          "114",
+          0
+        ],
+        "bbox_detector": [
+          "17",
+          0
+        ]
+      },
+      "class_type": "EditDetailerPipe",
+      "_meta": {
+        "title": "Edit DetailerPipe",
+        "branch": "eyes"
+      }
+    },
+    "29": {
+      "inputs": {
+        "wildcard": "[CONCAT] {face|face,detailed face}",
+        "Select to add LoRA": "Select the LoRA to add to the text",
+        "Select to add Wildcard": "Select the Wildcard to add to the text",
+        "detailer_pipe": [
+          "114",
+          0
+        ],
+        "bbox_detector": [
+          "16",
+          0
+        ]
+      },
+      "class_type": "EditDetailerPipe",
+      "_meta": {
+        "title": "Edit DetailerPipe",
+        "branch": "face"
+      }
+    },
+    "28": {
+      "inputs": {
+        "wildcard": "[LAB]\n[ALL] nsfw\n[NIPPLES] nsfw, nipples\n[PUSSY] nsfw, pussy\n[ANUS] nsfw, (anus)\n[PENIS] nsfw, penis\n[TESTICLES] nsfw, testicles",
+        "Select to add LoRA": "Select the LoRA to add to the text",
+        "Select to add Wildcard": "Select the Wildcard to add to the text",
+        "detailer_pipe": [
+          "114",
+          0
+        ],
+        "bbox_detector": [
+          "15",
+          0
+        ],
+        "segm_detector": [
+          "15",
+          1
+        ]
+      },
+      "class_type": "EditDetailerPipe",
+      "_meta": {
+        "title": "Edit DetailerPipe",
+        "branch": "nsfw_repair"
+      }
+    },
+    "27": {
+      "inputs": {
+        "wildcard": "[CONCAT] hand, perfect hands",
+        "Select to add LoRA": "Select the LoRA to add to the text",
+        "Select to add Wildcard": "Select the Wildcard to add to the text",
+        "detailer_pipe": [
+          "114",
+          0
+        ],
+        "bbox_detector": [
+          "14",
+          0
+        ]
+      },
+      "class_type": "EditDetailerPipe",
+      "_meta": {
+        "title": "Edit DetailerPipe",
+        "branch": "hands"
+      }
+    },
+    "26": {
+      "inputs": {
+        "threshold": 0.32,
+        "dilation": 24,
+        "crop_factor": 3,
+        "drop_size": 10,
+        "labels": "watermark, text",
+        "segm_detector": [
+          "6",
+          1
+        ],
+        "image": [
+          "2",
+          0
+        ]
+      },
+      "class_type": "SegmDetectorSEGS",
+      "_meta": {
+        "title": "SEGM Detector (SEGS)",
+        "branch": "29"
+      }
+    },
+    "25": {
+      "inputs": {
+        "value": 0.3
+      },
+      "class_type": "easy float",
+      "_meta": {
+        "title": "Mask Denoise",
+        "branch": "mask"
+      }
+    },
+    "24": {
+      "inputs": {
+        "model_name": "4x_foolhardy_Remacri.pth"
+      },
+      "class_type": "UpscaleModelLoader",
+      "_meta": {
+        "title": "Load Upscale Model",
+        "branch": "30"
+      }
+    },
+    "23": {
+      "inputs": {
+        "guide_size_for": true,
+        "steps": 18,
+        "sampler_name": "euler_ancestral",
+        "scheduler": "simple",
+        "denoise": 0.25,
+        "feather": 5,
+        "noise_mask": true,
+        "force_inpaint": true,
+        "wildcard": "",
+        "refiner_ratio": 0.2,
+        "cycle": 1,
+        "inpaint_model": false,
+        "noise_mask_feather": 20,
+        "image": [
+          "106",
+          0
+        ],
+        "segs": [
+          "11",
+          0
+        ],
+        "guide_size": [
+          "93",
+          0
+        ],
+        "max_size": [
+          "102",
+          0
+        ],
+        "seed": [
+          "79",
+          0
+        ],
+        "cfg": [
+          "94",
+          0
+        ],
+        "basic_pipe": [
+          "113",
+          0
+        ],
+        "tiled_encode": [
+          "101",
+          0
+        ],
+        "tiled_decode": [
+          "101",
+          0
+        ]
+      },
+      "class_type": "DetailerForEachPipe",
+      "_meta": {
+        "title": "Detailer (SEGS/pipe)",
+        "branch": "full_detailer"
+      }
+    },
+    "22": {
+      "inputs": {
+        "value": 1
+      },
+      "class_type": "easy float",
+      "_meta": {
+        "title": "Denoise",
+        "branch": "28"
+      }
+    },
+    "21": {
+      "inputs": {
+        "value": 1
+      },
+      "class_type": "easy float",
+      "_meta": {
+        "title": "Denoise",
+        "branch": "27"
+      }
+    },
+    "20": {
+      "inputs": {
+        "image": [
+          "106",
+          0
+        ]
+      },
+      "class_type": "GetImageSize",
+      "_meta": {
+        "title": "Get Image Size",
+        "branch": "full_detailer"
+      }
+    },
+    "19": {
+      "inputs": {
+        "resize_type": "scale by multiplier",
+        "quality": "ULTRA",
+        "images": [
+          "33",
+          0
+        ],
+        "resize_type.scale": 2
+      },
+      "class_type": "RTXVideoSuperResolution",
+      "_meta": {
+        "title": "RTX Video Super Resolution Pro",
+        "branch": "132"
+      }
+    },
+    "18": {
+      "inputs": {
+        "control_net_name": "SDXL\\control-lora-canny-rank256.safetensors"
+      },
+      "class_type": "ControlNetLoader",
+      "_meta": {
+        "title": "Load ControlNet Model",
+        "branch": "30"
+      }
+    },
+    "17": {
+      "inputs": {
+        "model_name": "bbox/Eyeful_v2-Individual.pt"
+      },
+      "class_type": "UltralyticsDetectorProvider",
+      "_meta": {
+        "title": "UltralyticsDetectorProvider",
+        "branch": "eyes"
+      }
+    },
+    "16": {
+      "inputs": {
+        "model_name": "bbox/face_yolov9c.pt"
+      },
+      "class_type": "UltralyticsDetectorProvider",
+      "_meta": {
+        "title": "UltralyticsDetectorProvider",
+        "branch": "face"
+      }
+    },
+    "15": {
+      "inputs": {
+        "model_name": "segm/ntd11_anime_nsfw_segm_v5-variant1.pt"
+      },
+      "class_type": "UltralyticsDetectorProvider",
+      "_meta": {
+        "title": "UltralyticsDetectorProvider",
+        "branch": "nsfw_repair"
+      }
+    },
+    "14": {
+      "inputs": {
+        "model_name": "bbox/hand_yolov9c.pt"
+      },
+      "class_type": "UltralyticsDetectorProvider",
+      "_meta": {
+        "title": "UltralyticsDetectorProvider",
+        "branch": "hands"
+      }
+    },
+    "13": {
+      "inputs": {
+        "ckpt_name": "sam3.1_multiplex_fp16.safetensors"
+      },
+      "class_type": "CheckpointLoaderSimple",
+      "_meta": {
+        "title": "Load Checkpoint",
+        "branch": "sam_detailer"
+      }
+    },
+    "12": {
+      "inputs": {
+        "value": 16
+      },
+      "class_type": "easy int",
+      "_meta": {
+        "title": "Mask Steps",
+        "branch": "mask"
+      }
+    },
+    "11": {
+      "inputs": {
+        "combined": false,
+        "crop_factor": 1,
+        "bbox_fill": false,
+        "drop_size": 10,
+        "contour_fill": false,
+        "mask": [
+          "10",
+          0
+        ]
+      },
+      "class_type": "MaskToSEGS",
+      "_meta": {
+        "title": "MASK to SEGS",
+        "branch": "full_detailer"
+      }
+    },
+    "10": {
+      "inputs": {
+        "value": 1,
+        "width": [
+          "20",
+          0
+        ],
+        "height": [
+          "20",
+          1
+        ]
+      },
+      "class_type": "SolidMask",
+      "_meta": {
+        "title": "Create Solid Mask",
+        "branch": "full_detailer"
+      }
+    },
+    "9": {
+      "inputs": {
+        "value": 30
+      },
+      "class_type": "easy int",
+      "_meta": {
+        "title": "Steps",
+        "branch": "28"
+      }
+    },
+    "8": {
+      "inputs": {
+        "value": 30
+      },
+      "class_type": "easy int",
+      "_meta": {
+        "title": "Steps",
+        "branch": "27"
+      }
+    },
+    "7": {
+      "inputs": {
+        "model_name": "4x_foolhardy_Remacri.pth",
+        "rescale_after_model": true,
+        "rescale_method": "lanczos",
+        "rescale": "by percentage",
+        "percent": 50,
+        "width": 1024,
+        "height": 1024,
+        "longer_side": 1024,
+        "crop": "disabled",
+        "image_output": "Hide",
+        "link_id": 0,
+        "save_prefix": "ComfyUI",
+        "image": [
+          "112",
+          0
+        ],
+        "vae": [
+          "85",
+          0
+        ]
+      },
+      "class_type": "easy hiresFix",
+      "_meta": {
+        "title": "HiresFix",
+        "branch": "15"
+      }
+    },
+    "6": {
+      "inputs": {
+        "model_name": "segm/unwantedV10x.pt"
+      },
+      "class_type": "UltralyticsDetectorProvider",
+      "_meta": {
+        "title": "UltralyticsDetectorProvider",
+        "branch": "29"
+      }
+    },
+    "5": {
+      "inputs": {
+        "vae_name": "sdxl_vae.safetensors"
+      },
+      "class_type": "VAELoader",
+      "_meta": {
+        "title": "Load VAE",
+        "branch": "18"
+      }
+    },
+    "3": {
+      "inputs": {
+        "model": [
+          "91",
+          0
+        ],
+        "➕ Add Lora": "",
+        "clip": [
+          "48",
+          0
+        ],
+        "text": "",
+        "loras": {
+          "__value__": []
+        }
+      },
+      "class_type": "Lora Loader (LoraManager)",
+      "_meta": {
+        "title": "Lora Loader (LoraManager)"
+      }
+    },
+    "2": {
+      "inputs": {
+        "image": "load_image.png"
+      },
+      "class_type": "LoadImage",
+      "_meta": {
+        "title": "Load Image"
+      }
+    },
+    "1": {
+      "inputs": {
+        "text": "masterpiece, best quality, amazing quality, absurdres,\n1girl, solo, portrait,",
+        "Select to add LoRA": "Select the LoRA to add to the text",
+        "Select to add Wildcard": "Select the Wildcard to add to the text",
+        "multiline_mode": false,
+        "seed": [
+          "79",
+          0
+        ]
+      },
+      "class_type": "easy wildcards",
+      "_meta": {
+        "title": "Positive"
+      }
+    },
+    "497": {
+      "inputs": {
+        "model_name": "bbox/foot_anime_yolo11m_v3.pt"
+      },
+      "class_type": "UltralyticsDetectorProvider",
+      "_meta": {
+        "title": "脚部检测",
+        "branch": "feet"
+      }
+    },
+    "498": {
+      "inputs": {
+        "wildcard": "[CONCAT] feet",
+        "Select to add LoRA": "Select the LoRA to add to the text",
+        "Select to add Wildcard": "Select the Wildcard to add to the text",
+        "detailer_pipe": [
+          "114",
+          0
+        ],
+        "bbox_detector": [
+          "497",
+          0
+        ]
+      },
+      "class_type": "EditDetailerPipe",
+      "_meta": {
+        "title": "脚部提示词",
+        "branch": "feet"
+      }
+    },
+    "499": {
+      "inputs": {
+        "guide_size_for": true,
+        "steps": 16,
+        "sampler_name": "euler_ancestral",
+        "scheduler": "normal",
+        "denoise": 0.4,
+        "feather": 16,
+        "noise_mask": true,
+        "force_inpaint": true,
+        "bbox_threshold": 0.5,
+        "bbox_dilation": 8,
+        "sam_detection_hint": "none",
+        "sam_dilation": 4,
+        "sam_threshold": 0.9,
+        "sam_bbox_expansion": 0,
+        "sam_mask_hint_threshold": 0.7,
+        "sam_mask_hint_use_negative": "False",
+        "drop_size": 16,
+        "refiner_ratio": 0.2,
+        "cycle": 1,
+        "inpaint_model": false,
+        "noise_mask_feather": 64,
+        "image": [
+          "88",
+          0
+        ],
+        "detailer_pipe": [
+          "498",
+          0
+        ],
+        "guide_size": [
+          "93",
+          0
+        ],
+        "max_size": [
+          "102",
+          0
+        ],
+        "seed": [
+          "79",
+          0
+        ],
+        "cfg": [
+          "94",
+          0
+        ],
+        "bbox_crop_factor": [
+          "92",
+          0
+        ],
+        "tiled_encode": [
+          "101",
+          0
+        ],
+        "tiled_decode": [
+          "101",
+          0
+        ]
+      },
+      "class_type": "FaceDetailerPipe",
+      "_meta": {
+        "title": "修脚 · FeetDetailer",
+        "branch": "feet"
+      }
+    },
+    "500": {
+      "inputs": {
+        "switch": false,
+        "on_false": [
+          "88",
+          0
+        ],
+        "on_true": [
+          "499",
+          0
+        ]
+      },
+      "class_type": "ComfySwitchNode",
+      "_meta": {
+        "title": "启用修脚"
+      }
+    }
+  },
+  "astrbot": {
+    "node_mapping": {
+      "positive": [
+        "1.text"
+      ],
+      "negative": [
+        "66.text"
+      ],
+      "seed": [
+        "79.seed"
+      ],
+      "image": [
+        "2.image"
+      ]
+    },
+    "v40": {
+      "branches": {
+        "11": {
+          "title": "Color Match",
+          "category": "生成阶段",
+          "nodes": [
+            "40"
+          ],
+          "enabled": false
+        },
+        "15": {
+          "title": "HiresFix",
+          "category": "生成阶段",
+          "nodes": [
+            "7"
+          ],
+          "enabled": false
+        },
+        "18": {
+          "title": "独立 VAE",
+          "category": "生成阶段",
+          "nodes": [
+            "5"
+          ],
+          "enabled": false
+        },
+        "19": {
+          "title": "JPEG 压缩修复",
+          "category": "生成阶段",
+          "nodes": [
+            "59"
+          ],
+          "enabled": false
+        },
+        "mask": {
+          "title": "遮罩重绘",
+          "category": "局部修复",
+          "nodes": [
+            "37",
+            "25",
+            "12"
+          ],
+          "enabled": true
+        },
+        "hands": {
+          "title": "修手",
+          "category": "局部修复",
+          "nodes": [
+            "55",
+            "27",
+            "14"
+          ],
+          "enabled": false
+        },
+        "nsfw_repair": {
+          "title": "NSFW 局部修复",
+          "category": "局部修复",
+          "nodes": [
+            "56",
+            "28",
+            "15"
+          ],
+          "enabled": false
+        },
+        "face": {
+          "title": "修脸",
+          "category": "局部修复",
+          "nodes": [
+            "57",
+            "29",
+            "16"
+          ],
+          "enabled": true
+        },
+        "eyes": {
+          "title": "修眼",
+          "category": "局部修复",
+          "nodes": [
+            "58",
+            "30",
+            "17"
+          ],
+          "enabled": false
+        },
+        "26": {
+          "title": "原图与结果对比",
+          "category": "生成阶段",
+          "nodes": [
+            "73"
+          ],
+          "enabled": true
+        },
+        "27": {
+          "title": "Inpaint",
+          "category": "生成阶段",
+          "nodes": [
+            "77",
+            "75",
+            "72",
+            "71",
+            "49",
+            "43",
+            "35",
+            "21",
+            "8"
+          ],
+          "enabled": false
+        },
+        "28": {
+          "title": "Outpaint",
+          "category": "生成阶段",
+          "nodes": [
+            "96",
+            "90",
+            "84",
+            "83",
+            "69",
+            "50",
+            "44",
+            "36",
+            "22",
+            "9"
+          ],
+          "enabled": false
+        },
+        "29": {
+          "title": "Remove Watermark",
+          "category": "生成阶段",
+          "nodes": [
+            "63",
+            "62",
+            "61",
+            "60",
+            "54",
+            "53",
+            "47",
+            "26",
+            "6"
+          ],
+          "enabled": false
+        },
+        "30": {
+          "title": "Ultimate SD Upscale",
+          "category": "生成阶段",
+          "nodes": [
+            "52",
+            "51",
+            "46",
+            "41",
+            "39",
+            "38",
+            "34",
+            "33",
+            "24",
+            "18"
+          ],
+          "enabled": false
+        },
+        "31": {
+          "title": "使用 SAM 分割",
+          "category": "生成阶段",
+          "nodes": [
+            "82"
+          ],
+          "enabled": true
+        },
+        "32": {
+          "title": "VPred Model?",
+          "category": "生成阶段",
+          "nodes": [
+            "74",
+            "64"
+          ],
+          "enabled": false
+        },
+        "33": {
+          "title": "CLIP Skip",
+          "category": "生成阶段",
+          "nodes": [
+            "48"
+          ],
+          "enabled": true
+        },
+        "36": {
+          "title": "Remove Background",
+          "category": "生成阶段",
+          "nodes": [
+            "76"
+          ],
+          "enabled": false
+        },
+        "37": {
+          "title": "Epsilon Scaling",
+          "category": "生成阶段",
+          "nodes": [
+            "97"
+          ],
+          "enabled": false
+        },
+        "38": {
+          "title": "CFGZeroStar",
+          "category": "生成阶段",
+          "nodes": [
+            "80"
+          ],
+          "enabled": false
+        },
+        "39": {
+          "title": "Apply Signature",
+          "category": "生成阶段",
+          "nodes": [
+            "117",
+            "116",
+            "115",
+            "107",
+            "105",
+            "100",
+            "95",
+            "81",
+            "78",
+            "70"
+          ],
+          "enabled": false
+        },
+        "full_detailer": {
+          "title": "整图细化",
+          "category": "局部修复",
+          "nodes": [
+            "23",
+            "20",
+            "11",
+            "10"
+          ],
+          "enabled": false
+        },
+        "117": {
+          "title": "ImageMorphology",
+          "category": "后处理",
+          "nodes": [
+            "122"
+          ],
+          "enabled": false
+        },
+        "118": {
+          "title": "Edge-Preserving Blur",
+          "category": "后处理",
+          "nodes": [
+            "120:190",
+            "120:191",
+            "120:192",
+            "120:193"
+          ],
+          "enabled": false
+        },
+        "119": {
+          "title": "ImageQuantize",
+          "category": "后处理",
+          "nodes": [
+            "125"
+          ],
+          "enabled": false
+        },
+        "120": {
+          "title": "Chromatic Aberration",
+          "category": "后处理",
+          "nodes": [
+            "123:413",
+            "123:414",
+            "123:415"
+          ],
+          "enabled": false
+        },
+        "121": {
+          "title": "ImageSharpen",
+          "category": "后处理",
+          "nodes": [
+            "126"
+          ],
+          "enabled": false
+        },
+        "122": {
+          "title": "Film Grain",
+          "category": "后处理",
+          "nodes": [
+            "121:184",
+            "121:185",
+            "121:186",
+            "121:187",
+            "121:188",
+            "121:189"
+          ],
+          "enabled": false
+        },
+        "123": {
+          "title": "VHS TV",
+          "category": "后处理",
+          "nodes": [
+            "124"
+          ],
+          "enabled": false
+        },
+        "124": {
+          "title": "Pixelation",
+          "category": "后处理",
+          "nodes": [
+            "127"
+          ],
+          "enabled": false
+        },
+        "125": {
+          "title": "Glitch",
+          "category": "后处理",
+          "nodes": [
+            "128"
+          ],
+          "enabled": false
+        },
+        "126": {
+          "title": "Night Vision",
+          "category": "后处理",
+          "nodes": [
+            "129"
+          ],
+          "enabled": false
+        },
+        "127": {
+          "title": "Blueprint",
+          "category": "后处理",
+          "nodes": [
+            "131"
+          ],
+          "enabled": false
+        },
+        "128": {
+          "title": "Gameboy",
+          "category": "后处理",
+          "nodes": [
+            "132"
+          ],
+          "enabled": false
+        },
+        "130": {
+          "title": "Contrast",
+          "category": "后处理",
+          "nodes": [
+            "119"
+          ],
+          "enabled": false
+        },
+        "sam_detailer": {
+          "title": "SAM 3.1 细化",
+          "category": "局部修复",
+          "nodes": [
+            "68",
+            "65",
+            "45",
+            "31",
+            "13"
+          ],
+          "enabled": false
+        },
+        "132": {
+          "title": "RTX Upscale",
+          "category": "生成阶段",
+          "nodes": [
+            "19"
+          ],
+          "enabled": false
+        },
+        "feet": {
+          "title": "修脚",
+          "category": "局部修复",
+          "nodes": [
+            "497",
+            "498",
+            "499"
+          ],
+          "enabled": false
+        }
+      },
+      "bypass": {
+        "40": {
+          "0": "image_target"
+        },
+        "7": {
+          "1": "image"
+        },
+        "59": {
+          "0": "image"
+        },
+        "37": {
+          "0": "image",
+          "1": "image",
+          "2": "image",
+          "3": "basic_pipe",
+          "4": "basic_pipe"
+        },
+        "55": {
+          "0": "image",
+          "1": "image",
+          "2": "image",
+          "4": "detailer_pipe",
+          "5": "image"
+        },
+        "27": {
+          "0": "detailer_pipe"
+        },
+        "56": {
+          "0": "image",
+          "1": "image",
+          "2": "image",
+          "4": "detailer_pipe",
+          "5": "image"
+        },
+        "28": {
+          "0": "detailer_pipe"
+        },
+        "57": {
+          "0": "image",
+          "1": "image",
+          "2": "image",
+          "4": "detailer_pipe",
+          "5": "image"
+        },
+        "29": {
+          "0": "detailer_pipe"
+        },
+        "58": {
+          "0": "image",
+          "1": "image",
+          "2": "image",
+          "4": "detailer_pipe",
+          "5": "image"
+        },
+        "30": {
+          "0": "detailer_pipe"
+        },
+        "73": {
+          "0": "image_a"
+        },
+        "77": {
+          "0": "latent_image"
+        },
+        "75": {
+          "0": "samples"
+        },
+        "49": {
+          "0": "positive",
+          "1": "negative"
+        },
+        "43": {
+          "0": "image"
+        },
+        "96": {
+          "0": "latent_image"
+        },
+        "90": {
+          "0": "samples"
+        },
+        "69": {
+          "0": "positive",
+          "1": "negative"
+        },
+        "50": {
+          "0": "image"
+        },
+        "44": {
+          "0": "image"
+        },
+        "62": {
+          "0": "latent_image"
+        },
+        "60": {
+          "0": "positive",
+          "1": "negative"
+        },
+        "53": {
+          "0": "image"
+        },
+        "51": {
+          "0": "image"
+        },
+        "34": {
+          "0": "positive",
+          "1": "negative"
+        },
+        "33": {
+          "0": "image"
+        },
+        "74": {
+          "0": "model"
+        },
+        "64": {
+          "0": "model"
+        },
+        "48": {
+          "0": "clip"
+        },
+        "76": {
+          "0": "images"
+        },
+        "97": {
+          "0": "model"
+        },
+        "80": {
+          "0": "model"
+        },
+        "117": {
+          "0": "destination"
+        },
+        "105": {
+          "0": "mask"
+        },
+        "100": {
+          "0": "image",
+          "1": "width",
+          "2": "width"
+        },
+        "23": {
+          "0": "image",
+          "1": "segs",
+          "2": "basic_pipe",
+          "3": "image"
+        },
+        "122": {
+          "0": "image"
+        },
+        "120:190": {
+          "0": "images.image0"
+        },
+        "125": {
+          "0": "image"
+        },
+        "123:413": {
+          "0": "images.image0"
+        },
+        "126": {
+          "0": "image"
+        },
+        "121:184": {
+          "0": "images.image0"
+        },
+        "124": {
+          "0": "images.image0",
+          "1": "images.image0",
+          "2": "images.image0",
+          "3": "images.image0"
+        },
+        "127": {
+          "0": "images.image0",
+          "1": "images.image0",
+          "2": "images.image0",
+          "3": "images.image0"
+        },
+        "128": {
+          "0": "images.image0",
+          "1": "images.image0",
+          "2": "images.image0",
+          "3": "images.image0"
+        },
+        "129": {
+          "0": "images.image0",
+          "1": "images.image0",
+          "2": "images.image0",
+          "3": "images.image0"
+        },
+        "131": {
+          "0": "images.image0",
+          "1": "images.image0",
+          "2": "images.image0",
+          "3": "images.image0"
+        },
+        "132": {
+          "0": "images.image0",
+          "1": "images.image0",
+          "2": "images.image0",
+          "3": "images.image0"
+        },
+        "119": {
+          "0": "images"
+        },
+        "68": {
+          "0": "image",
+          "1": "image",
+          "2": "image",
+          "3": "basic_pipe",
+          "4": "basic_pipe"
+        },
+        "65": {
+          "0": "mask"
+        },
+        "19": {
+          "0": "images"
+        },
+        "498": {
+          "0": "detailer_pipe"
+        }
+      },
+      "switches": {
+        "500": "feet"
+      },
+      "output": "32",
+      "extra_output": {
+        "26": [
+          "73"
+        ]
+      },
+      "dynamic_inputs": {
+        "GLSLShader": {
+          "size_mode": {
+            "from_input": {},
+            "custom": {
+              "size_mode.width": 512,
+              "size_mode.height": 512
+            }
+          }
+        },
+        "RTXVideoSuperResolution": {
+          "resize_type": {
+            "scale by multiplier": {
+              "resize_type.scale": 2.0
+            },
+            "target dimensions": {
+              "resize_type.width": 1920,
+              "resize_type.height": 1080,
+              "resize_type.keep_aspect_ratio": true
+            },
+            "print size (mm + DPI)": {
+              "resize_type.width_mm": 500.0,
+              "resize_type.height_mm": 500.0,
+              "resize_type.dpi": 300,
+              "resize_type.keep_aspect_ratio": true
+            }
+          }
+        }
+      }
+    }
+  }
+}

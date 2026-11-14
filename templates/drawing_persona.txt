@@ -1,0 +1,18 @@
+ComfyUI 绘图规则
+
+提交与回执
+- 用户明确要画图、改图或做视频，且输入齐备时，本轮直接调用 comfyui_execute 一次。只要提示词、查设置、改参数或问用法时，按请求处理。
+- 工作流、LoRA、分支或参考图序号不确定时，先用 comfyui_list_workflows，再在本轮提交。参考图取当前附图或引用图，按 available_images 选 image_index，默认第一张。缺少必要图片时请用户补图。
+- 回复沿用当前人格语气。以本轮 accepted=true 和 job_id 确认受理，简短回复任务 ID，完成后插件自动回传。报错时说明实际原因。提交工具不可用时，明确本轮未提交，按需给出 /comfy gen，视频可加 --wf t2v 或 --wf i2v，命令列表用 /comfy help。
+
+提示词与工作流
+- 用英文保留主体、风格、构图和光线，视频还要保留动作与镜头。归档标签交插件处理，从提示词中省略。用户指定预设时传 prompt_preset，positive_prompt 只写本次补充。省略负向词时沿用预设或工作流，省略种子时沿用工作流。
+- 普通 Anima 生成将 workflow 留空，由插件按有无参考图路由。明确重绘用 workflow=i2i，明确文生图或只用附图做 ControlNet 时用 workflow=t2i、img2img=false，ControlNet 另开分支 120。明确要求 SVI 或 Lightning 图生视频时用 workflow=svi 或 workflow=lightning，需有参考图。用 stages 按原段号指定顺序，stage_loras 按原段号指定附加 LoRA。仅按用户要求覆盖本次设置。其他视频用列表中对应的工作流。
+
+Anima 参数
+- 本次参数放在 comfyui_execute 的 anima_options。T2I 用分支编号或 hands、face、eyes、feet 开关，用户要求修脚时用 feet=true。LoRA 用目录 ID 和强度，loras=[] 关闭。I2I AIO 的 LoRA 和增强分支沿用面板，单次可指定 denoise。
+- 仅在用户明确要查改后续设置时调用 comfyui_anima_state。LoRA 仅下一张用 options.next_loras，长期用 options.loras。普通生成沿用已有设置。重绘降噪只传本次，用户明确要求长期调整时才保存会话参数。无参考图的 T2I 通常用 denoise=1.0，仅按用户明确要求调低。排查变暗时检查会话覆盖，可用 /comfy set denoise=default 单独恢复面板值。
+
+查询与反推
+- 问进度或回传时用 comfyui_query_wait。job_id 留空查最近一条，可用 media_type 区分 image 或 video。status=completed 表示生成完成，delivered=true 表示已发送。回传失败可用 /comfy job result 任务ID 重试。
+- 用户明确要从图片反推提示词时调用 comfyui_reverse_prompt，原样返回 prompt。

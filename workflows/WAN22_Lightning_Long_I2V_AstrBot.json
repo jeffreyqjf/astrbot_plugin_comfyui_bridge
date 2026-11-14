@@ -1,0 +1,1259 @@
+{
+  "prompt": {
+    "918": {
+      "inputs": {
+        "unet_name": "wan2.2\\Wan2_2-I2V-A14B-LOW_fp8_e4m3fn_scaled_KJ.safetensors",
+        "weight_dtype": "default"
+      },
+      "class_type": "UNETLoader",
+      "_meta": {
+        "title": "Load Diffusion Model LOW"
+      }
+    },
+    "920": {
+      "inputs": {
+        "unet_name": "wan2.2\\Wan2_2-I2V-A14B-NSFW_fast_move-LOW_Q8lightning_edition)V2.gguf"
+      },
+      "class_type": "UnetLoaderGGUF",
+      "_meta": {
+        "title": "Unet Loader (GGUF) LOW"
+      }
+    },
+    "919": {
+      "inputs": {
+        "unet_name": "wan2.2\\Wan2_2-I2V-A14B-NSFW_fast_move-HIGH_Q8(lightning_edition)V2.gguf"
+      },
+      "class_type": "UnetLoaderGGUF",
+      "_meta": {
+        "title": "Unet Loader (GGUF) HIGH"
+      }
+    },
+    "604": {
+      "inputs": {
+        "value": 1.3
+      },
+      "class_type": "FloatConstant",
+      "_meta": {
+        "title": "motion amplitude"
+      }
+    },
+    "916": {
+      "inputs": {
+        "vae_name": "wan_2.1_vae.safetensors"
+      },
+      "class_type": "VAELoader",
+      "_meta": {
+        "title": "Load VAE"
+      }
+    },
+    "97": {
+      "inputs": {
+        "image": "example.png"
+      },
+      "class_type": "LoadImage",
+      "_meta": {
+        "title": "参考图 · AstrBot 会替换为 QQ 图片"
+      }
+    },
+    "921": {
+      "inputs": {
+        "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+        "type": "wan",
+        "device": "default"
+      },
+      "class_type": "CLIPLoader",
+      "_meta": {
+        "title": "Load CLIP"
+      }
+    },
+    "917": {
+      "inputs": {
+        "unet_name": "wan2.2\\Wan2_2-I2V-A14B-HIGH_fp8_e4m3fn_scaled_KJ.safetensors",
+        "weight_dtype": "default"
+      },
+      "class_type": "UNETLoader",
+      "_meta": {
+        "title": "Load Diffusion Model HIGH"
+      }
+    },
+    "605": {
+      "inputs": {
+        "value": 5
+      },
+      "class_type": "INTConstant",
+      "_meta": {
+        "title": "motion_frames"
+      }
+    },
+    "606": {
+      "inputs": {
+        "value": 0.05
+      },
+      "class_type": "FloatConstant",
+      "_meta": {
+        "title": "color protect strength"
+      }
+    },
+    "607": {
+      "inputs": {
+        "desired_width": 720,
+        "desired_height": 720,
+        "divisible_by": 16,
+        "upscale": false,
+        "upscale_method": "lanczos",
+        "small_image_mode": "none",
+        "pad_color": "#000000",
+        "image": [
+          "97",
+          0
+        ]
+      },
+      "class_type": "FindPerfectResolution",
+      "_meta": {
+        "title": "Find Perfect Resolution"
+      }
+    },
+    "1252:1239": {
+      "inputs": {
+        "add_noise": "disable",
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": 4,
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 2,
+        "end_at_step": 100,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "1252:1247",
+          0
+        ],
+        "positive": [
+          "1252:1248",
+          2
+        ],
+        "negative": [
+          "1252:1248",
+          3
+        ],
+        "latent_image": [
+          "1252:1238",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "2-KSampler (Advanced) LOW"
+      }
+    },
+    "1252:1244": {
+      "inputs": {
+        "text": [
+          "1001",
+          0
+        ],
+        "clip": [
+          "921",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "first prompt"
+      }
+    },
+    "1252:1245": {
+      "inputs": {
+        "text": [
+          "1101",
+          0
+        ],
+        "clip": [
+          "921",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative Prompt)"
+      }
+    },
+    "1252:1246": {
+      "inputs": {
+        "shift": 5.000000000000001,
+        "model": [
+          "919",
+          0
+        ]
+      },
+      "class_type": "ModelSamplingSD3",
+      "_meta": {
+        "title": "ModelSamplingSD3 HIGH"
+      }
+    },
+    "1252:1248": {
+      "inputs": {
+        "batch_size": 1,
+        "color_protect": true,
+        "positive": [
+          "1252:1244",
+          0
+        ],
+        "negative": [
+          "1252:1245",
+          0
+        ],
+        "vae": [
+          "916",
+          0
+        ],
+        "width": [
+          "607",
+          0
+        ],
+        "height": [
+          "607",
+          1
+        ],
+        "length": 81,
+        "motion_amplitude": [
+          "604",
+          0
+        ],
+        "correct_strength": [
+          "606",
+          0
+        ],
+        "start_image": [
+          "97",
+          0
+        ]
+      },
+      "class_type": "PainterI2VAdvanced",
+      "_meta": {
+        "title": "PainterI2VAdvanced"
+      }
+    },
+    "1252:1249": {
+      "inputs": {
+        "samples": [
+          "1252:1239",
+          0
+        ],
+        "vae": [
+          "916",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "1252:1238": {
+      "inputs": {
+        "add_noise": "enable",
+        "steps": 4,
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "end_at_step": 2,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "1252:1246",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "positive": [
+          "1252:1248",
+          0
+        ],
+        "negative": [
+          "1252:1248",
+          1
+        ],
+        "latent_image": [
+          "1252:1248",
+          4
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "1-KSampler (Advanced) HIGH"
+      }
+    },
+    "1252:1247": {
+      "inputs": {
+        "shift": 8,
+        "model": [
+          "920",
+          0
+        ]
+      },
+      "class_type": "ModelSamplingSD3",
+      "_meta": {
+        "title": "ModelSamplingSD3 LOW"
+      }
+    },
+    "1262:1253": {
+      "inputs": {
+        "inputcount": 2,
+        "image_1": [
+          "1252:1249",
+          0
+        ],
+        "image_2": [
+          "1262:1258",
+          0
+        ]
+      },
+      "class_type": "ImageBatchMulti",
+      "_meta": {
+        "title": "Image Batch Multi"
+      }
+    },
+    "1262:1255": {
+      "inputs": {
+        "add_noise": "disable",
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": 4,
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 2,
+        "end_at_step": 100,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "1252:1247",
+          0
+        ],
+        "positive": [
+          "1262:1256",
+          0
+        ],
+        "negative": [
+          "1262:1256",
+          1
+        ],
+        "latent_image": [
+          "1262:1254",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "2-KSampler (Advanced) LOW"
+      }
+    },
+    "1262:1256": {
+      "inputs": {
+        "batch_size": 1,
+        "positive": [
+          "1262:1257",
+          0
+        ],
+        "negative": [
+          "1262:1259",
+          0
+        ],
+        "vae": [
+          "916",
+          0
+        ],
+        "width": [
+          "607",
+          0
+        ],
+        "height": [
+          "607",
+          1
+        ],
+        "length": 81,
+        "motion_frames": [
+          "605",
+          0
+        ],
+        "motion_amplitude": [
+          "604",
+          0
+        ],
+        "previous_video": [
+          "1262:1260",
+          0
+        ],
+        "initial_reference_image": [
+          "97",
+          0
+        ]
+      },
+      "class_type": "PainterLongVideo",
+      "_meta": {
+        "title": "2-PainterLongVideo"
+      }
+    },
+    "1262:1257": {
+      "inputs": {
+        "text": [
+          "1002",
+          0
+        ],
+        "clip": [
+          "921",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "second prompt"
+      }
+    },
+    "1262:1258": {
+      "inputs": {
+        "samples": [
+          "1262:1255",
+          0
+        ],
+        "vae": [
+          "916",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "1262:1259": {
+      "inputs": {
+        "text": [
+          "1102",
+          0
+        ],
+        "clip": [
+          "921",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative Prompt)"
+      }
+    },
+    "1262:1260": {
+      "inputs": {
+        "upscale_method": "nearest-exact",
+        "scale_by": 2,
+        "image": [
+          "1262:1261",
+          0
+        ]
+      },
+      "class_type": "ImageScaleBy",
+      "_meta": {
+        "title": "Upscale Image By"
+      }
+    },
+    "1262:1261": {
+      "inputs": {
+        "indexes": "-1",
+        "err_if_missing": true,
+        "err_if_empty": true,
+        "image": [
+          "1252:1249",
+          0
+        ]
+      },
+      "class_type": "VHS_SelectImages",
+      "_meta": {
+        "title": "Select Images 🎥🅥🅗🅢"
+      }
+    },
+    "1262:1254": {
+      "inputs": {
+        "add_noise": "enable",
+        "steps": 4,
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "end_at_step": 2,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "1252:1246",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "positive": [
+          "1262:1256",
+          0
+        ],
+        "negative": [
+          "1262:1256",
+          1
+        ],
+        "latent_image": [
+          "1262:1256",
+          2
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "2-KSampler (Advanced) HIGH"
+      }
+    },
+    "1272:1263": {
+      "inputs": {
+        "inputcount": 2,
+        "image_1": [
+          "1262:1253",
+          0
+        ],
+        "image_2": [
+          "1272:1269",
+          0
+        ]
+      },
+      "class_type": "ImageBatchMulti",
+      "_meta": {
+        "title": "Image Batch Multi"
+      }
+    },
+    "1272:1265": {
+      "inputs": {
+        "text": [
+          "1103",
+          0
+        ],
+        "clip": [
+          "921",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative Prompt)"
+      }
+    },
+    "1272:1266": {
+      "inputs": {
+        "batch_size": 1,
+        "positive": [
+          "1272:1267",
+          0
+        ],
+        "negative": [
+          "1272:1265",
+          0
+        ],
+        "vae": [
+          "916",
+          0
+        ],
+        "width": [
+          "607",
+          0
+        ],
+        "height": [
+          "607",
+          1
+        ],
+        "length": 81,
+        "motion_frames": [
+          "605",
+          0
+        ],
+        "motion_amplitude": [
+          "604",
+          0
+        ],
+        "previous_video": [
+          "1272:1270",
+          0
+        ],
+        "initial_reference_image": [
+          "97",
+          0
+        ]
+      },
+      "class_type": "PainterLongVideo",
+      "_meta": {
+        "title": "PainterLongVideo"
+      }
+    },
+    "1272:1267": {
+      "inputs": {
+        "text": [
+          "1003",
+          0
+        ],
+        "clip": [
+          "921",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "third prompt"
+      }
+    },
+    "1272:1269": {
+      "inputs": {
+        "samples": [
+          "1272:1264",
+          0
+        ],
+        "vae": [
+          "916",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "1272:1270": {
+      "inputs": {
+        "upscale_method": "lanczos",
+        "scale_by": 2,
+        "image": [
+          "1272:1271",
+          0
+        ]
+      },
+      "class_type": "ImageScaleBy",
+      "_meta": {
+        "title": "Upscale Image By"
+      }
+    },
+    "1272:1271": {
+      "inputs": {
+        "indexes": "-1",
+        "err_if_missing": true,
+        "err_if_empty": true,
+        "image": [
+          "1262:1253",
+          0
+        ]
+      },
+      "class_type": "VHS_SelectImages",
+      "_meta": {
+        "title": "Select Images 🎥🅥🅗🅢"
+      }
+    },
+    "1272:1268": {
+      "inputs": {
+        "add_noise": "enable",
+        "steps": 4,
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "end_at_step": 2,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "1252:1246",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "positive": [
+          "1272:1266",
+          0
+        ],
+        "negative": [
+          "1272:1266",
+          1
+        ],
+        "latent_image": [
+          "1272:1266",
+          2
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "3-KSampler (Advanced) HIGH"
+      }
+    },
+    "1272:1264": {
+      "inputs": {
+        "add_noise": "disable",
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": 4,
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 2,
+        "end_at_step": 4,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "1252:1247",
+          0
+        ],
+        "positive": [
+          "1272:1266",
+          0
+        ],
+        "negative": [
+          "1272:1266",
+          1
+        ],
+        "latent_image": [
+          "1272:1268",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "3-KSampler (Advanced) LOW"
+      }
+    },
+    "1210": {
+      "inputs": {
+        "indexes": "-1",
+        "err_if_missing": true,
+        "err_if_empty": true,
+        "image": [
+          "1272:1263",
+          0
+        ]
+      },
+      "class_type": "VHS_SelectImages",
+      "_meta": {
+        "title": "Select Images 🎥🅥🅗🅢"
+      }
+    },
+    "1280:1274": {
+      "inputs": {
+        "batch_size": 1,
+        "positive": [
+          "1280:1275",
+          0
+        ],
+        "negative": [
+          "1280:1277",
+          0
+        ],
+        "vae": [
+          "916",
+          0
+        ],
+        "width": [
+          "607",
+          0
+        ],
+        "height": [
+          "607",
+          1
+        ],
+        "length": 81,
+        "motion_frames": [
+          "605",
+          0
+        ],
+        "motion_amplitude": [
+          "604",
+          0
+        ],
+        "previous_video": [
+          "1211",
+          0
+        ],
+        "initial_reference_image": [
+          "97",
+          0
+        ]
+      },
+      "class_type": "PainterLongVideo",
+      "_meta": {
+        "title": "PainterLongVideo"
+      }
+    },
+    "1280:1275": {
+      "inputs": {
+        "text": [
+          "1004",
+          0
+        ],
+        "clip": [
+          "921",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "third prompt"
+      }
+    },
+    "1280:1277": {
+      "inputs": {
+        "text": [
+          "1104",
+          0
+        ],
+        "clip": [
+          "921",
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Negative Prompt)"
+      }
+    },
+    "1280:1278": {
+      "inputs": {
+        "samples": [
+          "1280:1273",
+          0
+        ],
+        "vae": [
+          "916",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "1280:1279": {
+      "inputs": {
+        "inputcount": 2,
+        "image_1": [
+          "1272:1263",
+          0
+        ],
+        "image_2": [
+          "1280:1278",
+          0
+        ]
+      },
+      "class_type": "ImageBatchMulti",
+      "_meta": {
+        "title": "Image Batch Multi"
+      }
+    },
+    "1280:1273": {
+      "inputs": {
+        "add_noise": "disable",
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "steps": 4,
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 2,
+        "end_at_step": 100,
+        "return_with_leftover_noise": "disable",
+        "model": [
+          "1252:1247",
+          0
+        ],
+        "positive": [
+          "1280:1274",
+          0
+        ],
+        "negative": [
+          "1280:1274",
+          1
+        ],
+        "latent_image": [
+          "1280:1276",
+          0
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "3-KSampler (Advanced) LOW"
+      }
+    },
+    "1280:1276": {
+      "inputs": {
+        "add_noise": "enable",
+        "steps": 4,
+        "cfg": 1,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "start_at_step": 0,
+        "end_at_step": 2,
+        "return_with_leftover_noise": "enable",
+        "model": [
+          "1252:1246",
+          0
+        ],
+        "noise_seed": [
+          "900",
+          0
+        ],
+        "positive": [
+          "1280:1274",
+          0
+        ],
+        "negative": [
+          "1280:1274",
+          1
+        ],
+        "latent_image": [
+          "1280:1274",
+          2
+        ]
+      },
+      "class_type": "KSamplerAdvanced",
+      "_meta": {
+        "title": "3-KSampler (Advanced) HIGH"
+      }
+    },
+    "1211": {
+      "inputs": {
+        "upscale_method": "lanczos",
+        "scale_by": 2,
+        "image": [
+          "1210",
+          0
+        ]
+      },
+      "class_type": "ImageScaleBy",
+      "_meta": {
+        "title": "Upscale Image By"
+      }
+    },
+    "1059": {
+      "inputs": {
+        "ckpt_name": "rife49",
+        "multiplier": 4,
+        "ensemble": false,
+        "images": [
+          "1252:1249",
+          0
+        ]
+      },
+      "class_type": "FL_RIFE",
+      "_meta": {
+        "title": "FL RIFE Frame Interpolation"
+      }
+    },
+    "1221": {
+      "inputs": {
+        "model_name": "RealESRGAN_x4plus_anime_6B.pth"
+      },
+      "class_type": "UpscaleModelLoader",
+      "_meta": {
+        "title": "Load Upscale Model"
+      }
+    },
+    "1224": {
+      "inputs": {
+        "upscale_model": [
+          "1221",
+          0
+        ],
+        "image": [
+          "1252:1249",
+          0
+        ]
+      },
+      "class_type": "ImageUpscaleWithModel",
+      "_meta": {
+        "title": "Upscale Image (using Model)"
+      }
+    },
+    "1223": {
+      "inputs": {
+        "upscale_method": "nearest-exact",
+        "scale_by": 0.5,
+        "image": [
+          "1224",
+          0
+        ]
+      },
+      "class_type": "ImageScaleBy",
+      "_meta": {
+        "title": "Upscale Image By"
+      }
+    },
+    "1039": {
+      "inputs": {
+        "frame_rate": 16,
+        "loop_count": 0,
+        "filename_prefix": "vedio/wan22_lightning_long",
+        "format": "video/h264-mp4",
+        "pingpong": false,
+        "save_output": true,
+        "images": [
+          "1288",
+          0
+        ],
+        "pix_fmt": "yuv420p",
+        "crf": 18,
+        "save_metadata": true,
+        "trim_to_audio": false
+      },
+      "class_type": "VHS_VideoCombine",
+      "_meta": {
+        "title": "AstrBot · H.264 MP4"
+      }
+    },
+    "1282": {
+      "inputs": {
+        "lora_name": "WAN-N\\wan2.2_i2v_A14b_high_noise_lora_rank64_lightx2v_4step_1022.safetensors",
+        "strength_model": 1.0,
+        "model": [
+          "917",
+          0
+        ]
+      },
+      "class_type": "LoraLoaderModelOnly",
+      "_meta": {
+        "title": "FP8 Lightning LoRA"
+      }
+    },
+    "1283": {
+      "inputs": {
+        "lora_name": "WAN-N\\Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors",
+        "strength_model": 1.0,
+        "model": [
+          "918",
+          0
+        ]
+      },
+      "class_type": "LoraLoaderModelOnly",
+      "_meta": {
+        "title": "FP8 Lightning LoRA"
+      }
+    },
+    "900": {
+      "class_type": "PrimitiveInt",
+      "inputs": {
+        "value": 0
+      },
+      "_meta": {
+        "title": "固定种子"
+      }
+    },
+    "901": {
+      "class_type": "PrimitiveString",
+      "inputs": {
+        "value": ""
+      }
+    },
+    "902": {
+      "class_type": "PrimitiveStringMultiline",
+      "inputs": {
+        "value": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走"
+      },
+      "_meta": {
+        "title": "通用负向提示词"
+      }
+    },
+    "1001": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "901",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      }
+    },
+    "1101": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "902",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      }
+    },
+    "1002": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "901",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      }
+    },
+    "1102": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "902",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      }
+    },
+    "1003": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "901",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      }
+    },
+    "1103": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "902",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      }
+    },
+    "1004": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "901",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      }
+    },
+    "1104": {
+      "class_type": "StringConcatenate",
+      "inputs": {
+        "string_a": [
+          "902",
+          0
+        ],
+        "string_b": "",
+        "delimiter": ", "
+      }
+    },
+    "1284": {
+      "class_type": "ImageFromBatch",
+      "inputs": {
+        "image": [
+          "1252:1249",
+          0
+        ],
+        "batch_index": 0,
+        "length": 1
+      },
+      "_meta": {
+        "title": "首帧参考"
+      }
+    },
+    "1285": {
+      "class_type": "ColorTransfer",
+      "inputs": {
+        "image_target": [
+          "1252:1249",
+          0
+        ],
+        "image_ref": [
+          "1284",
+          0
+        ],
+        "method": "reinhard_lab",
+        "source_stats": "per_frame",
+        "strength": 0.8
+      },
+      "_meta": {
+        "title": "首帧亮度与色彩校正"
+      }
+    },
+    "1286": {
+      "class_type": "VHS_SplitImages",
+      "inputs": {
+        "images": [
+          "1285",
+          0
+        ],
+        "split_index": 1
+      },
+      "_meta": {
+        "title": "选择后续帧"
+      }
+    },
+    "1287": {
+      "class_type": "ImageSharpenKJ",
+      "inputs": {
+        "image": [
+          "1286",
+          2
+        ],
+        "method": "adaptive_usm",
+        "method.strength": 0.32,
+        "method.radius": 1.0,
+        "method.threshold": 0.05
+      },
+      "_meta": {
+        "title": "后续帧细节增强"
+      }
+    },
+    "1288": {
+      "class_type": "ImageBatchMulti",
+      "inputs": {
+        "inputcount": 2,
+        "image_1": [
+          "1284",
+          0
+        ],
+        "image_2": [
+          "1287",
+          0
+        ]
+      },
+      "_meta": {
+        "title": "按顺序合并首帧与后续帧"
+      }
+    }
+  },
+  "astrbot": {
+    "lightning": {
+      "segments": 1,
+      "model_format": "gguf",
+      "upscale": false,
+      "interpolate": false
+    },
+    "node_mapping": {
+      "positive": [
+        "901.value"
+      ],
+      "negative": [
+        "902.value"
+      ],
+      "image": [
+        "97.image"
+      ],
+      "seed": [
+        "900.value"
+      ]
+    }
+  }
+}

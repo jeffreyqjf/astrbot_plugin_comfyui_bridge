@@ -1,0 +1,6 @@
+name: astrbot_plugin_comfyui_bridge
+display_name: ComfyUI 工作台
+desc: 支持 Anima、WAI-Illustrious、SDXL 和 WAN，提供 QQ 绘图、手机工作台、提示词预设、图片归档和收藏。
+version: v2.24.0
+author: local
+astrbot_version: ">=4.29.0"

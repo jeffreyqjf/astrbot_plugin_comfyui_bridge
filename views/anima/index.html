@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ComfyUI 工作台</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main>
+    <header class="hero">
+      <p class="eyebrow">COMFYUI STUDIO <span>ASTRBOT</span></p>
+      <h1>创作工作台</h1>
+      <p>在这里设置生成参数、提示词预设、归档规则和绘图人格。</p>
+    </header>
+    <section id="remote-login" hidden>
+      <h2>连接工作台</h2>
+      <form id="remote-login-form">
+        <label class="field">访问口令
+          <input id="remote-token" type="password" inputmode="numeric" autocomplete="current-password"
+            placeholder="输入 6 位数字" maxlength="128" required>
+        </label>
+        <p id="remote-login-status" role="alert"></p>
+        <footer><button class="primary" type="submit">连接</button></footer>
+      </form>
+    </section>
+    <div class="workspace" id="workspace">
+      <aside class="workflow-nav" aria-label="工作流导航">
+        <p class="nav-label">工作流</p>
+        <select id="remote-workflow" aria-label="选择工作流" hidden></select>
+        <nav id="workflow-list" aria-label="工作流列表"></nav>
+      </aside>
+      <aside class="management-nav" aria-label="工作台管理">
+        <p class="nav-label">管理</p>
+        <nav id="management-list" aria-label="管理选项">
+          <button type="button" id="open-exports" class="workflow-tab" aria-controls="exports">导入导出</button>
+          <button type="button" id="open-archive" class="workflow-tab">图片归档</button>
+          <button type="button" id="open-persona" class="workflow-tab" aria-controls="persona">绘图人格</button>
+          <button type="button" id="open-lora-order" class="workflow-tab" aria-controls="lora-order">LoRA 编号</button>
+          <button type="button" id="open-presets" class="workflow-tab" aria-controls="presets">提示词预设</button>
+          <button type="button" id="open-image-review" class="workflow-tab" aria-controls="image-review">待评价图片</button>
+          <button type="button" id="open-image-gallery" class="workflow-tab" aria-controls="image-gallery">收藏图集</button>
+          <button type="button" id="open-pass-gallery" class="workflow-tab" aria-controls="image-gallery">Pass 图集</button>
+          <button type="button" id="open-videos" class="workflow-tab" aria-controls="videos">生成视频</button>
+          <button type="button" id="open-queue" class="workflow-tab" aria-controls="queue">任务队列</button>
+          <button type="button" id="remote-logout" class="workflow-tab" hidden>退出远程工作台</button>
+        </nav>
+      </aside>
+      <div class="workspace-main">
+        <p id="status" role="status" aria-live="polite">正在读取工作流…</p>
+        <form id="settings" hidden>
+          <div class="panel-heading">
+            <div><span id="workflow-kind" class="pill"></span><h2 id="workflow-title"></h2></div>
+            <div class="row-actions">
+              <button type="button" id="show-unsaved" hidden>未保存</button>
+              <button type="button" id="discard" hidden>放弃修改</button>
+            </div>
+          </div>
+          <p id="workflow-note" class="section-note" hidden></p>
+          <section id="workflow-config-settings">
+            <h2>工作流配置</h2>
+            <label class="field">已保存的配置<select id="workflow-config-name"></select></label>
+            <footer>
+              <button type="button" id="rename-workflow-config" disabled>重命名</button>
+              <button type="button" id="save-workflow-config" disabled>另存当前参数</button>
+              <button type="button" id="delete-workflow-config" disabled>删除配置</button>
+            </footer>
+            <small class="section-note">选择后直接加载。保存设置时会同步更新选中的配置。</small>
+          </section>
+          <section>
+            <h2>命令简称</h2>
+            <label class="field">工作流简称
+              <input id="workflow-alias" maxlength="32" placeholder="留空使用默认简称">
+            </label>
+            <footer><button type="button" id="workflow-alias-save">保存简称</button></footer>
+            <small id="workflow-alias-example"></small>
+          </section>
+      <section>
+        <h2 id="prompt-settings-title">提示词与种子</h2>
+        <label id="prefix-setting" class="field">正向提示词前缀
+          <textarea id="prefix" rows="2" maxlength="4000" placeholder="可留空，或填写常用风格标签"></textarea>
+        </label>
+        <label class="toggle"><input type="checkbox" id="fixed"> 使用面板里的固定种子</label>
+        <small id="seed-note">随机模式每次生成使用新种子。负向提示词与种子数值可在下方调整。</small>
+        <div class="grid" id="sweep-lora-setting" hidden>
+          <label class="field">人物 LoRA 扫图目录
+            <select id="sweep-lora-family"></select>
+          </label>
+        </div>
+      </section>
+      <section id="reference-settings">
+        <h2>图生图参考图</h2>
+        <p>默认从 QQ 读取图生图和 ControlNet 参考图。同时启用时共用所选图片。</p>
+        <label class="field">图片来源
+          <select id="reference-source">
+            <option value="auto">优先 QQ 附图，没图时用面板参考图</option>
+            <option value="qq">仅用 QQ 当前消息或引用图片</option>
+            <option value="local">仅用面板参考图</option>
+          </select>
+        </label>
+        <small>同一条消息附图，或回复图片并发送指令。选择本机素材时，可调整节点 #21 和 #129。</small>
+      </section>
+      <section id="anima-branches">
+        <h2>工作流分支</h2>
+        <p>勾选后点「保存设置」，下次打开会保留已保存的分支。关闭分支时会保留它的参数。</p>
+        <details>
+          <summary id="branch-summary">分支开关</summary>
+          <div id="branches" class="grid"></div>
+          <footer><button type="submit" class="primary" id="save-branches">保存设置</button></footer>
+        </details>
+        <details id="branch-dependencies">
+          <summary>分支与模型</summary>
+          <p>逐个试开启分支，检查已保存配置能否导出以及本机是否识别所需模型和素材。检查不会生成图片。</p>
+          <button type="button" id="check-branches">检查全部分支</button>
+          <p id="branch-check-status" role="status" aria-live="polite"></p>
+          <p id="branch-models"></p>
+          <div class="branch-table" id="branch-report" hidden>
+            <table>
+              <thead><tr><th scope="col">分支</th><th scope="col">检查结果</th><th scope="col">模型 / 素材</th></tr></thead>
+              <tbody id="branch-rows"></tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+      <section>
+        <h2>节点参数 <span id="count"></span></h2>
+        <label class="toggle" id="dormant-control"><input type="checkbox" id="show-dormant"> 显示旁路分支的参数</label>
+        <label class="field parameter-search">查找参数
+          <input type="search" id="filter" placeholder="例如：宽度、CFG、节点编号">
+        </label>
+        <div id="nodes"></div>
+        <p id="parameter-empty" hidden>没有匹配的参数。</p>
+      </section>
+      <footer>
+        <button type="button" id="sync">同步 ComfyUI 画布</button>
+        <button type="submit" class="primary" id="save">保存设置</button>
+      </footer>
+        </form>
+        <form id="archive" hidden>
+          <div class="panel-heading">
+            <div><span class="pill">图片输出</span><h2>图片归档</h2></div>
+          </div>
+          <section>
+            <p>正向提示词出现标签时，按下方从上到下第一条匹配规则保存。标签不区分大小写，匹配后从绘图提示词中移除。</p>
+            <p>在 QQ 回复一张图片并发送 <code>/comfy archive fav</code>，可把生成图移入 <code>favourite</code>。同一用户在本会话中排在收藏图片前面的待评价图会移入 <code>pass</code>。</p>
+            <label class="field archive-default">未命中时的文件夹
+              <input id="archive-default" maxlength="64" required>
+            </label>
+            <div id="archive-rows"></div>
+            <button type="button" id="archive-add">＋ 添加规则</button>
+            <small class="section-note">只填单层文件夹名称，例如 SFW 或 风景。规则用于 ComfyUI 原图和 AstrBot 回传缓存。</small>
+          </section>
+          <footer><button class="primary" type="submit" id="archive-save">保存归档规则</button></footer>
+        </form>
+        <form id="persona" hidden>
+          <div class="panel-heading">
+            <div><span class="pill">AI 绘图</span><h2>绘图人格</h2></div>
+            <button type="button" id="persona-reload">重新读取文件</button>
+          </div>
+          <section>
+            <p>这里的提示词会附加到 AstrBot 当前使用的人格中。保存后，下次 AI 对话生效。</p>
+            <label class="field">绘图提示词
+              <textarea id="persona-text" rows="18" maxlength="16000" spellcheck="false" required></textarea>
+            </label>
+            <small class="section-note" id="persona-path"></small>
+          </section>
+          <footer>
+            <button type="button" id="persona-default">载入默认提示词</button>
+            <button class="primary" type="submit" id="persona-save">保存提示词</button>
+          </footer>
+        </form>
+        <div id="lora-order" hidden>
+          <div class="panel-heading">
+            <div><span class="pill">QQ 快捷调用</span><h2>LoRA 编号</h2></div>
+            <button type="button" id="lora-order-refresh">刷新目录</button>
+          </div>
+          <section>
+            <div class="order-heading">
+              <div>
+                <label class="field">模型目录<select id="lora-family"></select></label>
+                <p>点击 LoRA 名称可编辑分类和附带提示词。拖动或点击箭头可调整组内编号。</p>
+              </div>
+              <span id="lora-order-count" class="pill"></span>
+            </div>
+            <div id="lora-order-list"></div>
+            <small class="section-note" id="lora-order-help"></small>
+          </section>
+        </div>
+        <dialog id="lora-tag-dialog" aria-labelledby="lora-tag-title">
+          <h2 id="lora-tag-title">LoRA 设置</h2>
+          <p id="lora-tag-name"></p>
+          <small id="lora-tag-hash" class="section-note"></small>
+          <form id="lora-tag-form">
+            <label class="field">LoRA 分类
+              <select id="lora-category">
+                <option value="C">人物（C）</option>
+                <option value="S">风格（S）</option>
+                <option value="O">其他（O）</option>
+              </select>
+            </label>
+            <label class="field">默认权重
+              <input id="lora-default-strength" type="number" min="-100" max="100" step="any" required>
+              <small>命令省略权重时和遍历 LoRA 时使用。</small>
+            </label>
+            <label class="field">随正向提示词发送
+              <textarea id="lora-tag-text" rows="4" maxlength="1000" spellcheck="false" placeholder="例如 watercolor, soft lighting"></textarea>
+            </label>
+            <small class="section-note" id="lora-tag-default"></small>
+            <small class="section-note">留空保存可停用插件补词。恢复默认可重新使用 LoRA 自带的触发词。</small>
+            <p id="lora-tag-error" role="alert" class="error" hidden></p>
+            <footer>
+              <button type="button" id="lora-tag-cancel">取消</button>
+              <button type="button" id="lora-tag-reset">恢复默认</button>
+              <button type="submit" class="primary" id="lora-tag-save">保存设置</button>
+            </footer>
+          </form>
+        </dialog>
+        <div id="presets" hidden>
+          <div class="panel-heading">
+            <div><span class="pill">绘图提示词</span><h2>提示词预设</h2></div>
+            <div class="row-actions">
+              <button type="button" id="preset-reload" hidden>重新读取文件</button>
+            </div>
+          </div>
+          <section>
+            <h2>用户预设库</h2>
+            <label class="field">选择已有用户
+              <select id="preset-account"></select>
+            </label>
+            <div class="grid">
+              <label class="field">平台实例 ID<input id="preset-platform" placeholder="例如 aiocqhttp" maxlength="80"></label>
+              <label class="field">用户 ID<input id="preset-user" placeholder="例如 QQ 号" maxlength="100"></label>
+            </div>
+            <footer><button type="button" id="preset-open-account">打开用户预设库</button></footer>
+            <small class="section-note">QQ 用户可私聊发送 /comfy prompt preset 获取账号标识，冒号前是平台实例 ID，后面是用户 ID。</small>
+          </section>
+          <form id="preset-form" hidden>
+          <section>
+            <div class="order-heading">
+              <div>
+                <h2 id="preset-account-title"></h2>
+                <p>点击名称编辑。拖动手柄或点击箭头，可调整编号并自动保存。</p>
+              </div>
+              <button type="button" id="preset-new">＋ 新建预设</button>
+            </div>
+            <ol id="preset-list" class="order-list" aria-label="提示词预设编号"></ol>
+            <div class="preset-preview">
+              <button type="button" id="preset-preview-open" aria-label="查看预设预览大图" hidden>
+                <img id="preset-preview-image" alt="提示词预设的效果图">
+              </button>
+              <div>
+                <strong>效果预览</strong>
+                <p id="preset-preview-status" role="status"></p>
+                <div class="row-actions">
+                  <button type="button" id="preset-preview-select">从收藏选图</button>
+                  <button type="button" id="preset-preview-clear" hidden>移除预览</button>
+                </div>
+              </div>
+            </div>
+            <div class="grid">
+              <label class="field wide">预设名称
+                <input id="preset-name" maxlength="64" placeholder="例如：水彩 人像" required>
+              </label>
+              <label class="field wide">正向提示词
+                <textarea id="preset-positive" rows="6" maxlength="8000" spellcheck="false" required></textarea>
+              </label>
+              <label class="field wide">负向提示词（可选）
+                <textarea id="preset-negative" rows="4" maxlength="8000" spellcheck="false" placeholder="留空沿用工作流的负向提示词"></textarea>
+              </label>
+            </div>
+            <details id="prompt-tag-picker" class="compact-disclosure">
+              <summary><strong>提示词词库</strong><small>查词和预览</small></summary>
+              <p class="section-note">长按词条或加词按钮查看缩略图，点按词名也能预览。点「＋正向」或「＋负向」可直接加词。</p>
+              <div class="grid">
+                <label class="field">搜索标签<input type="search" id="prompt-tag-search" placeholder="例如 水彩、柔光、watermark" maxlength="120"></label>
+                <label class="field">分类<select id="prompt-tag-category"><option value="">全部分类</option></select></label>
+              </div>
+              <p id="prompt-tag-status" role="status" aria-live="polite"></p>
+              <ul id="prompt-tag-results" class="prompt-tag-results"></ul>
+              <button type="button" id="prompt-tag-more" hidden>查看更多</button>
+              <p class="section-note" id="prompt-tag-directory"></p>
+              <p class="section-note" id="prompt-tag-warnings" role="status" hidden></p>
+              <button type="button" id="prompt-tag-reload">重新读取词库</button>
+            </details>
+            <div id="preset-usage">
+              <small class="section-note">预设所属用户可发送 <code id="preset-command">/comfy gen --preset "水彩 人像"</code></small>
+              <small class="section-note">可在预设编号或名称后补充本次画面。直接填写带权重的 Prompt 时，加上 <code>--raw</code> 可保留补充内容的原文。</small>
+            </div>
+            <small class="section-note" id="preset-path"></small>
+          </section>
+          <footer>
+            <button type="button" id="preset-discard" hidden>放弃修改</button>
+            <button type="submit" class="primary" id="preset-save">保存预设</button>
+          </footer>
+          </form>
+        </div>
+        <dialog id="prompt-tag-preview" aria-labelledby="prompt-tag-preview-title">
+          <h2 id="prompt-tag-preview-title"></h2>
+          <p id="prompt-tag-preview-label"></p>
+          <img id="prompt-tag-preview-image" hidden alt="">
+          <p id="prompt-tag-preview-status" role="status"></p>
+          <footer>
+            <button type="button" id="prompt-tag-preview-close" autofocus>关闭</button>
+            <button type="button" id="prompt-tag-preview-positive">＋正向</button>
+            <button type="button" id="prompt-tag-preview-negative">＋负向</button>
+          </footer>
+        </dialog>
+        <dialog id="preset-conflict" aria-labelledby="preset-conflict-title">
+          <h2 id="preset-conflict-title">发现同名预设</h2>
+          <p id="preset-conflict-progress"></p>
+          <div id="preset-comparison"></div>
+          <form method="dialog">
+            <footer>
+              <button value="cancel" autofocus>取消导入</button>
+              <button value="existing">保留现有版</button>
+              <button class="primary" value="incoming">用导入版覆盖</button>
+            </footer>
+          </form>
+        </dialog>
+        <div id="exports" hidden>
+          <div class="panel-heading"><h2>导入导出</h2></div>
+          <section>
+            <h2>工作流</h2>
+            <label class="field">选择要导出的单个工作流<select id="export-workflow-name"></select></label>
+            <footer>
+              <button type="button" id="export-workflow">导出工作流 JSON</button>
+              <button type="button" id="export-workflows">导出全部工作流 ZIP</button>
+            </footer>
+            <small class="section-note">工作流文件包含已保存的参数，ZIP 还包含 Anima T2I 画布。</small>
+            <label class="toggle"><input type="checkbox" id="replace-workflows"> 导入时覆盖同名工作流</label>
+            <footer>
+              <button type="button" id="import-workflows">导入工作流 JSON 或 ZIP</button>
+              <button type="button" id="open-workflow-directory" hidden>打开工作流目录</button>
+            </footer>
+            <input type="file" id="workflow-import-file" accept=".json,.zip,application/json,application/zip" hidden>
+          </section>
+          <section>
+            <h2>工作流配置</h2>
+            <div class="grid">
+              <label class="field">工作流<select id="transfer-config-workflow"></select></label>
+              <label class="field">要导出的配置<select id="transfer-config-name"></select></label>
+            </div>
+            <footer>
+              <button type="button" id="import-workflow-config">导入配置 JSON</button>
+              <button type="button" id="export-workflow-config" disabled>导出配置 JSON</button>
+            </footer>
+            <small class="section-note">导入后可在对应工作流里应用。同名配置会自动加上序号。</small>
+            <input type="file" id="workflow-config-file" accept=".json,application/json" hidden>
+          </section>
+          <section>
+            <h2>提示词预设</h2>
+            <label class="field">预设所属用户<select id="export-preset-account"></select></label>
+            <details>
+              <summary>使用其他 QQ 账号</summary>
+              <div class="grid">
+                <label class="field">平台实例 ID<input id="transfer-preset-platform" placeholder="例如 aiocqhttp" maxlength="80"></label>
+                <label class="field">用户 ID<input id="transfer-preset-user" placeholder="例如 QQ 号" maxlength="100"></label>
+              </div>
+              <button type="button" id="transfer-preset-account">选择此账号</button>
+            </details>
+            <footer>
+              <button type="button" id="preset-import" disabled>导入提示词预设 JSON</button>
+              <button type="button" id="export-presets" disabled>导出提示词预设 JSON</button>
+            </footer>
+            <input type="file" id="preset-file" accept=".json,application/json" hidden>
+          </section>
+          <section>
+            <h2>常用命令</h2>
+            <label class="toggle"><input type="checkbox" id="replace-commands"> 导入时覆盖同名命令</label>
+            <footer>
+              <button type="button" id="import-commands">导入常用命令 JSON</button>
+              <button type="button" id="export-commands">导出常用命令 JSON</button>
+            </footer>
+            <input type="file" id="commands-import-file" accept=".json,application/json" hidden>
+          </section>
+          <section>
+            <h2>LoRA 附带词</h2>
+            <label class="field">LoRA 文件夹<select id="export-lora-family"></select></label>
+            <footer>
+              <button type="button" id="lora-tags-import">导入附带词 JSON</button>
+              <button type="button" id="export-lora-tags">导出附带词 JSON</button>
+            </footer>
+            <small class="section-note">按模型文件的 SHA-256 合并，同一哈希以导入词为准。缺少对应模型的记录也会保留。</small>
+            <input type="file" id="lora-tags-file" accept=".json,application/json" hidden>
+          </section>
+        </div>
+        <div id="image-review" hidden>
+          <div class="panel-heading">
+            <div><h2>待评价图片</h2><small id="image-review-count"></small></div>
+            <button type="button" id="image-review-refresh">刷新</button>
+          </div>
+          <div id="image-review-filter-slot">
+            <details id="image-filters">
+              <summary aria-label="筛选图片" title="筛选图片">
+                <span class="filter-icon" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span id="image-filter-count" hidden></span>
+              </summary>
+              <div class="image-filter-panel">
+                <div class="row-actions">
+                  <label class="field">搜索筛选项 <input type="search" id="image-filter-search" autocomplete="off"></label>
+                  <button type="button" id="image-filter-clear" disabled>清除筛选</button>
+                </div>
+                <small>同类任选，跨类同时匹配。</small>
+                <p id="image-filter-status" role="status" hidden></p>
+                <div id="image-filter-options"></div>
+              </div>
+            </details>
+          </div>
+          <p id="image-review-empty" hidden>暂无待评价图片。</p>
+          <div id="image-review-jobs"></div>
+        </div>
+        <div id="videos" hidden>
+          <div class="panel-heading">
+            <h2>生成视频</h2>
+            <button type="button" id="videos-refresh">刷新</button>
+          </div>
+          <div id="videos-list"></div>
+          <p id="videos-empty" hidden>暂无生成的视频。</p>
+          <footer>
+            <button type="button" id="videos-prev" disabled>上一页</button>
+            <small id="videos-page"></small>
+            <button type="button" id="videos-next" disabled>下一页</button>
+          </footer>
+        </div>
+        <div id="image-gallery" hidden>
+          <div class="panel-heading">
+            <h2 id="image-gallery-title">收藏图集</h2>
+            <label class="field">图片分类
+              <select id="image-gallery-rating">
+                <option value="">全部</option>
+                <option value="SFW">SFW</option>
+                <option value="NSFW">NSFW</option>
+              </select>
+            </label>
+          </div>
+          <div class="row-actions">
+            <div id="image-gallery-filter-slot"></div>
+            <button type="button" id="image-gallery-thumbnails">生成缺失缩略图</button>
+          </div>
+          <p id="image-gallery-thumbnail-status" role="status"></p>
+          <div id="image-gallery-grid" class="review-grid"></div>
+          <p id="image-gallery-empty" hidden>暂无收藏图片。</p>
+          <footer>
+            <button type="button" id="image-gallery-prev" disabled>上一页</button>
+            <small id="image-gallery-page"></small>
+            <button type="button" id="image-gallery-next" disabled>下一页</button>
+          </footer>
+        </div>
+        <dialog id="image-original" aria-labelledby="image-original-title">
+          <div class="panel-heading">
+            <h2 id="image-original-title">原图</h2>
+            <div class="row-actions">
+              <button type="button" id="image-original-move" hidden></button>
+              <form method="dialog"><button>关闭</button></form>
+            </div>
+          </div>
+          <p id="image-original-status" role="status"></p>
+          <dl id="image-generation-info" class="image-generation-info" hidden></dl>
+          <img id="image-original-file" alt="" hidden>
+        </dialog>
+        <dialog id="image-delete-dialog" aria-labelledby="image-delete-title">
+          <h2 id="image-delete-title">删除图片</h2>
+          <p id="image-delete-name"></p>
+          <p>删除归档中的原图后无法在工作台恢复。</p>
+          <p id="image-delete-status" role="status"></p>
+          <footer>
+            <form method="dialog"><button id="image-delete-cancel">取消</button></form>
+            <button type="button" id="image-delete-confirm" class="primary">确认删除</button>
+          </footer>
+        </dialog>
+        <div id="queue" hidden>
+          <div class="panel-heading">
+            <div><span class="pill">生成管理</span><h2>任务队列</h2></div>
+            <div class="row-actions">
+              <button type="button" id="queue-refresh">刷新队列</button>
+              <button type="button" id="queue-cancel-all" disabled>取消全部任务</button>
+            </div>
+          </div>
+          <p id="queue-status" role="status" aria-live="polite"></p>
+          <details id="queue-create" class="compact-disclosure">
+            <summary><strong>＋ 创建任务</strong></summary>
+            <label class="field queue-mode">添加方式
+              <select id="queue-create-mode">
+                <option value="">无</option>
+                <option value="command">命令添加</option>
+                <option value="simple">简易添加</option>
+              </select>
+            </label>
+            <form id="remote-command-form" hidden>
+              <div class="grid">
+                <label class="field">常用命令<select id="queue-command-template"></select></label>
+                <label class="field">模板名称
+                  <input id="queue-command-template-name" maxlength="64" placeholder="为当前命令取个名字">
+                </label>
+                <div class="row-actions wide">
+                  <button type="button" id="queue-command-template-save">保存模板</button>
+                  <button type="button" id="queue-command-template-delete" disabled>删除所选模板</button>
+                </div>
+                <label class="field wide">命令
+                  <textarea id="queue-command-text" name="command" rows="3" maxlength="16000" required spellcheck="false"
+                    placeholder='/comfy gen --wf wai watercolor landscape'></textarea>
+                </label>
+                <label class="field">预设所属用户<select id="remote-command-account" name="account"></select></label>
+              </div>
+              <small class="section-note">选择模板后可先编辑再发送。支持 gen、lora、sweep 和 --help，描述按原文提交。</small>
+              <footer><button type="submit" class="primary" id="remote-command-send">提交命令</button></footer>
+            </form>
+            <form id="queue-form" hidden>
+              <div class="grid">
+                <label class="field">工作流<select id="queue-workflow" required></select></label>
+                <label class="field">预设所属用户<select id="queue-preset-account"></select></label>
+                <label class="field">提示词预设<select id="queue-preset"></select></label>
+                <label class="field wide">正向提示词或本次补充
+                  <textarea id="queue-positive" rows="4" maxlength="8000" spellcheck="false"></textarea>
+                </label>
+                <label class="field wide">负向提示词
+                  <textarea id="queue-negative" rows="2" maxlength="8000" placeholder="留空沿用预设或工作流"></textarea>
+                </label>
+                <label class="field">生成批次
+                  <input type="number" id="queue-count" value="1" min="1" step="1" required>
+                </label>
+              </div>
+              <small class="section-note">多批次会分别入队，每项使用随机种子，可单独取消。提示词按原文提交。超时从 ComfyUI 接收任务后计时，包含 ComfyUI 内的排队和执行。</small>
+              <footer><button type="submit" class="primary" id="queue-add">加入队列</button></footer>
+            </form>
+            <div class="field queue-reference" id="queue-reference" hidden>参考图
+              <div class="row-actions">
+                <button type="button" id="queue-reference-open">从收藏选图</button>
+                <button type="button" id="queue-reference-upload">本地图片</button>
+                <button type="button" id="queue-reference-edit" disabled>编辑遮罩</button>
+                <button type="button" id="queue-reference-remove-mask" hidden>移除遮罩编辑</button>
+                <button type="button" id="queue-reference-clear" hidden>清除图片</button>
+              </div>
+              <input type="hidden" id="queue-reference-id">
+              <input id="queue-reference-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+              <small id="queue-reference-status" role="status"></small>
+            </div>
+          </details>
+          <section>
+            <h2 id="queue-summary">当前队列</h2>
+            <div id="queue-active"></div>
+          </section>
+          <details class="compact-disclosure">
+            <summary><strong>QQ 任务等待超时</strong></summary>
+            <form id="queue-qq-timeout-form">
+              <div class="grid">
+                <label class="field">工作流<select id="queue-qq-workflow" required></select></label>
+                <label class="field">超时（秒）
+                  <input type="number" id="queue-qq-timeout" step="1" aria-describedby="queue-qq-timeout-note" disabled>
+                  <small id="queue-qq-timeout-note">正在读取当前设置…</small>
+                </label>
+              </div>
+              <small class="section-note">应用于该工作流之后从 QQ 和网页提交的任务。留空恢复默认值。</small>
+              <footer><button type="submit" class="primary" id="queue-qq-timeout-save" disabled>保存等待超时</button></footer>
+            </form>
+          </details>
+          <section>
+            <h2>最近任务</h2>
+            <div id="queue-recent"></div>
+          </section>
+          </div>
+          <dialog id="queue-reference-picker" aria-labelledby="queue-reference-title">
+            <div class="panel-heading">
+              <h2 id="queue-reference-title">从收藏选择参考图</h2>
+              <button type="button" id="queue-reference-close" autofocus>关闭</button>
+            </div>
+            <label class="field">分类
+              <select id="queue-reference-rating">
+                <option value="">全部</option><option value="SFW">SFW</option><option value="NSFW">NSFW</option>
+              </select>
+            </label>
+            <p id="queue-reference-note" role="status"></p>
+            <div class="review-grid" id="queue-reference-grid"></div>
+            <footer>
+              <button type="button" id="queue-reference-prev" disabled>上一页</button>
+              <button type="button" id="queue-reference-next" disabled>下一页</button>
+            </footer>
+          </dialog>
+          <dialog id="queue-cancel-dialog" aria-labelledby="queue-cancel-title">
+            <h2 id="queue-cancel-title">取消全部任务？</h2>
+            <p>将取消当前队列中等待和处理中的任务。</p>
+            <form method="dialog"><footer>
+              <button value="" autofocus>返回</button>
+              <button value="cancel-all" class="primary">确认取消</button>
+            </footer></form>
+          </dialog>
+      </div>
+    </div>
+  </main>
+  <dialog id="video-dialog" class="video-dialog" aria-labelledby="video-title">
+    <h2 id="video-title"></h2>
+    <video id="video-player" controls playsinline preload="metadata" hidden></video>
+    <img id="video-animation" alt="" hidden>
+    <p id="video-play-status" role="status" hidden></p>
+    <footer>
+      <button type="button" id="video-close" autofocus>关闭</button>
+    </footer>
+  </dialog>
+  <dialog id="video-delete-dialog" class="video-dialog" aria-labelledby="video-delete-title">
+    <h2 id="video-delete-title">删除视频</h2>
+    <p id="video-delete-name"></p>
+    <p id="video-delete-status" role="status"></p>
+    <footer>
+      <button type="button" id="video-delete-cancel" autofocus>取消</button>
+      <button type="button" id="video-delete-confirm" class="primary">确认删除</button>
+    </footer>
+  </dialog>
+  <dialog id="workflow-config-dialog">
+    <form method="dialog">
+      <h2 id="workflow-config-dialog-title"></h2>
+      <p id="workflow-config-dialog-note" hidden></p>
+      <label class="field" id="workflow-config-title-field">配置名称
+        <input id="workflow-config-title" maxlength="64" placeholder="例如 快速出图、精细修复">
+      </label>
+      <label class="toggle" id="workflow-config-overwrite-field" hidden>
+        <input type="checkbox" id="workflow-config-overwrite"> 覆盖同名配置
+      </label>
+      <footer>
+        <button value="cancel" formnovalidate>取消</button>
+        <button class="primary" value="confirm" id="workflow-config-confirm">保存</button>
+      </footer>
+    </form>
+  </dialog>
+  <div class="workbench-notices">
+    <div id="success-notice" class="success-notice" role="status" hidden></div>
+    <div id="error-notice" class="error-notice" hidden>
+      <p id="error-notice-text" role="alert"></p>
+      <button type="button" id="dismiss-error" aria-label="关闭提示">关闭</button>
+      <div id="unsaved-actions" hidden>
+        <ul id="unsaved-changes" aria-label="未保存的改动"></ul>
+        <div class="row-actions">
+          <button type="submit" form="settings" class="primary">保存</button>
+          <button type="button" id="discard-unsaved">放弃修改</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

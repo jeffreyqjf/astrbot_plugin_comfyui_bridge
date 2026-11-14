@@ -1,0 +1,844 @@
+{
+  "prompt": {
+    "91": {
+      "inputs": {
+        "vae_name": "taesdxl"
+      },
+      "class_type": "VAELoader",
+      "_meta": {
+        "title": "可选外部 VAE"
+      }
+    },
+    "107": {
+      "inputs": {
+        "width": 832,
+        "height": 1216,
+        "batch_size": 1
+      },
+      "class_type": "EmptyLatentImage",
+      "_meta": {
+        "title": "EmptyLatentImage"
+      }
+    },
+    "120": {
+      "inputs": {
+        "model_name": "RealESRGAN_x4plus.pth"
+      },
+      "class_type": "UpscaleModelLoader",
+      "_meta": {
+        "title": "Load Upscale Model"
+      }
+    },
+    "87": {
+      "inputs": {
+        "model": [
+          "126",
+          0
+        ],
+        "clip": [
+          "88",
+          1
+        ],
+        "vae": [
+          "88",
+          2
+        ],
+        "positive": [
+          "218",
+          0
+        ],
+        "negative": [
+          "105",
+          0
+        ]
+      },
+      "class_type": "ToBasicPipe",
+      "_meta": {
+        "title": "ToBasicPipe"
+      }
+    },
+    "126": {
+      "inputs": {
+        "sampling": "eps",
+        "zsnr": false,
+        "model": [
+          "88",
+          0
+        ]
+      },
+      "class_type": "ModelSamplingDiscrete",
+      "_meta": {
+        "title": "ModelSamplingDiscrete"
+      }
+    },
+    "125": {
+      "inputs": {
+        "model_name": "bbox/Eyeful_v2-Paired.pt"
+      },
+      "class_type": "UltralyticsDetectorProvider",
+      "_meta": {
+        "title": "UltralyticsDetectorProvider"
+      }
+    },
+    "138": {
+      "inputs": {
+        "model": [
+          "126",
+          0
+        ],
+        "clip": [
+          "88",
+          1
+        ],
+        "vae": [
+          "88",
+          2
+        ],
+        "positive": [
+          "146",
+          0
+        ],
+        "negative": [
+          "105",
+          0
+        ]
+      },
+      "class_type": "ToBasicPipe",
+      "_meta": {
+        "title": "ToBasicPipe"
+      }
+    },
+    "22": {
+      "inputs": {
+        "upscale_model": [
+          "120",
+          0
+        ],
+        "image": [
+          "118",
+          0
+        ]
+      },
+      "class_type": "ImageUpscaleWithModel",
+      "_meta": {
+        "title": "Upscale Image (using Model)"
+      }
+    },
+    "24": {
+      "inputs": {
+        "upscale_method": "bilinear",
+        "width": 1248,
+        "height": 1824,
+        "crop": "disabled",
+        "image": [
+          "22",
+          0
+        ]
+      },
+      "class_type": "ImageScale",
+      "_meta": {
+        "title": "ImageScale"
+      }
+    },
+    "185": {
+      "inputs": {
+        "pixels": [
+          "211",
+          0
+        ],
+        "vae": [
+          "88",
+          2
+        ]
+      },
+      "class_type": "VAEEncode",
+      "_meta": {
+        "title": "VAEEncode"
+      }
+    },
+    "195": {
+      "inputs": {
+        "text": "eye"
+      },
+      "class_type": "ttN text",
+      "_meta": {
+        "title": "眼部提示词"
+      }
+    },
+    "198": {
+      "inputs": {
+        "text": [
+          "195",
+          0
+        ],
+        "clip": [
+          "88",
+          1
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIPTextEncode"
+      }
+    },
+    "202": {
+      "inputs": {
+        "wildcard": "",
+        "Select to add LoRA": "Select the LoRA to add to the text",
+        "Select to add Wildcard": "Select the Wildcard to add to the text",
+        "model": [
+          "126",
+          0
+        ],
+        "clip": [
+          "88",
+          1
+        ],
+        "vae": [
+          "88",
+          2
+        ],
+        "positive": [
+          "204",
+          0
+        ],
+        "negative": [
+          "105",
+          0
+        ],
+        "bbox_detector": [
+          "125",
+          0
+        ]
+      },
+      "class_type": "ToDetailerPipe",
+      "_meta": {
+        "title": "ToDetailerPipe"
+      }
+    },
+    "204": {
+      "inputs": {
+        "conditioning_1": [
+          "205",
+          0
+        ],
+        "conditioning_2": [
+          "198",
+          0
+        ]
+      },
+      "class_type": "ConditioningCombine",
+      "_meta": {
+        "title": "ConditioningCombine"
+      }
+    },
+    "180": {
+      "inputs": {
+        "wildcard": "",
+        "Select to add LoRA": "Select the LoRA to add to the text",
+        "Select to add Wildcard": "Select the Wildcard to add to the text",
+        "model": [
+          "126",
+          0
+        ],
+        "clip": [
+          "88",
+          1
+        ],
+        "vae": [
+          "88",
+          2
+        ],
+        "positive": [
+          "173",
+          0
+        ],
+        "negative": [
+          "105",
+          0
+        ],
+        "bbox_detector": [
+          "213",
+          0
+        ],
+        "sam_model_opt": [
+          "206",
+          0
+        ]
+      },
+      "class_type": "ToDetailerPipe",
+      "_meta": {
+        "title": "ToDetailerPipe"
+      }
+    },
+    "206": {
+      "inputs": {
+        "model_name": "sam_vit_b_01ec64.pth",
+        "device_mode": "AUTO"
+      },
+      "class_type": "SAMLoader",
+      "_meta": {
+        "title": "SAMLoader"
+      }
+    },
+    "213": {
+      "inputs": {
+        "model_name": "bbox/face_yolov9c.pt"
+      },
+      "class_type": "UltralyticsDetectorProvider",
+      "_meta": {
+        "title": "UltralyticsDetectorProvider"
+      }
+    },
+    "100": {
+      "inputs": {
+        "text": ""
+      },
+      "class_type": "ttN text",
+      "_meta": {
+        "title": "默认负向提示词"
+      }
+    },
+    "88": {
+      "inputs": {
+        "ckpt_name": "WAI-Nsfw-Illustrious-17.safetensors"
+      },
+      "class_type": "CheckpointLoaderSimple",
+      "_meta": {
+        "title": "CheckpointLoaderSimple"
+      }
+    },
+    "173": {
+      "inputs": {
+        "conditioning_1": [
+          "172",
+          0
+        ],
+        "conditioning_2": [
+          "219",
+          0
+        ]
+      },
+      "class_type": "ConditioningCombine",
+      "_meta": {
+        "title": "ConditioningCombine"
+      }
+    },
+    "219": {
+      "inputs": {
+        "mode": "Standard",
+        "parser": "A1111",
+        "mean_normalization": true,
+        "multi_conditioning": true,
+        "use_old_emphasis_implementation": false,
+        "smZ_steps": 1,
+        "clip": [
+          "88",
+          1
+        ],
+        "mode.text": "face, face focus"
+      },
+      "class_type": "smZ CLIPTextEncode",
+      "_meta": {
+        "title": "人脸附加提示词编码"
+      }
+    },
+    "105": {
+      "inputs": {
+        "text": [
+          "100",
+          0
+        ],
+        "clip": [
+          "88",
+          1
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIPTextEncode"
+      }
+    },
+    "118": {
+      "inputs": {
+        "samples": [
+          "247",
+          1
+        ],
+        "vae": [
+          "88",
+          2
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAEDecode"
+      }
+    },
+    "218": {
+      "inputs": {
+        "mode": "Standard",
+        "parser": "A1111",
+        "mean_normalization": true,
+        "multi_conditioning": true,
+        "use_old_emphasis_implementation": false,
+        "smZ_steps": 1,
+        "clip": [
+          "88",
+          1
+        ],
+        "mode.text": [
+          "98",
+          0
+        ]
+      },
+      "class_type": "smZ CLIPTextEncode",
+      "_meta": {
+        "title": "主提示词编码"
+      }
+    },
+    "172": {
+      "inputs": {
+        "strength": 1.0000000000000002,
+        "add_weight": 0,
+        "text": [
+          "98",
+          0
+        ],
+        "clip": [
+          "88",
+          1
+        ]
+      },
+      "class_type": "CLIPTextEncodeWithWeight //Inspire",
+      "_meta": {
+        "title": "人脸主提示词权重"
+      }
+    },
+    "128": {
+      "inputs": {
+        "control_net_name": "diffusion_pytorch_model.safetensors"
+      },
+      "class_type": "ControlNetLoader",
+      "_meta": {
+        "title": "ControlNetLoader"
+      }
+    },
+    "129": {
+      "inputs": {
+        "type": "canny/lineart/anime_lineart/mlsd",
+        "control_net": [
+          "128",
+          0
+        ]
+      },
+      "class_type": "SetUnionControlNetType",
+      "_meta": {
+        "title": "Set Union ControlNet Type"
+      }
+    },
+    "146": {
+      "inputs": {
+        "strength": 0.30000000000000004,
+        "conditioning": [
+          "218",
+          0
+        ],
+        "control_net": [
+          "129",
+          0
+        ],
+        "image": [
+          "astrbot_wai_canny",
+          0
+        ]
+      },
+      "class_type": "ControlNetApply",
+      "_meta": {
+        "title": "ControlNetApply"
+      }
+    },
+    "237": {
+      "inputs": {
+        "basic_pipe": [
+          "138",
+          0
+        ]
+      },
+      "class_type": "FromBasicPipe",
+      "_meta": {
+        "title": "FromBasicPipe"
+      }
+    },
+    "255": {
+      "inputs": {
+        "hard_mode": true,
+        "boost": true,
+        "model": [
+          "237",
+          0
+        ]
+      },
+      "class_type": "Automatic CFG",
+      "_meta": {
+        "title": "放大自动 CFG"
+      }
+    },
+    "109": {
+      "inputs": {
+        "value": 286024948705843
+      },
+      "class_type": "PrimitiveInt",
+      "_meta": {
+        "title": "局部修复种子"
+      }
+    },
+    "211": {
+      "inputs": {
+        "guide_size": 512,
+        "guide_size_for": true,
+        "max_size": 1024,
+        "steps": 6,
+        "cfg": 5,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 0.5000000000000001,
+        "feather": 10,
+        "noise_mask": true,
+        "force_inpaint": true,
+        "bbox_threshold": 0.30000000000000004,
+        "bbox_dilation": 10,
+        "bbox_crop_factor": 3,
+        "sam_detection_hint": "center-1",
+        "sam_dilation": 0,
+        "sam_threshold": 0.93,
+        "sam_bbox_expansion": 0,
+        "sam_mask_hint_threshold": 0.7,
+        "sam_mask_hint_use_negative": "False",
+        "drop_size": 10,
+        "refiner_ratio": 0.2,
+        "cycle": 1,
+        "inpaint_model": false,
+        "noise_mask_feather": 20,
+        "tiled_encode": true,
+        "tiled_decode": true,
+        "image": [
+          "24",
+          0
+        ],
+        "detailer_pipe": [
+          "180",
+          0
+        ],
+        "seed": [
+          "109",
+          0
+        ]
+      },
+      "class_type": "FaceDetailerPipe",
+      "_meta": {
+        "title": "人脸修复"
+      }
+    },
+    "238": {
+      "inputs": {
+        "cfg_conds": 7,
+        "cfg_cond2_negative": 7,
+        "style": "regular",
+        "model": [
+          "255",
+          0
+        ],
+        "cond1": [
+          "237",
+          3
+        ],
+        "cond2": [
+          "218",
+          0
+        ],
+        "negative": [
+          "237",
+          4
+        ]
+      },
+      "class_type": "DualCFGGuider",
+      "_meta": {
+        "title": "Dual CFG Guider"
+      }
+    },
+    "230": {
+      "inputs": {
+        "noise": [
+          "227",
+          0
+        ],
+        "guider": [
+          "238",
+          0
+        ],
+        "sampler": [
+          "231",
+          0
+        ],
+        "sigmas": [
+          "229",
+          0
+        ],
+        "latent_image": [
+          "185",
+          0
+        ]
+      },
+      "class_type": "SamplerCustomAdvanced",
+      "_meta": {
+        "title": "SamplerCustomAdvanced"
+      }
+    },
+    "13": {
+      "inputs": {
+        "samples": [
+          "230",
+          0
+        ],
+        "vae": [
+          "237",
+          2
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAEDecode"
+      }
+    },
+    "229": {
+      "inputs": {
+        "scheduler": "normal",
+        "steps": 8,
+        "denoise": 0.5000000000000001,
+        "model": [
+          "237",
+          0
+        ]
+      },
+      "class_type": "BasicScheduler",
+      "_meta": {
+        "title": "BasicScheduler"
+      }
+    },
+    "227": {
+      "inputs": {
+        "noise_seed": 991156798005283
+      },
+      "class_type": "RandomNoise",
+      "_meta": {
+        "title": "RandomNoise"
+      }
+    },
+    "228": {
+      "inputs": {
+        "sampler_name": "euler_ancestral"
+      },
+      "class_type": "KSamplerSelect",
+      "_meta": {
+        "title": "KSamplerSelect"
+      }
+    },
+    "231": {
+      "inputs": {
+        "detail_amount": 0.15000000000000002,
+        "start": 0.30000000000000004,
+        "end": 0.7000000000000002,
+        "bias": 0.5,
+        "exponent": 1,
+        "start_offset": 0,
+        "end_offset": 0,
+        "fade": 0,
+        "smooth": true,
+        "cfg_scale_override": 0,
+        "sampler": [
+          "228",
+          0
+        ]
+      },
+      "class_type": "DetailDaemonSamplerNode",
+      "_meta": {
+        "title": "DetailDaemonSamplerNode"
+      }
+    },
+    "37": {
+      "inputs": {
+        "filename_prefix": "WAI-Illustrious",
+        "images": [
+          "174",
+          0
+        ]
+      },
+      "class_type": "SaveImage",
+      "_meta": {
+        "title": "QQ 最终图片"
+      }
+    },
+    "247": {
+      "inputs": {
+        "add_noise": false,
+        "noise_seed": 935482437416098,
+        "steps": 30,
+        "cfg": 10,
+        "sampler_name": "euler_ancestral",
+        "scheduler": "normal",
+        "start_at_step": 20,
+        "end_at_step": 10000,
+        "return_with_leftover_noise": false,
+        "basic_pipe": [
+          "244",
+          0
+        ],
+        "latent_image": [
+          "244",
+          1
+        ]
+      },
+      "class_type": "ImpactKSamplerAdvancedBasicPipe",
+      "_meta": {
+        "title": "基础采样 · 第三段"
+      }
+    },
+    "244": {
+      "inputs": {
+        "add_noise": false,
+        "noise_seed": 535775404114672,
+        "steps": 30,
+        "cfg": 10,
+        "sampler_name": "euler_ancestral",
+        "scheduler": "normal",
+        "start_at_step": 10,
+        "end_at_step": 20,
+        "return_with_leftover_noise": true,
+        "basic_pipe": [
+          "245",
+          0
+        ],
+        "latent_image": [
+          "245",
+          1
+        ]
+      },
+      "class_type": "ImpactKSamplerAdvancedBasicPipe",
+      "_meta": {
+        "title": "基础采样 · 第二段"
+      }
+    },
+    "245": {
+      "inputs": {
+        "add_noise": true,
+        "noise_seed": 498241554708817,
+        "steps": 30,
+        "cfg": 10,
+        "sampler_name": "euler_ancestral",
+        "scheduler": "normal",
+        "start_at_step": 0,
+        "end_at_step": 10,
+        "return_with_leftover_noise": true,
+        "basic_pipe": [
+          "87",
+          0
+        ],
+        "latent_image": [
+          "107",
+          0
+        ]
+      },
+      "class_type": "ImpactKSamplerAdvancedBasicPipe",
+      "_meta": {
+        "title": "基础采样 · 第一段"
+      }
+    },
+    "205": {
+      "inputs": {
+        "strength": 0.4000000000000001,
+        "add_weight": 0,
+        "text": [
+          "98",
+          0
+        ],
+        "clip": [
+          "88",
+          1
+        ]
+      },
+      "class_type": "CLIPTextEncodeWithWeight //Inspire",
+      "_meta": {
+        "title": "眼部主提示词权重"
+      }
+    },
+    "98": {
+      "inputs": {
+        "text": "1girl, solo, looking at viewer"
+      },
+      "class_type": "ttN text",
+      "_meta": {
+        "title": "QQ 正向提示词"
+      }
+    },
+    "174": {
+      "inputs": {
+        "guide_size": 512,
+        "guide_size_for": true,
+        "max_size": 1024,
+        "steps": 6,
+        "cfg": 4,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 0.4000000000000001,
+        "feather": 10,
+        "noise_mask": true,
+        "force_inpaint": true,
+        "bbox_threshold": 0.30000000000000004,
+        "bbox_dilation": 10,
+        "bbox_crop_factor": 3,
+        "sam_detection_hint": "center-1",
+        "sam_dilation": 0,
+        "sam_threshold": 0.93,
+        "sam_bbox_expansion": 0,
+        "sam_mask_hint_threshold": 0.7,
+        "sam_mask_hint_use_negative": "False",
+        "drop_size": 10,
+        "refiner_ratio": 0.2,
+        "cycle": 1,
+        "inpaint_model": false,
+        "noise_mask_feather": 20,
+        "tiled_encode": false,
+        "tiled_decode": false,
+        "image": [
+          "13",
+          0
+        ],
+        "detailer_pipe": [
+          "202",
+          0
+        ],
+        "seed": [
+          "109",
+          0
+        ]
+      },
+      "class_type": "FaceDetailerPipe",
+      "_meta": {
+        "title": "眼部修复"
+      }
+    },
+    "astrbot_wai_canny": {
+      "class_type": "Canny",
+      "inputs": {
+        "image": [
+          "24",
+          0
+        ],
+        "low_threshold": 0.4,
+        "high_threshold": 0.8
+      }
+    }
+  },
+  "astrbot": {}
+}

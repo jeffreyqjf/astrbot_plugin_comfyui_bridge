@@ -1,0 +1,254 @@
+{
+  "1": {
+    "inputs": {
+      "unet_name": "wan2.2\\Wan2_2-T2V-A14B_HIGH_fp8_e4m3fn_scaled_KJ.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "01 高噪声模型 / High noise",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "2": {
+    "inputs": {
+      "unet_name": "wan2.2\\Wan2_2-T2V-A14B-LOW_fp8_e4m3fn_scaled_KJ.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "02 低噪声模型 / Low noise",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "3": {
+    "inputs": {
+      "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "type": "wan",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "03 UMT5 文本编码器",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "4": {
+    "inputs": {
+      "text": "A red panda walks slowly along a mossy tree branch in a lush forest, soft morning light, gentle breeze moving the leaves, slow cinematic camera pan, realistic fur, smooth natural motion.",
+      "clip": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "04 正向提示词 / Prompt",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "5": {
+    "inputs": {
+      "text": "oversaturated, overexposed, blurry, low quality, jpeg artifacts, watermark, subtitles, text, deformed hands, extra fingers, distorted face, extra limbs, static image, flicker",
+      "clip": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "05 负向提示词 / Negative",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "6": {
+    "inputs": {
+      "vae_name": "wan_2.1_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "06 WAN VAE",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "7": {
+    "inputs": {
+      "width": 512,
+      "height": 288,
+      "length": 49,
+      "batch_size": 1
+    },
+    "class_type": "EmptyHunyuanLatentVideo",
+    "_meta": {
+      "title": "07 文生视频：尺寸与帧数",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "8": {
+    "inputs": {
+      "shift": 5,
+      "model": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingSD3",
+    "_meta": {
+      "title": "08 高噪声 Shift",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "9": {
+    "inputs": {
+      "shift": 5,
+      "model": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingSD3",
+    "_meta": {
+      "title": "09 低噪声 Shift",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "10": {
+    "inputs": {
+      "add_noise": "enable",
+      "noise_seed": 20261105,
+      "steps": 20,
+      "cfg": 3.5,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "start_at_step": 0,
+      "end_at_step": 10,
+      "return_with_leftover_noise": "enable",
+      "model": [
+        "8",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "10 高噪声采样（0 → 10）",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "11": {
+    "inputs": {
+      "add_noise": "disable",
+      "noise_seed": 20261105,
+      "steps": 20,
+      "cfg": 3.5,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "start_at_step": 10,
+      "end_at_step": 20,
+      "return_with_leftover_noise": "disable",
+      "model": [
+        "9",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "10",
+        0
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "11 低噪声采样（10 → 20）",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "12": {
+    "inputs": {
+      "tile_size": 256,
+      "overlap": 64,
+      "temporal_size": 16,
+      "temporal_overlap": 4,
+      "samples": [
+        "11",
+        0
+      ],
+      "vae": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeTiled",
+    "_meta": {
+      "title": "12 分块解码 / Tiled decode",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "13": {
+    "inputs": {
+      "fps": 16,
+      "bit_depth": 8,
+      "color_space": "sRGB",
+      "chroma_subsampling": "420",
+      "codec": "none",
+      "images": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "13 视频帧率 / FPS",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  },
+  "14": {
+    "inputs": {
+      "filename_prefix": "vedio/wan22_t2v",
+      "format": "mp4",
+      "format.codec": "h264",
+      "format.codec.encoding": "auto",
+      "codec": "auto",
+      "video": [
+        "13",
+        0
+      ]
+    },
+    "class_type": "SaveVideo",
+    "_meta": {
+      "title": "14 保存 MP4 / AstrBot 输出",
+      "cnr_id": "comfy-core",
+      "ver": "0.44.0"
+    }
+  }
+}
