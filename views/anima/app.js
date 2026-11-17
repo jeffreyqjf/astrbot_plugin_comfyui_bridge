@@ -1000,7 +1000,9 @@ function bindOrderDrag(rows, onMove, handle) {
   }
 }
 
-function renderOrderList(list, items, { locked, onMove, onSelect, selectedIndex, empty, pointer = false }) {
+function renderOrderList(list, items, {
+  locked, onMove, onSelect, selectedIndex, empty, pointer = false, start = 0, total = start + items.length,
+}) {
   list.replaceChildren();
   if (!items.length) {
     const row = document.createElement("li");
@@ -1010,10 +1012,11 @@ function renderOrderList(list, items, { locked, onMove, onSelect, selectedIndex,
     return;
   }
   items.forEach(({ title, detail, id, number: code, preview }, index) => {
+    const position = start + index;
     const row = document.createElement("li");
     row.className = "order-row";
     if (id) row.dataset.id = id;
-    row.classList.toggle("selected", selectedIndex === index);
+    row.classList.toggle("selected", selectedIndex === position);
     const grip = document.createElement("span");
     grip.className = "order-grip";
     grip.textContent = "⠿";
@@ -1027,12 +1030,12 @@ function renderOrderList(list, items, { locked, onMove, onSelect, selectedIndex,
         const from = rows.indexOf(source);
         const insertion = rows.indexOf(target) + Number(after);
         const to = insertion > from ? insertion - 1 : insertion;
-        if (from !== to) onMove(from, to);
+        if (from !== to) onMove(start + from, start + to);
       }, { selector: ".order-row", handle: grip, touch: true });
     }
     const number = document.createElement("span");
     number.className = "order-number";
-    number.textContent = code ?? String(index + 1);
+    number.textContent = code ?? String(position + 1);
     const label = document.createElement(onSelect ? "button" : "div");
     label.className = "order-name";
     label.textContent = title;
@@ -1049,8 +1052,8 @@ function renderOrderList(list, items, { locked, onMove, onSelect, selectedIndex,
     if (onSelect) {
       label.type = "button";
       label.disabled = locked;
-      label.setAttribute("aria-pressed", String(selectedIndex === index));
-      label.addEventListener("click", () => onSelect(index));
+      label.setAttribute("aria-pressed", String(selectedIndex === position));
+      label.addEventListener("click", () => onSelect(position));
     }
     if (detail) {
       const meta = document.createElement("small");
@@ -1065,15 +1068,15 @@ function renderOrderList(list, items, { locked, onMove, onSelect, selectedIndex,
       button.textContent = symbol;
       button.title = verb;
       button.setAttribute("aria-label", `${verb} ${title}`);
-      const to = index + offset;
-      button.disabled = locked || to < 0 || to >= items.length;
-      button.addEventListener("click", () => onMove(index, to));
+      const to = position + offset;
+      button.disabled = locked || to < 0 || to >= total;
+      button.addEventListener("click", () => onMove(position, to));
       actions.append(button);
     }
     row.append(grip, number, label, actions);
     list.append(row);
   });
-  if (!pointer) bindOrderDrag([...list.children], onMove, (row) => row.firstElementChild);
+  if (!pointer) bindOrderDrag([...list.children], (from, to) => onMove(start + from, start + to), (row) => row.firstElementChild);
 }
 
 function loraOrderQuery() {
@@ -1086,8 +1089,11 @@ function loraDirectoryOptions() {
 
 function renderLoraOrder(locked = false) {
   const entries = loraOrder?.entries ?? [];
-  get("lora-order-count").textContent = `${entries.length} 个 LoRA`;
+  const category = get("lora-order-category");
+  const visible = category.value ? entries.filter((row) => row.category === category.value).length : entries.length;
+  get("lora-order-count").textContent = category.value ? `${visible} / ${entries.length} 个 LoRA` : `${visible} 个 LoRA`;
   get("lora-order-refresh").disabled = get("lora-family").disabled = locked;
+  category.disabled = locked;
   const family = get("lora-family").value;
   const command = "/comfy lora " + (family === "illustrious" ? "wai" : family);
   get("lora-order-help").textContent =
@@ -1097,6 +1103,7 @@ function renderLoraOrder(locked = false) {
   const groups = get("lora-order-list");
   groups.replaceChildren();
   for (const [code, title] of Object.entries(loraCategories)) {
+    if (category.value && code !== category.value) continue;
     const indices = entries.flatMap((row, index) => row.category === code ? [index] : []);
     const heading = document.createElement("h3");
     heading.textContent = `${title}（${code}）`;
@@ -1204,6 +1211,7 @@ async function saveLoraTag(tag, category, defaultStrength) {
 get("open-lora-order").addEventListener("click", openLoraOrder);
 get("lora-order-refresh").addEventListener("click", openLoraOrder);
 get("lora-family").addEventListener("change", openLoraOrder);
+get("lora-order-category").addEventListener("change", () => renderLoraOrder());
 get("lora-tag-dialog").addEventListener("cancel", (event) => {
   if (loading) event.preventDefault();
 });
@@ -1537,6 +1545,9 @@ get("persona").addEventListener("submit", async (event) => {
 });
 
 const presetFields = ["name", "positive", "negative"];
+const presetPageSize = 12;
+const presetPageSelect = get("preset-page");
+let presetPage = 1;
 let presetPreview = "";
 let presetPreviewRequest = 0;
 const presetAccountLabel = (account) => account === "legacy" ? "旧版共享预设（仅后台）" : account;
@@ -1554,14 +1565,36 @@ function renderPresetList(busy = loading) {
   const locked = busy || !get("preset-discard").hidden;
   get("preset-new").disabled = locked;
   const list = get("preset-list");
+  const rows = presets?.presets ?? [];
+  const last = Math.max(1, Math.ceil(rows.length / presetPageSize));
+  presetPage = Math.min(presetPage, last);
+  const start = (presetPage - 1) * presetPageSize;
+  get("preset-pages").hidden = last <= 1;
+  if (presetPageSelect.options.length !== last) {
+    presetPageSelect.replaceChildren(...Array.from({ length: last }, (_, index) => new Option(`第 ${index + 1} 页`, index + 1)));
+  }
+  presetPageSelect.value = presetPage;
+  presetPageSelect.disabled = busy;
+  get("preset-page-prev").disabled = busy || presetPage <= 1;
+  get("preset-page-next").disabled = busy || presetPage >= last;
   for (const image of list.querySelectorAll("img")) imageReviews.previews.unobserve(image);
-  renderOrderList(list, (presets?.presets ?? []).map((row) => ({
+  renderOrderList(list, rows.slice(start, start + presetPageSize).map((row) => ({
     title: row.name, preview: row.preview,
   })), {
-    locked, onMove: movePreset, onSelect: selectPreset, selectedIndex: presetIndex,
+    locked, start, total: rows.length, onMove: movePreset, onSelect: selectPreset, selectedIndex: presetIndex,
     empty: "还没有预设。新建的第一条会成为 1 号。",
   });
 }
+
+function flipPresetPage(page) {
+  if (loading || !presets) return;
+  presetPage = page;
+  renderPresetList();
+}
+
+presetPageSelect.addEventListener("change", () => flipPresetPage(Number(presetPageSelect.value)));
+get("preset-page-prev").addEventListener("click", () => flipPresetPage(presetPage - 1));
+get("preset-page-next").addEventListener("click", () => flipPresetPage(presetPage + 1));
 
 function fillPreset() {
   const row = presets.presets[presetIndex];
@@ -1593,7 +1626,7 @@ async function movePreset(from, to) {
   message("正在保存预设编号…");
   try {
     const saved = await bridge.apiPost("studio/presets", { account, revision, presets: rows });
-    renderPresets(saved, rows.indexOf(active));
+    renderPresets(saved, rows.indexOf(active), to);
     completed(`已保存。${rows[to].name} 现在是 ${to + 1} 号。`);
   } catch (error) {
     message(error.message, true);
@@ -1603,7 +1636,7 @@ async function movePreset(from, to) {
   }
 }
 
-function renderPresets(data, index) {
+function renderPresets(data, index, pageIndex = index) {
   presets = data;
   const accounts = get("preset-account");
   if (![...accounts.options].some((option) => option.value === data.account)) {
@@ -1615,6 +1648,7 @@ function renderPresets(data, index) {
   get("preset-form").hidden = get("preset-reload").hidden = false;
   get("preset-path").textContent = `本地文件 · ${data.path}`;
   presetIndex = index;
+  presetPage = Math.floor(Math.max(0, pageIndex) / presetPageSize) + 1;
   fillPreset();
 }
 

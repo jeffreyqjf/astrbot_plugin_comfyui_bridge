@@ -1,6 +1,6 @@
 # ComfyUI 工作台
 
-AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、图像反推、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v2.27.0。
+AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、图像反推、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v2.28.0。
 
 ## 安装和上手
 
@@ -53,7 +53,7 @@ AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘�
 
 ## LoRA 怎么选
 
-- `/comfy lora anima` 和 `/comfy lora wai` 各按人物 C、风格 S、其他 O 编号，对应 `models/loras/anima/` 和 `models/loras/illustrious/`。在工作台「LoRA 编号」可调整分类、组内顺序和默认权重，并编辑附带提示词。
+- `/comfy lora anima` 和 `/comfy lora wai` 各按人物 C、风格 S、其他 O 编号，对应 `models/loras/anima/` 和 `models/loras/illustrious/`。在工作台「LoRA 编号」可从列表上方切换显示分类，点模型名称可调整归属分类、默认权重和附带提示词，也可在组内调整顺序。
 - Anima T2I 或 WAI 可以用 `lora … use C1:0.85` 预约下一次，或用 `gen … --lora C1:0.85` 指定本次。Anima I2I AIO 在工作台配置 LoRA 槽位。
 - `/comfy lora video` 查看 SVI 和 Lightning 的视频 LoRA，使用文件名。`--lora "3=high:文件名:0.8"` 给第 3 段附加高噪声 LoRA，`--stages 3,1` 按原段号顺序执行。省略时沿用工作台的逐段配置。
 
@@ -88,7 +88,7 @@ QQ 可附图或回复图片并发送 `/comfy gen --wf detailer detailed face --r
 
 每个工作流的「工作流配置」可将已保存的参数另存为「快速出图」「精细修复」等命名配置。选中即加载，「保存设置」同步更新所选配置。在「管理 → 导入导出 → 工作流配置」可备份和恢复配置。
 
-在工作流的「命令简称」设置自己的 `--wf` 值。具备可接入采样模型的自定义文生图工作流，选择 LoRA 目录后即可用该简称查询、预约和扫图。提示词预设可从收藏选择效果图，列表显示小图，点开预览可查看原图。
+在工作流的「命令简称」设置自己的 `--wf` 值。具备可接入采样模型的自定义文生图工作流，选择 LoRA 目录后即可用该简称查询、预约和扫图。提示词预设列表每页显示 12 条，翻页沿用全局编号，页间可用上下箭头移动预设。可从收藏选择效果图，列表显示小图，点开预览可查看原图。
 
 工作流参数页的「调整参数布局」可拖拽分类和字段顺序，或用上下箭头调整后保存。新导入的自定义工作流按节点依赖生成初始顺序，后续同名导入和命名配置切换保留已保存的布局。
 

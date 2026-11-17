@@ -180,7 +180,17 @@
           <section>
             <div class="order-heading">
               <div>
-                <label class="field">模型目录<select id="lora-family"></select></label>
+                <div class="row-actions order-filters">
+                  <label class="field">模型目录<select id="lora-family"></select></label>
+                  <label class="field">显示分类
+                    <select id="lora-order-category">
+                      <option value="">全部</option>
+                      <option value="C">人物（C）</option>
+                      <option value="S">风格（S）</option>
+                      <option value="O">其他（O）</option>
+                    </select>
+                  </label>
+                </div>
                 <p>点击 LoRA 名称可编辑分类和附带提示词。拖动或点击箭头可调整组内编号。</p>
               </div>
               <span id="lora-order-count" class="pill"></span>
@@ -247,6 +257,11 @@
               <button type="button" id="preset-new">＋ 新建预设</button>
             </div>
             <ol id="preset-list" class="order-list" aria-label="提示词预设编号"></ol>
+            <nav id="preset-pages" class="image-pages" aria-label="提示词预设分页" hidden>
+              <button type="button" id="preset-page-prev">上一页</button>
+              <select id="preset-page" aria-label="提示词预设页码"></select>
+              <button type="button" id="preset-page-next">下一页</button>
+            </nav>
             <div class="preset-preview">
               <button type="button" id="preset-preview-open" aria-label="查看预设预览大图" hidden>
                 <img id="preset-preview-image" alt="提示词预设的效果图">

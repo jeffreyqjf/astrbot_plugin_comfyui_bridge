@@ -50,3 +50,10 @@
 - 命令添加使用服务端的实际工作流解析结果显示 V40 OpenPose、Any 或 Anima T2I LLLite 分支，复用简易添加的选图、直用和预处理。普通生成、人物 LoRA 遍历和预设遍历可提交独立控制图。每个遍历任务保留同一份控制输入，预处理输出继续独立归档。
 - 29 项回归测试通过。隔离 AstrBot 加载 11 条工作流和 61 条 Web 路由，使用模拟生成验证 V40 普通生成、两种遍历及不支持分支的拒绝路径。Chromium 在 1100px 和 360px 宽度下通过控制面板、选图、遍历提交和乱序响应检查。实际 ComfyUI 生成和运行实例更新待验证。
 - Git Commit Message 为 `feat: support ControlNet in workbench command tasks`。
+
+## v2.28.0 · 预设翻页与 LoRA 分类筛选
+
+- 提示词预设每页显示 12 条，支持上一页、下一页和页码选择。编号按完整列表计算，拖拽保留页内排序，箭头可跨页移动。翻页保留当前编辑及草稿，定位指定预设会打开对应页。
+- LoRA 编号列表新增「全部、人物 C、风格 S、其他 O」显示筛选，从当前目录立即切换分组，按原组内编号显示并支持排序。
+- Chromium 在 1100px 和 360px 宽度下通过分页、跨页移动、页内拖拽、草稿保留和分类筛选检查。29 项回归测试通过，安装包在隔离 AstrBot 加载 11 条工作流和 61 条路由。当前运行实例待更新。
+- Git Commit Message 为 `feat: paginate prompt presets and filter LoRA categories`。
