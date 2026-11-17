@@ -57,3 +57,8 @@
 - LoRA 编号列表新增「全部、人物 C、风格 S、其他 O」显示筛选，从当前目录立即切换分组，按原组内编号显示并支持排序。
 - Chromium 在 1100px 和 360px 宽度下通过分页、跨页移动、页内拖拽、草稿保留和分类筛选检查。29 项回归测试通过，安装包在隔离 AstrBot 加载 11 条工作流和 61 条路由。当前运行实例待更新。
 - Git Commit Message 为 `feat: paginate prompt presets and filter LoRA categories`。
+
+## v2.28.1 · 预设分页排版
+
+- 缩短页码下拉框，上一页、页码和下一页保持在同一行。Chromium 在 320、360、760 和 1100 像素宽度下通过布局检查。
+- Git Commit Message 为 `fix: keep prompt preset pagination on one line`。

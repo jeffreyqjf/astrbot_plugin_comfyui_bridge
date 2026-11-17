@@ -230,7 +230,9 @@ body:has(#error-notice:not([hidden]) #unsaved-actions:not([hidden])) main {
 .order-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 8px 16px; }
 .order-heading p { margin: 4px 0; }
 .order-filters { margin-bottom: 8px; }
-#preset-pages { margin-bottom: 16px; }
+#preset-pages { flex-wrap: nowrap; margin-bottom: 16px; }
+#preset-pages button { flex: none; white-space: nowrap; }
+#preset-page { width: auto; min-width: 0; }
 .order-list { display: grid; gap: 8px; margin: 12px 0 16px; padding: 0; list-style: none; }
 .order-row {
   position: relative; display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto;
