@@ -261,6 +261,8 @@ class ComfyUIBridge(Star):
             ("studio/lora-order", self.studio.save_lora_order, "POST"),
             ("studio/lora-tags", self.studio.lora_tags, "GET"),
             ("studio/lora-tags", self.studio.import_lora_tags, "POST"),
+            ("studio/controlnet/profiles", self.studio.controlnet_profiles, "GET"),
+            ("studio/controlnet/profiles", self.studio.save_controlnet_profiles, "POST"),
             ("studio/workflows/export", self.studio.export_workflows, "GET"),
             ("studio/workflow/export", self.studio.export_workflow, "GET"),
             ("studio/workflows/save", self.studio.save_workflows, "POST"),

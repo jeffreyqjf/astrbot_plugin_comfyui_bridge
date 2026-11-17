@@ -11,6 +11,7 @@ from bridge.workflows.controlnet import (
     configure_controlnets,
     controlnet_capabilities,
     controlnet_switches,
+    normalize_controlnet_profiles,
     without_controlnet_images,
 )
 from bridge.workflows.detailer import LEGACY_FEET_LINKS
@@ -60,6 +61,43 @@ SCHEMAS = {
 
 
 class ControlNetWorkflowsTest(unittest.TestCase):
+    def test_custom_type_profile_applies_installed_model_processor_and_signed_strength(self):
+        for name, branch, model, loader, field, apply, processor in (
+            (ADVANCED_V40_WORKFLOW, "any", "test\\tile.safetensors", "178", "control_net_name", "165", "172"),
+            (ANIMA_WORKFLOW, "lllite", "anima\\custom.safetensors", "138", "name", "131", "130"),
+        ):
+            with self.subTest(name=name):
+                schemas = deepcopy(SCHEMAS)
+                schemas["ControlNetLoader"] = combo("control_net_name", [model])
+                schemas["ModelPatchLoader"] = combo("name", [model])
+                schemas["AIO_Preprocessor"] = combo("preprocessor", ["TilePreprocessor"])
+                strength = -0.4 if branch == "lllite" else 1.25
+                configs = normalize_controlnet_profiles({"version": 1, "profiles": [{
+                    "id": "my-tile", "workflow": name, "branch": branch, "type": "tile", "label": "Tile",
+                    "model": model, "preprocessor": "TilePreprocessor", "resolution": 1024,
+                    "strength": strength, "start_percent": 0.2, "end_percent": 0.55,
+                }]})
+                self.assertEqual(controlnet_capabilities(name, configs)[branch]["types"], ["tile"])
+                bindings = {branch: {"type": "tile", "mode": "preprocess", "image": "raw.png", "profile": configs[0]}}
+                if branch == "any":
+                    data = profile(name)
+                    workflow = v40_workflow(name, data["prompt"], data["astrbot"], controlnets=bindings, schemas=schemas)
+                    graph = workflow.graph
+                    self.assertNotEqual(data["prompt"][loader]["inputs"][field], model)
+                else:
+                    graph = {
+                        "129": node("LoadImage", image="previous.png"),
+                        "130": node("AIO_Preprocessor", image=["129", 0], preprocessor="none"),
+                        "131": node("AnimaLLLiteApply", image=["130", 0], model_patch=["138", 0]),
+                        "138": node("ModelPatchLoader", name="previous.safetensors"),
+                    }
+                    configure_controlnets(name, graph, bindings, schemas)
+                self.assertEqual(graph[loader]["inputs"][field], model)
+                self.assertEqual(graph[processor]["inputs"]["preprocessor"], "TilePreprocessor")
+                self.assertEqual(graph[processor]["inputs"]["resolution"], 1024)
+                values = graph[apply]["inputs"]
+                self.assertEqual((values["strength"], values["start_percent"], values["end_percent"]), (strength, 0.2, 0.55))
+
     def test_v40_bindings_use_independent_inputs_and_effective_outputs(self):
         name = ADVANCED_V40_WORKFLOW
         data = profile(name)

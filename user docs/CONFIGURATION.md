@@ -340,6 +340,35 @@ WAI 默认线稿型 Union ControlNet 的输入先做 Canny 边缘检测。选中
 
 [工作台表单](../views/workbench/index.html) · [工作台代码](../views/workbench/app.js) · [设置存取](../bridge/studio/studio_settings.py)
 
+## ControlNet 预设
+
+在「管理 → ControlNet 配置」选择 Advanced Gemma V40 的 OpenPose、Any 或 Anima T2I 的 LLLite 分支。填写预设名称和类型代码，从 ComfyUI 提供的列表选择与工作流模型兼容的权重，再填写预处理、分辨率、强度和开始／结束比例。预处理器留空时仅提供「直接使用已处理图片」。同类型的不同模型可共用类型代码，控制图集按这个代码匹配。
+
+首次保存会在插件数据目录生成 `controlnet_profiles.json`，实际路径显示在配置页下方。简易添加和命令添加都会读取它。已配置的分支使用保存的类型，同一类型有多条时默认选第一条。删除该分支的最后一条预设后，分支回到内置配置。手动编辑文件后重新打开工作台即可重载类型和预设。
+
+```json
+{
+  "version": 1,
+  "profiles": [
+    {
+      "id": "illustrious-canny",
+      "workflow": "Advanced_Gemma_V40_AstrBot",
+      "branch": "any",
+      "type": "canny",
+      "label": "Illustrious Canny",
+      "model": "Illustrious_ControlNet/illustriousXLv1.1_canny_fp16.safetensors",
+      "preprocessor": "CannyEdgePreprocessor",
+      "resolution": 1536,
+      "strength": 1.25,
+      "start_percent": 0,
+      "end_percent": 0.5
+    }
+  ]
+}
+```
+
+手动填写时，每条预设的 `id` 须唯一。`id` 和 `type` 使用小写英文字母、数字、下划线或连字符。模型路径相对 ComfyUI 对应的模型目录，预处理器使用下拉列表中的节点名称。当前预设适用于已有分支和输入连线。需要额外遮罩、专用参数或额外节点的模型须先适配工作流。
+
 生成任务的完整提交图和执行追溯记录保存在插件数据目录的 `generation_metadata/<完整任务ID>.json`，包含实际提示词、种子、模型、LoRA、参考图校验值和 ComfyUI 输出信息。支持嵌入的输出格式还会写入任务信息。QQ 转发压缩可能剥离内嵌字段，本机 JSON 可继续追溯。
 
 [快速上手](../README.md) · [QQ 指令集](COMMANDS.md)

@@ -918,7 +918,7 @@ function activate(tab) {
 
 function showPanel(id, tab) {
   activate(tab);
-  for (const panel of ["settings", "archive", "persona", "lora-order", "presets", "queue", "create-task", "exports", "image-review", "image-gallery", "control-gallery", "videos"]) get(panel).hidden = panel !== id;
+  for (const panel of ["settings", "archive", "persona", "lora-order", "presets", "queue", "create-task", "exports", "image-review", "image-gallery", "control-gallery", "controlnet-profiles", "videos"]) get(panel).hidden = panel !== id;
   if (remote) get("remote-workflow").value = id === "settings" ? selected.name : "";
 }
 
@@ -2318,12 +2318,13 @@ function renderTaskControlnets(selectedName = queueWorkflow.value) {
   for (const { thumbnail } of taskControlnets.values()) setTaskImagePreview(thumbnail, null);
   branches.replaceChildren();
   taskControlnets.clear();
-  for (const [branch, { types, modes }] of Object.entries(workflow?.controlnets ?? {})) {
+  for (const [branch, { types, modes, profiles = [] }] of Object.entries(workflow?.controlnets ?? {})) {
     const row = get("queue-controlnet-branch").content.firstElementChild.cloneNode(true);
     row.querySelector("legend").textContent = controlBranchTitle(branch);
     const enabled = row.querySelector("[data-control-enabled]");
     const fields = row.querySelector("[data-control-fields]");
     const type = row.querySelector("[data-control-type]");
+    const profile = row.querySelector("[data-control-profile]");
     const mode = row.querySelector("[data-control-mode]");
     const browse = row.querySelector("[data-control-input]");
     const browseWeb = row.querySelector("[data-control-input-web]");
@@ -2333,14 +2334,24 @@ function renderTaskControlnets(selectedName = queueWorkflow.value) {
     const file = row.querySelector("input");
     const status = row.querySelector("[data-control-source]");
     const thumbnail = row.querySelector("[data-control-thumbnail]");
-    const settings = { enabled, type, mode, thumbnail, source: null };
+    const settings = { enabled, type, profile, mode, thumbnail, source: null };
     let sourceVersion = 0;
     taskControlnets.set(branch, settings);
     for (const value of types) type.add(new Option(controlTypeTitle(value), value));
-    for (const value of modes) {
-      if (value === "preprocess" && !studio.input_available) continue;
-      mode.add(new Option(value === "direct" ? "直接使用已处理图片" : "预处理原图", value));
+    row.querySelector("[data-control-profile-field]").hidden = !profiles.length;
+    function updateModes() {
+      const available = profiles.find(({ id }) => id === profile.value)?.modes ?? modes;
+      const previous = mode.value;
+      mode.replaceChildren(...available.filter((value) => value !== "preprocess" || studio.input_available)
+        .map((value) => new Option(value === "direct" ? "直接使用已处理图片" : "预处理原图", value)));
+      if ([...mode.options].some(({ value }) => value === previous)) mode.value = previous;
     }
+    function updateProfiles() {
+      profile.replaceChildren(...profiles.filter((entry) => entry.type === type.value)
+        .map((entry) => new Option(entry.label, entry.id)));
+      updateModes();
+    }
+    updateProfiles();
     enabled.querySelector('option[value="on"]').disabled = !mode.options.length;
     browse.disabled = !studio.input_available;
     browseWeb.hidden = !studio.input_file_dialog;
@@ -2363,7 +2374,15 @@ function renderTaskControlnets(selectedName = queueWorkflow.value) {
       sourceVersion++;
       fields.hidden = enabled.value !== "on";
     });
-    type.addEventListener("change", () => setSource(null));
+    type.addEventListener("change", () => {
+      updateProfiles();
+      setSource(null);
+    });
+    profile.addEventListener("change", () => {
+      const previous = mode.value;
+      updateModes();
+      if (mode.value !== previous) setSource(null);
+    });
     mode.addEventListener("change", () => setSource(null));
     const pickInputOnWeb = () => imageReviews.pickResource("input", ({ entry, src }) => {
       setSource({ id: entry.id, label: entry.id }, src);
@@ -2401,15 +2420,19 @@ function renderTaskControlnets(selectedName = queueWorkflow.value) {
     branches.append(row);
   }
   controls.hidden = !taskControlnets.size;
+  const status = get("queue-controlnet-config-status");
+  status.textContent = studio.controlnet_profile_error || "";
+  status.hidden = !status.textContent;
 }
 
 async function queueControlnetPayload() {
   const entries = [...taskControlnets].filter(([, { enabled }]) => enabled.value);
   if (!entries.length) return {};
-  const controlnets = await Promise.all(entries.map(async ([branch, { enabled, type, mode, source }]) => {
+  const controlnets = await Promise.all(entries.map(async ([branch, { enabled, type, profile, mode, source }]) => {
     if (enabled.value === "off") return [branch, null];
     if (!source) throw new Error(`请为 ${controlBranchTitle(branch)} 选择控制图。`);
     const binding = { type: type.value, mode: mode.value };
+    if (profile.value) binding.profile = profile.value;
     if (source.file) binding.image = await encodeReference(source.file);
     else if (source.asset_id) binding.asset_id = source.asset_id;
     else if (source.gallery) binding.gallery = source.gallery;
@@ -2418,6 +2441,145 @@ async function queueControlnetPayload() {
   }));
   return { controlnets: Object.fromEntries(controlnets) };
 }
+
+const controlProfileRoute = "studio/controlnet/profiles";
+const controlProfileField = (field) => get(`controlnet-profile-${field}`);
+const controlProfileWorkflow = controlProfileField("workflow");
+const controlProfileBranch = controlProfileField("branch");
+const controlProfileSelect = controlProfileField("select");
+const controlProfileForm = controlProfileField("form");
+const controlProfileNumbers = ["resolution", "strength", "start_percent", "end_percent"];
+let controlProfileData;
+let controlProfileBusy = false;
+
+function controlProfileStatus(text, error = false) {
+  const status = controlProfileField("status");
+  status.textContent = text;
+  status.classList.toggle("error", error);
+}
+
+function setControlProfileBusy(busy) {
+  controlProfileBusy = busy;
+  for (const control of [controlProfileWorkflow, controlProfileBranch, controlProfileField("refresh"),
+    ...controlProfileForm.querySelectorAll("input, select, button")]) control.disabled = busy;
+  controlProfileSelect.disabled = busy || !controlProfileData;
+  controlProfileField("save").disabled = busy || !controlProfileData?.models.length;
+  controlProfileField("resolution").disabled = busy || !controlProfileField("preprocessor").value;
+}
+
+function renderControlProfile() {
+  const row = controlProfileData.profiles.find(({ id }) => id === controlProfileSelect.value);
+  const model = controlProfileField("model");
+  model.replaceChildren(new Option("选择模型", ""), ...controlProfileData.models.map((value) => new Option(value, value)));
+  const preprocessor = controlProfileField("preprocessor");
+  preprocessor.replaceChildren(new Option("仅直用（不预处理）", ""),
+    ...controlProfileData.preprocessors.map((value) => new Option(value, value)));
+  for (const [select, value] of [[model, row?.model], [preprocessor, row?.preprocessor]]) {
+    if (value && ![...select.options].some((option) => option.value === value)) {
+      select.add(new Option(`${value}（当前不可用）`, value));
+    }
+    select.value = value ?? "";
+  }
+  controlProfileField("label").value = row?.label ?? "";
+  controlProfileField("type").value = row?.type ?? "";
+  for (const field of controlProfileNumbers) controlProfileField(field).value = (row ?? controlProfileData.defaults)[field];
+  controlProfileField("strength").min = controlProfileData.strength_min;
+  controlProfileField("delete").hidden = !row;
+  controlProfileForm.hidden = false;
+  setControlProfileBusy(false);
+}
+
+function renderControlProfileList(identity = "") {
+  controlProfileSelect.replaceChildren(new Option("新建预设", ""), ...controlProfileData.profiles.map(
+    ({ id, label, type }) => new Option(`${label} · ${controlTypeTitle(type)}`, id)
+  ));
+  controlProfileSelect.value = controlProfileData.profiles.some(({ id }) => id === identity) ? identity : "";
+  controlProfileField("path").textContent = controlProfileData.path;
+  renderControlProfile();
+}
+
+async function loadControlProfiles(identity = "") {
+  if (controlProfileBusy || !controlProfileBranch.value) return;
+  controlProfileData = undefined;
+  controlProfileForm.hidden = true;
+  setControlProfileBusy(true);
+  controlProfileStatus("正在读取模型和预设…");
+  try {
+    controlProfileData = await bridge.apiGet(controlProfileRoute, {
+      workflow: controlProfileWorkflow.value, branch: controlProfileBranch.value,
+    });
+    renderControlProfileList(identity);
+    controlProfileStatus(controlProfileData.catalog_error, Boolean(controlProfileData.catalog_error));
+  } catch (error) {
+    controlProfileStatus(error.message, true);
+  } finally {
+    setControlProfileBusy(false);
+  }
+}
+
+function selectControlProfileWorkflow() {
+  const workflow = studio.workflows.find(({ name }) => name === controlProfileWorkflow.value);
+  controlProfileBranch.replaceChildren(...Object.keys(workflow.controlnets).map(
+    (branch) => new Option(controlBranchTitle(branch), branch)
+  ));
+  loadControlProfiles();
+}
+
+function openControlProfiles(workflowName) {
+  if (!studio || loading || controlProfileBusy || get("save").disabled) return;
+  const available = studio.workflows.filter(({ controlnets }) => Object.keys(controlnets ?? {}).length);
+  if (!available.length) {
+    message("暂无可配置 ControlNet 的工作流。", true);
+    return;
+  }
+  showPanel("controlnet-profiles", get("open-controlnet-profiles"));
+  message("");
+  const prior = workflowName ?? controlProfileWorkflow.value;
+  controlProfileWorkflow.replaceChildren(...available.map(({ name }) => new Option(workflowTitle(name), name)));
+  if (available.some(({ name }) => name === prior)) controlProfileWorkflow.value = prior;
+  selectControlProfileWorkflow();
+}
+
+async function writeControlProfile(remove = false) {
+  if (controlProfileBusy || !controlProfileData) return;
+  const workflow = controlProfileWorkflow.value;
+  const id = controlProfileSelect.value || null;
+  const profile = remove ? null : {
+    label: controlProfileField("label").value.trim(),
+    type: controlProfileField("type").value.trim(),
+    model: controlProfileField("model").value,
+    preprocessor: controlProfileField("preprocessor").value,
+    ...Object.fromEntries(controlProfileNumbers.map((field) => [field, controlProfileField(field).valueAsNumber])),
+  };
+  setControlProfileBusy(true);
+  try {
+    const result = await bridge.apiPost(controlProfileRoute, {
+      workflow, branch: controlProfileBranch.value, id, profile, revision: controlProfileData.revision,
+    });
+    Object.assign(controlProfileData, result);
+    studio.workflows.find(({ name }) => name === workflow).controlnets = result.capabilities;
+    if (taskControlWorkflow === workflow) taskControlWorkflow = undefined;
+    renderControlProfileList(result.id);
+    controlProfileStatus(remove ? "预设已删除。" : "预设已保存，可在新建任务中使用。");
+  } catch (error) {
+    controlProfileStatus(error.message, true);
+  } finally {
+    setControlProfileBusy(false);
+  }
+}
+
+get("open-controlnet-profiles").addEventListener("click", () => openControlProfiles());
+get("queue-controlnet-configure").addEventListener("click", () => openControlProfiles(taskControlWorkflow));
+controlProfileWorkflow.addEventListener("change", selectControlProfileWorkflow);
+controlProfileBranch.addEventListener("change", () => loadControlProfiles());
+controlProfileSelect.addEventListener("change", renderControlProfile);
+controlProfileField("refresh").addEventListener("click", () => loadControlProfiles(controlProfileSelect.value));
+controlProfileField("preprocessor").addEventListener("change", () => setControlProfileBusy(false));
+controlProfileField("delete").addEventListener("click", () => writeControlProfile(true));
+controlProfileForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  writeControlProfile();
+});
 
 queueWorkflow.addEventListener("change", () => {
   showQueueReference();

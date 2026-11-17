@@ -366,6 +366,9 @@ button.order-name { border-color: transparent; background: transparent; text-ali
   min-width: 0; margin: 8px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px;
 }
 .queue-controlnet-branch legend, .image-preview-card h3 { color: var(--accent); font-weight: 650; }
+#controlnet-profile-path { overflow-wrap: anywhere; }
+#controlnet-profile-status:empty { display: none; }
+#queue-controlnets .panel-heading { margin-top: 12px; }
 .control-source-actions { margin-top: 10px; }
 .queue-lora { margin-top: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
 #queue-lora-summary { margin-left: 6px; color: var(--muted); font-size: 12px; }

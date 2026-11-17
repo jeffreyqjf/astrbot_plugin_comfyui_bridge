@@ -25,7 +25,7 @@ API_PATHS = frozenset({
     "studio/workflow/alias",
     "studio/workflow/export", "studio/workflows/export", "studio/workflows/import", "studio/workflows/replace",
     "studio/workflow/configs", "studio/workflow/configs/import", "studio/workflow/configs/export",
-    "studio/lora-tags", "studio/queue/templates/import",
+    "studio/lora-tags", "studio/controlnet/profiles", "studio/queue/templates/import",
     "studio/presets/import", "studio/queue", "studio/queue/command", "studio/queue/command/workflow",
     "studio/queue/templates", "studio/queue/cancel",
     "studio/queue/qq-timeout", "studio/queue/loras",

@@ -42,6 +42,7 @@
           <button type="button" id="open-image-gallery" class="workflow-tab" aria-controls="image-gallery">收藏图集</button>
           <button type="button" id="open-pass-gallery" class="workflow-tab" aria-controls="image-gallery">Pass 图集</button>
           <button type="button" id="open-control-gallery" class="workflow-tab" aria-controls="control-gallery">控制图集</button>
+          <button type="button" id="open-controlnet-profiles" class="workflow-tab" aria-controls="controlnet-profiles">ControlNet 配置</button>
           <button type="button" id="open-videos" class="workflow-tab" aria-controls="videos">生成视频</button>
           <button type="button" id="open-create-task" class="workflow-tab" aria-controls="create-task">新建任务</button>
           <button type="button" id="open-queue" class="workflow-tab" aria-controls="queue">任务队列</button>
@@ -489,6 +490,45 @@
             <button type="submit">跳转</button>
           </form>
         </template>
+        <div id="controlnet-profiles" hidden>
+          <div class="panel-heading">
+            <h2>ControlNet 配置</h2>
+            <button type="button" id="controlnet-profile-refresh">刷新模型列表</button>
+          </div>
+          <section>
+            <div class="grid">
+              <label class="field">工作流<select id="controlnet-profile-workflow"></select></label>
+              <label class="field">控制分支<select id="controlnet-profile-branch"></select></label>
+              <label class="field">预设<select id="controlnet-profile-select" disabled></select></label>
+            </div>
+            <p id="controlnet-profile-status" role="status"></p>
+            <form id="controlnet-profile-form" hidden>
+              <div class="grid">
+                <label class="field">预设名称<input id="controlnet-profile-label" maxlength="64" required></label>
+                <label class="field">类型代码
+                  <input id="controlnet-profile-type" list="controlnet-profile-type-options" maxlength="64"
+                    pattern="[a-z0-9][a-z0-9_\-]{0,63}" autocapitalize="off" placeholder="例如 canny" required>
+                </label>
+                <datalist id="controlnet-profile-type-options">
+                  <option value="openpose"></option><option value="canny"></option><option value="depth"></option>
+                  <option value="lineart"></option><option value="scribble"></option><option value="tile"></option>
+                </datalist>
+                <label class="field wide">模型文件<select id="controlnet-profile-model" required></select></label>
+                <label class="field">预处理器<select id="controlnet-profile-preprocessor"></select></label>
+                <label class="field">预处理分辨率<input id="controlnet-profile-resolution" type="number" min="64" max="16384" step="1" required></label>
+                <label class="field">控制强度<input id="controlnet-profile-strength" type="number" max="10" step="any" required></label>
+                <label class="field">开始比例<input id="controlnet-profile-start_percent" type="number" min="0" max="1" step="any" required></label>
+                <label class="field">结束比例<input id="controlnet-profile-end_percent" type="number" min="0" max="1" step="any" required></label>
+              </div>
+              <small class="section-note">同一种控制图请用相同类型代码，图集按此匹配。选择适配当前工作流的模型。预处理器留空时，任务只提供直接使用。</small>
+              <footer>
+                <button type="button" id="controlnet-profile-delete" hidden>删除预设</button>
+                <button type="submit" id="controlnet-profile-save" class="primary">保存预设</button>
+              </footer>
+              <small id="controlnet-profile-path" class="section-note"></small>
+            </form>
+          </section>
+        </div>
         <div id="control-gallery" hidden>
           <div class="panel-heading">
             <h2>控制图集</h2>
@@ -612,7 +652,11 @@
                 <small id="queue-lora-status" role="status"></small>
               </details>
               <div id="queue-controlnets" hidden>
-                <h3>ControlNet</h3>
+                <div class="panel-heading">
+                  <h3>ControlNet</h3>
+                  <button type="button" id="queue-controlnet-configure">配置预设</button>
+                </div>
+                <p id="queue-controlnet-config-status" role="status" hidden></p>
                 <div id="queue-controlnet-branches"></div>
               </div>
               <template id="queue-controlnet-branch">
@@ -626,6 +670,7 @@
                   <div data-control-fields hidden>
                     <div class="grid">
                       <label class="field">控制类型 <select data-control-type></select></label>
+                      <label class="field" data-control-profile-field hidden>预设 <select data-control-profile></select></label>
                       <label class="field">处理方式 <select data-control-mode></select></label>
                     </div>
                     <div class="row-actions control-source-actions">

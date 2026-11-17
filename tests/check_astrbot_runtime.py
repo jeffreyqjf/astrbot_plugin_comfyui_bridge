@@ -260,6 +260,88 @@ async def check_gallery_export(instance, root):
     assert (await export("images", "pass")).status_code == 400
 
 
+async def check_controlnet_profiles(instance, root, name):
+    from astrbot.api.web import PluginRequest, bind_request_context
+    from PIL import Image
+    from starlette.requests import Request
+
+    route = "studio/controlnet/profiles"
+    query = f"workflow={name}&branch=any".encode()
+
+    async def call(method, data=None, user="test", endpoint=route):
+        async def receive():
+            return {"type": "http.request", "body": json.dumps(data).encode()}
+
+        incoming = Request({
+            "type": "http", "method": method, "path": f"/api/{endpoint}", "headers": [], "query_string": query,
+        }, receive)
+        with bind_request_context(PluginRequest(incoming, username=user)):
+            return await instance.remote_studio.routes[method, endpoint]()
+
+    schemas = {
+        "LoadImage": {}, "ControlNetApplyAdvanced": {}, "PreviewImage": {},
+        "ControlNetLoader": {
+            "input": {"required": {"control_net_name": [["test\\tile.safetensors", "test\\tile-alt.safetensors"]]}},
+        },
+        "AIO_Preprocessor": {"input": {"optional": {"preprocessor": [["none", "TilePreprocessor"]]}}},
+    }
+    with patch.object(instance.service.client, "node_schemas", return_value=schemas):
+        assert (await call("GET", user=None)).status_code == 401
+        initial = json.loads((await call("GET")).body)
+        assert initial["models"] == ["test/tile.safetensors", "test/tile-alt.safetensors"]
+        assert initial["preprocessors"] == ["TilePreprocessor"] and not initial["profiles"]
+        row = {
+            "label": "Tile", "type": "tile", "model": "test/tile.safetensors", "preprocessor": "TilePreprocessor",
+            "resolution": 768, "strength": 1.25, "start_percent": 0, "end_percent": 0.55,
+        }
+        filtered = {"workflow": name, "branch": "any", "profile": row, "revision": initial["revision"]}
+        bad = await call("POST", {**filtered, "profile": {**row, "model": "missing.safetensors"}})
+        assert bad.status_code == 400
+        created = await call("POST", filtered)
+        assert created.status_code == 200, created.body
+        first = json.loads(created.body)
+        assert (await call("POST", filtered)).status_code == 409
+        request = {**filtered, "profile": {
+            **row, "label": "Tile Direct", "preprocessor": "", "model": "test/tile-alt.safetensors",
+        }, "revision": first["revision"]}
+        second = json.loads((await call("POST", request)).body)
+        assert second["capabilities"]["any"]["types"] == ["tile"]
+        path = instance.studio.controlnet_profiles_path
+        assert path.is_relative_to(root) and len(json.loads(path.read_bytes())["profiles"]) == 2
+        png = io.BytesIO()
+        Image.new("RGB", (2, 2)).save(png, "PNG")
+        binding = {"type": "tile", "mode": "direct", "image": base64.b64encode(png.getvalue()).decode()}
+        resolved, _, _ = instance.studio.prepare_controls(name, {"any": binding})
+        assert resolved["any"]["profile"]["id"] == first["id"]
+        with patch.object(instance.service, "_run") as run:
+            queued = await call("POST", {
+                "workflow": name, "positive": "fixture",
+                "controlnets": {"any": {**binding, "profile": first["id"], "mode": "preprocess"}},
+            }, endpoint="studio/queue")
+            assert queued.status_code == 200, queued.body
+            graph = run.call_args.args[1]
+            assert graph["178"]["inputs"]["control_net_name"] == "test\\tile.safetensors"
+            assert graph["165"]["inputs"]["strength"] == 1.25
+            assert graph["172"]["inputs"]["resolution"] == 768
+            assert run.call_args.kwargs["control_outputs"] == {"any": "astrbot_controlnet_any"}
+        binding["profile"] = second["id"]
+        resolved, _, _ = instance.studio.prepare_controls(name, {"any": binding})
+        assert resolved["any"]["profile"]["model"] == "test/tile-alt.safetensors"
+        try:
+            instance.studio.prepare_controls(name, {"any": {**binding, "mode": "preprocess"}})
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("A direct-only ControlNet profile accepted preprocess")
+        for saved in (second, first):
+            removed = await call("POST", {
+                **filtered, "id": saved["id"], "profile": None, "revision": second["revision"],
+            })
+            assert removed.status_code == 200, removed.body
+            second = json.loads(removed.body)
+        assert second["capabilities"]["any"]["types"] == ["canny", "depth"]
+
+
 async def check(root, archive, core):
     os.environ["ASTRBOT_ROOT"] = str(root)
     plugins = root / "data" / "plugins"
@@ -302,6 +384,9 @@ async def check(root, archive, core):
         await check_queue_loras(instance, root, module.ADVANCED_V40_WORKFLOW)
         assert ("GET", f"/{PLUGIN}/studio/images/export") in context.routes
         await check_gallery_export(instance, root)
+        assert ("GET", f"/{PLUGIN}/studio/controlnet/profiles") in context.routes
+        assert ("POST", f"/{PLUGIN}/studio/controlnet/profiles") in context.routes
+        await check_controlnet_profiles(instance, root, module.ADVANCED_V40_WORKFLOW)
         print(f"Loaded {len(service.workflows)} workflows and {len(context.routes)} web routes.")
     finally:
         await instance.terminate()

@@ -101,3 +101,9 @@
 
 - 简短参数组按每行的实际组数分配宽度，单组占满整行。扩散模型、文本编码器和 VAE 等简短组可并排摆放。Chromium 在 320px、360px、746px 和 1100px 宽度下通过布局和参数顺序检查。
 - Git Commit Message 为 `fix: fill unused space in workflow option rows`。
+
+## v2.32.0 · ControlNet 模型预设
+
+- 工作台新增 ControlNet 配置页。按 Advanced Gemma V40 的 OpenPose、Any 或 Anima T2I 的 LLLite 分支管理类型、模型、预处理、分辨率、强度与生效比例。首次保存写入插件数据目录的 `controlnet_profiles.json`，简易添加和命令添加可选择同类型的不同预设。未配置的分支使用内置规则。
+- 30 项回归测试通过。隔离 AstrBot 加载 11 条工作流和 64 条路由，验证模型列表、配置保存、版本冲突、不同预设切换、删除回退和模拟入队。Chromium 在 360px 和 1100px 宽度下验证编辑和任务选择。使用本机 ComfyUI 的模型及节点列表构建了 V40 Illustrious Canny 预设图与 OpenPose 默认图，实际出图及运行实例更新待验证。
+- Git Commit Message 为 `feat: configure ControlNet model presets for task creation`。

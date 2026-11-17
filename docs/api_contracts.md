@@ -8,6 +8,7 @@
 | `POST studio/queue`、`POST studio/queue/command` | 结构化参数或命令创建任务。工作流和入口支持时，使用 `image`（Base64）或 `reference_id`（收藏图标识）二选一，可加 `mask`（Base64） |
 | `POST studio/queue/command/workflow` | 发送 `command` 和布尔值 `has_reference`，返回生成或遍历命令选中的 `workflow`。无法解析或无需生成时返回 `workflow: null`，无需上传图像即可查询 |
 | `GET studio/queue/loras` | 按 `workflow` 读取该工作流目录下可选 LoRA 的 ID、编号、名称和默认强度 |
+| `GET/POST studio/controlnet/profiles` | GET 按 `workflow`、`branch` 读取预设、ComfyUI 模型和预处理器选项及文件修订号。POST 传 `workflow`、`branch`、`revision`、`profile`，编辑或删除时加 `id`，删除用 `profile: null`。修订不匹配返回 409 |
 | `GET studio/input`、`GET studio/input/preview` | 用 `directory`、`page` 浏览受限的本机 ComfyUI input，`id` 指定要预览的图片 |
 | `POST studio/input/pick` | 登录后发送空对象，在 Windows 主机的 ComfyUI input 中打开文件选择窗口。选图返回 `id`（input 相对路径），取消返回 `cancelled: true`。已有文件窗口返回 409，超时返回 408，窗口或目录不可用返回 503 |
 | `GET/POST studio/control-assets`、`GET studio/control-assets/preview` | 按控制图状态分页，查询可传 `type` 在分页前限定控制类型。按稳定 ID 预览或设置独立评价状态，预览返回 `src` 和 `asset` |
@@ -27,6 +28,8 @@
 工作台初始化返回各工作流的 `controlnets` 分支、类型和处理模式。提交任务时同名字段按分支填 `null` 以关闭，或指定 `type`、`mode`（`direct` 或 `preprocess`）以及 `id`、`asset_id`、Base64 `image`、`gallery: {id, state}` 中的一项。生成图的 `state` 可为 `favourite`、`pass` 或 `unevaluate`，提交时按指定图集读取原图。重绘参考图和遮罩独立传递。预处理输出按专用预览节点取回。它有独立归档和评价状态。
 
 命令提交的 `controlnets` 可用于普通生成，以及 `sweep lora`、`sweep presets` 的整批任务。实际目标工作流在提交时重新解析，并校验该工作流支持请求中的分支。
+
+配置了预设的分支在初始化数据附带 `profiles`，任务绑定可加 `profile` ID。省略 ID 时，后端使用匹配控制类型的第一条预设。文件保存在插件数据目录的 `controlnet_profiles.json`，由后端在受理时解析，模型参数由已保存的预设提供。
 
 初始化还返回 `sweep_lora_family`（无目录时为 `null`）。结构化创建任务可传 `loras: [{id, strength}]`，按提供顺序叠加，省略强度时使用目录默认值。设置 `lora_sweep: true` 会逐个生成，空名单遍历全部人物 LoRA。每批共享一个种子，队列一次校验并接收全部批次。
 

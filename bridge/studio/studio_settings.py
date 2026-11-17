@@ -40,9 +40,14 @@ from ..workflows.anima_aio import (
     aio_workflow,
 )
 from ..workflows.controlnet import (
+    PROFILE_FIELDS,
+    controlnet_branch,
     controlnet_capabilities,
     controlnet_node_types,
+    controlnet_profile_choices,
     controlnet_switches,
+    normalize_controlnet_profiles,
+    validate_controlnet_profile_choices,
 )
 from ..workflows.detailer import FEET_NODES, detailer_workflow, feet_switch
 from ..workflows.illustrious import (
@@ -179,6 +184,7 @@ def validate_presets(presets):
 
 
 WORKFLOW_ZIP_NAME = "astrbot-comfyui-workflows.zip"
+CONTROLNET_PROFILES_LIMIT = 128 * 1024
 WORKFLOW_ZIP_DIALOG = """
 import sys
 from tkinter import Tk, filedialog
@@ -228,6 +234,7 @@ class StudioSettings:
         self.presets_path = service.data_dir.resolve() / "prompt_presets" / "presets.json"
         self.preset_users_dir = self.presets_path.parent / "users"
         self.navigation_order_path = service.data_dir.resolve() / "navigation_order.json"
+        self.controlnet_profiles_path = service.data_dir.resolve() / "controlnet_profiles.json"
         self.prompt_library = PromptLibrary(
             service.data_dir, service.config.get("prompt_library_directory", ""),
         )
@@ -613,12 +620,17 @@ class StudioSettings:
                 input_available = True
             except InputUnavailable:
                 input_available = False
+            try:
+                control_profiles, _ = await asyncio.to_thread(self._read_controlnet_profiles)
+                control_error = ""
+            except (OSError, WorkflowError) as exc:
+                control_profiles, control_error = [], str(exc)
             return json_response(
                 {
                     "workflows": [
                         {
                             **workflow.describe(),
-                            "controlnets": controlnet_capabilities(workflow.name),
+                            "controlnets": controlnet_capabilities(workflow.name, control_profiles),
                             "sweep_lora_family": workflow.sweep_lora_family,
                             **({"kind": "auto_image", "requires_image": False} if workflow.name == AIO_WORKFLOW else {}),
                         }
@@ -636,6 +648,7 @@ class StudioSettings:
                     "navigation_order": navigation_order,
                     "input_available": input_available,
                     "input_file_dialog": input_available and sys.platform == "win32",
+                    "controlnet_profile_error": control_error,
                 }
             )
         except (OSError, ValueError) as exc:
@@ -1141,12 +1154,117 @@ class StudioSettings:
     def _control_archive(self):
         return ControlNetArchive(self.input_library.root(), self.service.data_dir, self.service.client.max_image_bytes)
 
+    def _read_controlnet_profiles(self):
+        path = self.controlnet_profiles_path
+        if path.is_symlink() or path.resolve() != path:
+            raise WorkflowError("controlnet_profiles.json 必须位于插件数据目录内。")
+        try:
+            with path.open("rb") as stream:
+                raw = stream.read(CONTROLNET_PROFILES_LIMIT + 1)
+        except FileNotFoundError:
+            return [], workflow_revision(b"")
+        if len(raw) > CONTROLNET_PROFILES_LIMIT:
+            raise WorkflowError("controlnet_profiles.json 超过 128 KB。")
+        try:
+            return normalize_controlnet_profiles(json.loads(raw)), workflow_revision(raw)
+        except (ValueError, RecursionError) as exc:
+            raise WorkflowError(f"controlnet_profiles.json 无法读取：{exc}") from exc
+
+    def _controlnet_profile_snapshot(self, name, branch, rows, revision):
+        return {
+            "revision": revision, "path": str(self.controlnet_profiles_path),
+            "profiles": [row for row in rows if row["workflow"] == name and row["branch"] == branch],
+            "capabilities": controlnet_capabilities(name, rows),
+        }
+
+    def _controlnet_profile_defaults(self, name, branch):
+        nodes = controlnet_branch(name, branch)
+        graph = self.anima._read()[1] if name == ANIMA_WORKFLOW else self._read(name)[2]
+        apply = graph.get(nodes.apply, {}).get("inputs", {})
+        processor = graph.get(nodes.preprocessor, {}).get("inputs", {})
+        return {field: apply.get(field, default) for field, default in (
+            ("strength", 1), ("start_percent", 0), ("end_percent", 1),
+        )} | {"resolution": processor.get("resolution", 512)}
+
+    async def controlnet_profiles(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        name, branch = request.query.get("workflow"), request.query.get("branch")
+        try:
+            await self.service.initialize()
+            controlnet_branch(name, branch)
+            rows, revision = await asyncio.to_thread(self._read_controlnet_profiles)
+            defaults = await asyncio.to_thread(self._controlnet_profile_defaults, name, branch)
+            result = self._controlnet_profile_snapshot(name, branch, rows, revision)
+            try:
+                schemas = await self.service.client.node_schemas(controlnet_node_types(name))
+                choices = controlnet_profile_choices(name, branch, schemas)
+                result["catalog_error"] = "" if choices["models"] else "ComfyUI 暂无此分支可选的模型。"
+            except ComfyError:
+                choices = controlnet_profile_choices(name, branch, {})
+                result["catalog_error"] = "无法读取 ComfyUI 模型列表。启动 ComfyUI 后可刷新列表。"
+            return json_response({**result, **choices, "defaults": defaults})
+        except (OSError, ValueError) as exc:
+            return error_response(str(exc), status_code=400)
+
+    async def save_controlnet_profiles(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        try:
+            raw = await request.body()
+            if len(raw) > CONTROLNET_PROFILES_LIMIT:
+                raise WorkflowError("ControlNet 预设数据过大。")
+            data = json.loads(raw)
+            if not isinstance(data, dict) or "profile" not in data:
+                raise WorkflowError("请选择要保存的 ControlNet 预设。")
+            await self.service.initialize()
+            name, branch, identity = (data.get(key) for key in ("workflow", "branch", "id"))
+            controlnet_branch(name, branch)
+            if identity is not None and not isinstance(identity, str):
+                raise WorkflowError("ControlNet 预设 ID 无效。")
+            profile = data["profile"]
+            if profile is not None:
+                if not isinstance(profile, dict) or profile.keys() != PROFILE_FIELDS - {"id", "workflow", "branch"}:
+                    raise WorkflowError("请填写完整的 ControlNet 预设。")
+                profile = normalize_controlnet_profiles({"version": 1, "profiles": [
+                    {**profile, "id": identity or uuid.uuid4().hex, "workflow": name, "branch": branch}
+                ]})[0]
+                schemas = await self.service.client.node_schemas(controlnet_node_types(name))
+                validate_controlnet_profile_choices(profile, controlnet_profile_choices(name, branch, schemas))
+            elif identity is None:
+                raise WorkflowError("请选择要删除的 ControlNet 预设。")
+            async with self.service.state_lock:
+                rows, revision = await asyncio.to_thread(self._read_controlnet_profiles)
+                if data.get("revision") != revision:
+                    return error_response("ControlNet 配置已有更新，请刷新后重试。", status_code=409)
+                if identity is None:
+                    rows.append(profile)
+                else:
+                    index = next((i for i, row in enumerate(rows) if
+                                  (row["id"], row["workflow"], row["branch"]) == (identity, name, branch)), None)
+                    if index is None:
+                        raise WorkflowError("所选 ControlNet 预设已不存在。")
+                    rows[index:index + 1] = [profile] if profile is not None else []
+                saved = {"version": 1, "profiles": rows}
+                normalize_controlnet_profiles(saved)
+                raw = profile_bytes(saved)
+                if len(raw) > CONTROLNET_PROFILES_LIMIT:
+                    raise WorkflowError("ControlNet 配置超过 128 KB。")
+                await asyncio.to_thread(atomic_write, self.controlnet_profiles_path, raw)
+            return json_response({
+                **self._controlnet_profile_snapshot(name, branch, rows, workflow_revision(raw)),
+                "id": profile["id"] if profile is not None else None,
+            })
+        except (OSError, ValueError, ComfyError, RecursionError) as exc:
+            return error_response(str(exc), status_code=400)
+
     def prepare_controls(self, name, parameters):
         if parameters is None or parameters == {}:
             return None, {}, None
         capabilities = controlnet_capabilities(name)
         if not isinstance(parameters, dict) or parameters.keys() - capabilities.keys():
             raise WorkflowError("此工作流不支持所选 ControlNet 分支。")
+        profiles = self._read_controlnet_profiles()[0] if any(row is not None for row in parameters.values()) else []
         bindings = {}
         sources = {}
         archive = None
@@ -1155,7 +1273,7 @@ class StudioSettings:
             if row is None:
                 bindings[branch] = None
                 continue
-            if not isinstance(row, dict) or set(row) - {"type", "mode", "asset_id", "id", "image", "gallery"}:
+            if not isinstance(row, dict) or set(row) - {"type", "mode", "asset_id", "id", "image", "gallery", "profile"}:
                 raise WorkflowError("ControlNet 参数格式无效。")
             selected = set(row) & {"asset_id", "id", "image", "gallery"}
             if len(selected) != 1:
@@ -1166,6 +1284,15 @@ class StudioSettings:
                 raise WorkflowError("请选择 ControlNet 图片。")
             label = ""
             binding = {"type": row.get("type"), "mode": row.get("mode"), "image": "__astrbot_control_pending__.png"}
+            choices = [profile for profile in profiles if profile["workflow"] == name and profile["branch"] == branch]
+            if choices or "profile" in row:
+                profile = next((
+                    option for option in choices if option["type"] == binding["type"]
+                    and ("profile" not in row or option["id"] == row["profile"])
+                ), None)
+                if profile is None:
+                    raise WorkflowError("ControlNet 类型或预设已更改，请重新选择。")
+                binding["profile"] = profile
             controlnet_switches(name, {branch: binding})
             bindings[branch] = binding
             if archive is None and (kind == "asset_id" or binding["mode"] == "preprocess"):
