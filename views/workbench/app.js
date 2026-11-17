@@ -300,6 +300,9 @@ function fieldControl(field) {
 function parameterGroup(fields, title = "", branchId) {
   const group = document.createElement("div");
   group.className = title ? "parameter-group repair-group" : "parameter-group";
+  if (title && !branchId && fields.length > 0 && fields.length <= 2 && fields.every(
+    (field) => !field.editor && !field.multiline && ["INT", "FLOAT", "BOOLEAN", "select"].includes(field.kind)
+  )) group.classList.add("parameter-group-compact");
   group.dataset.search = title.toLowerCase();
   group.dataset.layoutTitle = title || fields[0]?.title || "参数";
   if (title) {
@@ -388,22 +391,24 @@ function renderFields(fields, repairBranches, order, retainOpen, isAio, layout) 
     const count = document.createElement("span");
     count.className = "parameter-count";
     summary.append(name, count);
-    card.append(summary);
+    const groups = document.createElement("div");
+    groups.className = "parameter-groups";
+    card.append(summary, groups);
     const categoryFields = categories.get(name);
     if (aioGroups) {
       for (const [title, members] of aioGroups.get(name)) {
         const group = parameterGroup(members, title);
         if (name === "LoRA") group.classList.add("lora-parameter-group");
-        card.append(group);
+        groups.append(group);
       }
     } else if (name === "局部修复" && repairBranches.length) {
       const branchIds = new Set(repairBranches.map((branch) => branch.id));
       for (const branch of repairBranches) {
-        card.append(parameterGroup(categoryFields.filter((field) => field.repair_group === branch.id),
+        groups.append(parameterGroup(categoryFields.filter((field) => field.repair_group === branch.id),
           branch.title, branch.id));
       }
       const shared = categoryFields.filter((field) => !branchIds.has(field.repair_group));
-      if (shared.length) card.append(parameterGroup(shared, "共用修复设置"));
+      if (shared.length) groups.append(parameterGroup(shared, "共用修复设置"));
     } else {
       const nodeGroups = new Map();
       for (const field of categoryFields) {
@@ -411,11 +416,11 @@ function renderFields(fields, repairBranches, order, retainOpen, isAio, layout) 
         nodeGroups.get(field.node).push(field);
       }
       if (nodeGroups.size === 1) {
-        card.append(parameterGroup(categoryFields));
+        groups.append(parameterGroup(categoryFields));
       } else {
         for (const members of nodeGroups.values()) {
           const title = members[0].title || members[0].class_type || `#${members[0].node}`;
-          card.append(parameterGroup(members.map((field) => ({ ...field, groupTitle: title })), title));
+          groups.append(parameterGroup(members.map((field) => ({ ...field, groupTitle: title })), title));
         }
       }
     }
@@ -445,7 +450,7 @@ function applyParameterLayout({ categories, fields }) {
       const grid = group.querySelector(".parameter-grid");
       grid.append(...[...grid.children].sort((a, b) => rankField(a) - rankField(b)));
     }
-    card.append(...groups);
+    card.querySelector(".parameter-groups").append(...groups);
   }
   container.append(...cards);
 }

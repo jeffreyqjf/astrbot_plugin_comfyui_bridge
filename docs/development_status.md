@@ -90,3 +90,9 @@
 
 - 图集、图片分类和筛选按钮同行，筛选面板在下方展开。Chromium 在 320px、360px 和 1100px 宽度下通过布局与交互检查。
 - Git Commit Message 为 `fix: align the gallery picker filters in one toolbar`。
+
+## v2.31.2 · 工作流选项分列
+
+- 简短的节点参数组按参数区宽度分列，同行用纵线分隔，行间用横线分隔。长文本、复杂编辑器和带分支开关的设置保留整行。
+- Chromium 在 320px、360px、746px 和 1100px 宽度下通过分列、搜索、旁路显隐及恢复已保存顺序的检查。
+- Git Commit Message 为 `fix: use responsive columns for workflow option groups`。
