@@ -85,3 +85,8 @@
 - ControlNet 的「从图集选图」复用生成图集支持的分类、预设、工作流和 LoRA 筛选及全部匹配，选图筛选独立于主图集。待评卡片的收藏、跳过、删除排在一行。
 - 生成图与控制图使用等大的预览区域和同位置的下载按钮，信息移到各自图片下方，翻页居中放在弹窗底部。已在 360px 和 1100px 宽度下验证筛选请求与布局。运行实例待更新。
 - Git Commit Message 为 `feat: share gallery filters and align paired image previews`。
+
+## v2.31.1 · 图集选图工具栏
+
+- 图集、图片分类和筛选按钮同行，筛选面板在下方展开。Chromium 在 320px、360px 和 1100px 宽度下通过布局与交互检查。
+- Git Commit Message 为 `fix: align the gallery picker filters in one toolbar`。

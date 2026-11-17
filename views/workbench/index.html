@@ -719,28 +719,30 @@
               <form method="dialog"><button autofocus>关闭</button></form>
             </div>
             <nav id="task-resource-path" class="row-actions" aria-label="当前目录"></nav>
-            <label class="field queue-mode" id="task-resource-gallery-field" hidden>图集
-              <select id="task-resource-gallery">
-                <optgroup label="生成图">
-                  <option value="images/favourite">收藏图集</option>
-                  <option value="images/pass">Pass 图集</option>
-                  <option value="images/unevaluate">待评价图片</option>
-                </optgroup>
-                <optgroup label="控制图 · 直接使用" id="task-resource-control-galleries">
-                  <option value="controls/favourite">收藏控制图</option>
-                  <option value="controls/pass">Pass 控制图</option>
-                  <option value="controls/unevaluated">待评价控制图</option>
-                </optgroup>
-              </select>
-            </label>
-            <div id="task-resource-filters" hidden>
-              <label class="field queue-mode" id="task-resource-rating-field">图片分类
-                <select id="task-resource-rating">
-                  <option value="">全部</option>
-                  <option value="SFW">SFW</option>
-                  <option value="NSFW">NSFW</option>
+            <div class="task-resource-toolbar">
+              <label class="field" id="task-resource-gallery-field" hidden>图集
+                <select id="task-resource-gallery">
+                  <optgroup label="生成图">
+                    <option value="images/favourite">收藏图集</option>
+                    <option value="images/pass">Pass 图集</option>
+                    <option value="images/unevaluate">待评价图片</option>
+                  </optgroup>
+                  <optgroup label="控制图 · 直接使用" id="task-resource-control-galleries">
+                    <option value="controls/favourite">收藏控制图</option>
+                    <option value="controls/pass">Pass 控制图</option>
+                    <option value="controls/unevaluated">待评价控制图</option>
+                  </optgroup>
                 </select>
               </label>
+              <div id="task-resource-filters" hidden>
+                <label class="field" id="task-resource-rating-field">图片分类
+                  <select id="task-resource-rating">
+                    <option value="">全部</option>
+                    <option value="SFW">SFW</option>
+                    <option value="NSFW">NSFW</option>
+                  </select>
+                </label>
+              </div>
             </div>
             <p id="task-resource-status" role="status"></p>
             <div id="task-resource-preview" hidden>
