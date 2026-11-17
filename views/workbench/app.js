@@ -2922,6 +2922,16 @@ function mountNavigationOrder(list, section, key, anchor = null) {
   }
 }
 
+const workflowNav = get("workflow-list").parentElement;
+
+function fitWorkflowNav() {
+  const top = Math.max(12, workflowNav.getBoundingClientRect().top);
+  workflowNav.style.setProperty("--workflow-nav-top", `${top}px`);
+}
+
+window.addEventListener("scroll", fitWorkflowNav, { passive: true });
+window.addEventListener("resize", fitWorkflowNav);
+
 function renderWorkflowTabs() {
   const controlGallery = get("open-control-gallery");
   controlGallery.disabled = !studio.input_available;
@@ -2947,6 +2957,7 @@ function renderWorkflowTabs() {
   }
   mountNavigationOrder(list, "workflows", (tab) => tab.dataset.name);
   syncRemoteWorkflowList();
+  fitWorkflowNav();
   return first;
 }
 

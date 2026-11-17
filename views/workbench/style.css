@@ -36,6 +36,13 @@ h1 { margin: 10px 0 5px; font-size: clamp(25px, 4vw, 38px); font-weight: 730; }
 .workspace { display: grid; grid-template-columns: minmax(155px, 190px) minmax(0, 1fr) minmax(138px, 164px); grid-template-areas: "workflows content management"; gap: 20px; margin-top: 20px; }
 aside { position: sticky; top: 12px; align-self: start; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; box-shadow: var(--shadow); }
 .workflow-nav { grid-area: workflows; }
+@media (min-width: 711px) {
+  .workflow-nav {
+    display: flex; flex-direction: column;
+    max-height: max(144px, calc(100dvh - var(--workflow-nav-top, 12px) - 12px));
+  }
+  #workflow-list { min-height: 0; overflow-y: auto; overscroll-behavior-y: contain; scrollbar-width: thin; }
+}
 .management-nav { grid-area: management; }
 .nav-label { margin: 9px 8px; font-size: 11px; font-weight: 700; letter-spacing: .08em; }
 nav { display: grid; gap: 5px; }

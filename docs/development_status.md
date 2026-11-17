@@ -118,3 +118,9 @@
 - 从原画布转换搜种和放大定稿两份 AstrBot 画布，导出 API 并同步插件。QQ、命令添加、简易添加支持两条工作流及单张可选参考图。原画布哈希核对一致。新增 Markdown 使用教程。
 - 32 项回归测试通过。隔离 AstrBot 加载 13 条工作流和 64 条路由，模拟验证两个简称及种子、输出映射。使用本机 ComfyUI 选项验证节点和模型清单。原画布扩散模型和 H3 文本编码器未出现在加载器列表，定稿放大文件尚未在潜空间放大目录注册，实际出图和运行副本更新待验证。
 - Git Commit Message 为 `feat: integrate MiniMax H3 Seed Hunter workflows`。
+
+## v2.33.1 · 工作流侧栏独立滚动
+
+- 桌面侧栏根据当前窗口的可见高度限制列表区域。工作流列表独立滚动，参数区仍可正常滚动。
+- Chromium 在 820 × 430 和 1200 × 680 下验证参数区停在顶部时可滚到列表末项，在 360px 宽度下检查单列布局。
+- Git Commit Message 为 `fix: scroll the workflow sidebar independently`。
