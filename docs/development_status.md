@@ -79,3 +79,9 @@
 - 普通参考图和各 ControlNet 分支在选图后显示按比例缩放的小预览。ControlNet 可浏览收藏、Pass、待评价生成图，直用模式还可浏览对应类型的控制图集。选图窗口同时提供目录缩略图和确认预览。
 - 29 项回归测试通过。隔离 AstrBot 加载 11 条工作流和 62 条路由，验证三种生成图状态的原图读取、来源状态校验及控制图分页前按类型过滤。Chromium 在 360px 和 1100px 宽度下检查了选图、预览、清除和提交数据。实际生成、系统文件窗口及运行实例更新待验证。
 - Git Commit Message 为 `feat: preview task images and select ControlNet sources from galleries`。
+
+## v2.31.0 · 图集选图筛选与预览排版
+
+- ControlNet 的「从图集选图」复用生成图集支持的分类、预设、工作流和 LoRA 筛选及全部匹配，选图筛选独立于主图集。待评卡片的收藏、跳过、删除排在一行。
+- 生成图与控制图使用等大的预览区域和同位置的下载按钮，信息移到各自图片下方，翻页居中放在弹窗底部。已在 360px 和 1100px 宽度下验证筛选请求与布局。运行实例待更新。
+- Git Commit Message 为 `feat: share gallery filters and align paired image previews`。

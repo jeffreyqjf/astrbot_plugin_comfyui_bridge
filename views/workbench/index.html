@@ -426,10 +426,10 @@
             <button type="button" id="image-review-refresh">刷新</button>
           </div>
           <div id="image-review-filter-slot">
-            <details id="image-filters">
+            <details id="image-filters" class="image-filters">
               <summary aria-label="筛选图片" title="筛选图片">
                 <span class="filter-icon" aria-hidden="true"><i></i><i></i><i></i></span>
-                <span id="image-filter-count" hidden></span>
+                <span id="image-filter-count" class="image-filter-count" hidden></span>
               </summary>
               <div class="image-filter-panel">
                 <div class="row-actions">
@@ -513,13 +513,24 @@
         <dialog id="image-original" aria-labelledby="image-original-title">
           <div class="panel-heading">
             <h2 id="image-original-title">原图</h2>
-            <div class="row-actions">
-              <button type="button" id="image-original-download" class="image-download" aria-label="下载原图" title="下载原图" hidden>↓</button>
-              <button type="button" id="image-original-favourite" class="primary" hidden>收藏</button>
-              <button type="button" id="image-original-pass" hidden>跳过</button>
-              <button type="button" id="image-original-move" hidden></button>
-              <form method="dialog"><button autofocus>关闭</button></form>
-            </div>
+            <form method="dialog"><button autofocus>关闭</button></form>
+          </div>
+          <div class="image-original-pair">
+            <article class="image-preview-card">
+              <div class="image-preview-heading">
+                <h3>生成图</h3>
+                <button type="button" id="image-original-download" class="image-download" aria-label="下载原图" title="下载原图" hidden></button>
+              </div>
+              <div class="image-preview-media"><img id="image-original-file" alt="" hidden></div>
+              <p id="image-original-status" role="status"></p>
+              <dl id="image-generation-info" class="image-generation-info" hidden></dl>
+              <div class="row-actions">
+                <button type="button" id="image-original-favourite" class="primary" hidden>收藏</button>
+                <button type="button" id="image-original-pass" hidden>跳过</button>
+                <button type="button" id="image-original-move" hidden></button>
+              </div>
+            </article>
+            <div id="image-original-controls" hidden></div>
           </div>
           <div id="image-original-navigation" hidden>
             <div class="image-page-numbers">
@@ -528,12 +539,6 @@
               <button type="button" id="image-original-next" aria-label="下一张">下一张 →</button>
             </div>
             <nav id="image-original-pages" class="image-pages" aria-label="预览分页" hidden></nav>
-          </div>
-          <p id="image-original-status" role="status"></p>
-          <dl id="image-generation-info" class="image-generation-info" hidden></dl>
-          <div class="image-original-pair">
-            <div class="image-original-result"><img id="image-original-file" alt="" hidden></div>
-            <div id="image-original-controls" hidden></div>
           </div>
         </dialog>
         <dialog id="image-delete-dialog" aria-labelledby="image-delete-title">
@@ -728,6 +733,15 @@
                 </optgroup>
               </select>
             </label>
+            <div id="task-resource-filters" hidden>
+              <label class="field queue-mode" id="task-resource-rating-field">图片分类
+                <select id="task-resource-rating">
+                  <option value="">全部</option>
+                  <option value="SFW">SFW</option>
+                  <option value="NSFW">NSFW</option>
+                </select>
+              </label>
+            </div>
             <p id="task-resource-status" role="status"></p>
             <div id="task-resource-preview" hidden>
               <img id="task-resource-image" alt="">

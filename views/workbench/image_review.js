@@ -85,148 +85,177 @@ export function mountImageReviews({
     }
   }, { rootMargin: "120px" });
 
-  const filters = get("image-filters");
-  const filterOptions = get("image-filter-options");
-  const filterSearch = get("image-filter-search");
-  const loraMatch = get("image-lora-match");
-  const selectedFilters = { preset: new Set(), workflow: new Set(), lora: new Set() };
-  const filterLabels = { preset: "提示词预设", workflow: "工作流", lora: "LoRA" };
-  const selectedLabels = new Map();
-  let facets = {};
-  let facetRequest = 0;
-  const filterMissing = { preset: "未使用预设 / 无记录", workflow: "未记录工作流", lora: "未使用 LoRA / 无记录" };
-
-  function filterQuery() {
-    const active = Object.entries(selectedFilters)
-      .filter(([, values]) => values.size)
-      .map(([key, values]) => [key, [...values]]);
-    return {
-      ...(active.length ? { filters: JSON.stringify(Object.fromEntries(active)) } : {}),
-      ...(loraMatch.checked ? { lora_match: "all" } : {}),
-    };
-  }
-
   function loraLabel(name) {
     return name.split("/").at(-1).replace(/\.safetensors$/i, "");
   }
 
-  function filterLabel(key, row) {
-    if (!row.id) return row.label;
-    if (key === "workflow") return workflowTitle(row.label);
-    return key === "lora" ? loraLabel(row.label) : row.label;
-  }
+  function mountFilters(filters, prefix, filterContext, reloadFiltered) {
+    const getFilter = (id) => get(prefix + id);
+    const filterOptions = getFilter("image-filter-options");
+    const filterSearch = getFilter("image-filter-search");
+    const loraMatch = getFilter("image-lora-match");
+    const selectedFilters = { preset: new Set(), workflow: new Set(), lora: new Set() };
+    const filterLabels = { preset: "提示词预设", workflow: "工作流", lora: "LoRA" };
+    const selectedLabels = new Map();
+    let facets = {};
+    let facetRequest = 0;
+    const filterMissing = { preset: "未使用预设 / 无记录", workflow: "未记录工作流", lora: "未使用 LoRA / 无记录" };
 
-  function renderFilters() {
-    const count = Object.values(selectedFilters).reduce((sum, values) => sum + values.size, 0);
-    const badge = get("image-filter-count");
-    badge.textContent = count;
-    badge.hidden = count === 0;
-    get("image-filter-clear").disabled = count === 0 && !loraMatch.checked;
-    const query = filterSearch.value.trim().toLowerCase();
-    const focused = document.activeElement?.dataset;
-    const focusKey = focused?.filterKey;
-    const focusValue = focused?.filterValue;
-    const scroll = Array.from(filterOptions.querySelectorAll(".image-filter-values"), (group) => group.scrollTop);
-    filterOptions.replaceChildren();
-    for (const [key, title] of Object.entries(filterLabels)) {
-      const options = new Map((facets[key] ?? [{ id: "", label: filterMissing[key] }]).map((row) => [row.id, row]));
-      const labels = new Map();
-      for (const row of options.values()) {
-        const label = filterLabel(key, row);
-        labels.set(label, (labels.get(label) ?? 0) + 1);
-      }
-      for (const id of selectedFilters[key]) {
-        if (!options.has(id)) options.set(id, { id, label: selectedLabels.get(id) ?? id });
-      }
-      const section = document.createElement("fieldset");
-      const legend = document.createElement("legend");
-      legend.textContent = title;
-      const group = document.createElement("div");
-      group.className = "image-filter-values";
-      for (const row of options.values()) {
-        const title = filterLabel(key, row);
-        const label = key === "lora" && labels.get(title) > 1 ? row.label : title;
-        const selected = selectedFilters[key].has(row.id);
-        if (query && !selected && !label.toLowerCase().includes(query) && !row.label.toLowerCase().includes(query)) continue;
-        const button = document.createElement("button");
-        button.type = "button";
-        button.textContent = label;
-        if (key === "lora") button.title = row.label;
-        button.dataset.filterKey = key;
-        button.dataset.filterValue = row.id;
-        button.setAttribute("aria-pressed", String(selected));
-        button.addEventListener("click", () => {
-          if (selected) selectedFilters[key].delete(row.id);
-          else {
-            selectedFilters[key].add(row.id);
-            selectedLabels.set(row.id, row.label);
+    function filterQuery() {
+      const active = Object.entries(selectedFilters)
+        .filter(([, values]) => values.size)
+        .map(([key, values]) => [key, [...values]]);
+      return {
+        ...(active.length ? { filters: JSON.stringify(Object.fromEntries(active)) } : {}),
+        ...(loraMatch.checked ? { lora_match: "all" } : {}),
+      };
+    }
+
+    function filterLabel(key, row) {
+      if (!row.id) return row.label;
+      if (key === "workflow") return workflowTitle(row.label);
+      return key === "lora" ? loraLabel(row.label) : row.label;
+    }
+
+    function renderFilters() {
+      const count = Object.values(selectedFilters).reduce((sum, values) => sum + values.size, 0);
+      const badge = getFilter("image-filter-count");
+      badge.textContent = count;
+      badge.hidden = count === 0;
+      getFilter("image-filter-clear").disabled = count === 0 && !loraMatch.checked;
+      const query = filterSearch.value.trim().toLowerCase();
+      const focused = document.activeElement?.dataset;
+      const focusKey = focused?.filterKey;
+      const focusValue = focused?.filterValue;
+      const scroll = Array.from(filterOptions.querySelectorAll(".image-filter-values"), (group) => group.scrollTop);
+      filterOptions.replaceChildren();
+      for (const [key, title] of Object.entries(filterLabels)) {
+        const options = new Map((facets[key] ?? [{ id: "", label: filterMissing[key] }]).map((row) => [row.id, row]));
+        const labels = new Map();
+        for (const row of options.values()) {
+          const label = filterLabel(key, row);
+          labels.set(label, (labels.get(label) ?? 0) + 1);
+        }
+        for (const id of selectedFilters[key]) {
+          if (!options.has(id)) options.set(id, { id, label: selectedLabels.get(id) ?? id });
+        }
+        const section = document.createElement("fieldset");
+        const legend = document.createElement("legend");
+        legend.textContent = title;
+        const group = document.createElement("div");
+        group.className = "image-filter-values";
+        for (const row of options.values()) {
+          const title = filterLabel(key, row);
+          const label = key === "lora" && labels.get(title) > 1 ? row.label : title;
+          const selected = selectedFilters[key].has(row.id);
+          if (query && !selected && !label.toLowerCase().includes(query) && !row.label.toLowerCase().includes(query)) continue;
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = label;
+          if (key === "lora") button.title = row.label;
+          button.dataset.filterKey = key;
+          button.dataset.filterValue = row.id;
+          button.setAttribute("aria-pressed", String(selected));
+          button.addEventListener("click", () => {
+            if (selected) selectedFilters[key].delete(row.id);
+            else {
+              selectedFilters[key].add(row.id);
+              selectedLabels.set(row.id, row.label);
+            }
+            renderFilters();
+            reloadFiltered();
+          });
+          group.append(button);
+        }
+        if (!group.children.length) group.textContent = "暂无匹配项";
+        section.append(legend, group);
+        filterOptions.append(section);
+        group.scrollTop = scroll.shift() ?? 0;
+        for (const button of group.children) {
+          if (button.dataset.filterKey === focusKey && button.dataset.filterValue === focusValue) {
+            button.focus({ preventScroll: true });
           }
-          renderFilters();
-          reloadFiltered();
-        });
-        group.append(button);
-      }
-      if (!group.children.length) group.textContent = "暂无匹配项";
-      section.append(legend, group);
-      filterOptions.append(section);
-      group.scrollTop = scroll.shift() ?? 0;
-      for (const button of group.children) {
-        if (button.dataset.filterKey === focusKey && button.dataset.filterValue === focusValue) {
-          button.focus({ preventScroll: true });
         }
       }
     }
+
+    async function loadFacets() {
+      const query = filterContext();
+      if (!filters.open || !query) return;
+      const version = ++facetRequest;
+      const status = getFilter("image-filter-status");
+      status.textContent = "正在读取筛选项…";
+      status.hidden = false;
+      try {
+        const data = await bridge.apiGet("studio/images", { ...query, facets: "1" });
+        if (version !== facetRequest || !filters.open || !filterContext()) return;
+        facets = data.facets;
+        status.hidden = true;
+        renderFilters();
+      } catch (error) {
+        if (version === facetRequest) status.textContent = error.message;
+      }
+    }
+
+    filters.addEventListener("toggle", () => {
+      if (filters.open) loadFacets();
+      else facetRequest++;
+    });
+    filterSearch.addEventListener("input", renderFilters);
+    loraMatch.addEventListener("change", () => {
+      renderFilters();
+      reloadFiltered();
+    });
+    getFilter("image-filter-clear").addEventListener("click", () => {
+      for (const values of Object.values(selectedFilters)) values.clear();
+      selectedLabels.clear();
+      filterSearch.value = "";
+      loraMatch.checked = false;
+      renderFilters();
+      reloadFiltered();
+    });
+
+    return {
+      query: filterQuery,
+      load: loadFacets,
+      resetOptions() {
+        facetRequest++;
+        facets = {};
+        getFilter("image-filter-status").hidden = true;
+        renderFilters();
+        loadFacets();
+      },
+    };
   }
 
-  function reloadFiltered() {
+  const filters = get("image-filters");
+  const pickerFilters = filters.cloneNode(true);
+  pickerFilters.id = "picker-image-filters";
+  for (const element of pickerFilters.querySelectorAll("[id]")) element.id = "picker-" + element.id;
+  get("task-resource-filters").append(pickerFilters);
+
+  const galleryFilters = mountFilters(filters, "", () => {
+    if (!pending.hidden) return { state: "unevaluate" };
+    if (!gallery.hidden) return { state: galleryList.state, rating: get("image-gallery-rating").value };
+  }, () => {
     if (!pending.hidden) refreshList(pendingList, 1);
     else if (!gallery.hidden) refreshList(galleryList, 1);
-  }
+  });
+  const { query: filterQuery, load: loadFacets } = galleryFilters;
+  const resourceFilters = mountFilters(pickerFilters, "picker-", () => {
+    if (!resourcePicker.open || resourceRequest?.source === "input") return;
+    const [kind, state] = resourceGallery.value.split("/");
+    if (kind === "images") return { state, rating: resourceRating(state) };
+  }, () => loadResources(1));
 
-  async function loadFacets() {
-    if (!filters.open || (pending.hidden && gallery.hidden)) return;
-    const version = ++facetRequest;
-    const status = get("image-filter-status");
-    status.textContent = "正在读取筛选项…";
-    status.hidden = false;
-    try {
-      const data = await bridge.apiGet("studio/images", {
-        facets: "1", state: pending.hidden ? galleryList.state : "unevaluate",
-        rating: pending.hidden ? get("image-gallery-rating").value : "",
-      });
-      if (version !== facetRequest || !filters.open) return;
-      facets = data.facets;
-      status.hidden = true;
-      renderFilters();
-    } catch (error) {
-      if (version === facetRequest) status.textContent = error.message;
-    }
+  function resourceRating(state) {
+    return state === "unevaluate" ? "" : get("task-resource-rating").value;
   }
 
   function placeFilters(slot) {
     get(slot).append(filters);
-    facets = {};
-    renderFilters();
-    loadFacets();
+    galleryFilters.resetOptions();
   }
-
-  filters.addEventListener("toggle", () => {
-    if (filters.open) loadFacets();
-    else facetRequest++;
-  });
-  filterSearch.addEventListener("input", renderFilters);
-  loraMatch.addEventListener("change", () => {
-    renderFilters();
-    reloadFiltered();
-  });
-  get("image-filter-clear").addEventListener("click", () => {
-    for (const values of Object.values(selectedFilters)) values.clear();
-    selectedLabels.clear();
-    filterSearch.value = "";
-    loraMatch.checked = false;
-    renderFilters();
-    reloadFiltered();
-  });
 
   function generationFields(item) {
     const info = item.generation;
@@ -475,7 +504,9 @@ export function mountImageReviews({
       const data = isInput
         ? await bridge.apiGet("studio/input", { directory: request.path.at(-1).id, page })
         : await bridge.apiGet(kind === "controls" ? "studio/control-assets" : "studio/images", {
-          state, page, ...(kind === "controls" ? { type: request.type } : {}),
+          state, page, ...(kind === "controls" ? { type: request.type } : {
+            rating: resourceRating(state), ...resourceFilters.query(),
+          }),
         });
       if (version !== resourceVersion || !resourcePicker.open) return;
       const entries = data.entries ?? data.assets ?? data.images ?? data.jobs.flatMap((job) => job.images);
@@ -570,10 +601,19 @@ export function mountImageReviews({
     get("task-resource-control-galleries").disabled = !useControls;
     resourceGallery.value = useControls ? "controls/favourite" : "images/favourite";
     resourcePicker.showModal();
+    changeResourceGallery();
+  }
+
+  function changeResourceGallery() {
+    const [kind, state] = resourceGallery.value.split("/");
+    get("task-resource-filters").hidden = resourceRequest.source === "input" || kind !== "images";
+    get("task-resource-rating-field").hidden = state === "unevaluate";
+    resourceFilters.resetOptions();
     loadResources(1);
   }
 
-  resourceGallery.addEventListener("change", () => loadResources(1));
+  resourceGallery.addEventListener("change", changeResourceGallery);
+  get("task-resource-rating").addEventListener("change", changeResourceGallery);
   get("task-resource-back").addEventListener("click", () => loadResources(resourceRequest.page));
   resourceChoose.addEventListener("click", () => {
     if (!resourceRequest?.entry) return;
@@ -656,22 +696,25 @@ export function mountImageReviews({
   async function showControlAsset(link, container, isCurrent) {
     const id = controlAssetId(link);
     const frame = document.createElement("article");
-    frame.className = "control-preview-card";
+    frame.className = "image-preview-card";
     const title = document.createElement("h3");
     title.textContent = controlAssetTitle(link);
     const heading = document.createElement("div");
-    heading.className = "control-preview-heading";
+    heading.className = "image-preview-heading";
     heading.append(title);
     const image = document.createElement("img");
     image.hidden = true;
     image.alt = title.textContent;
+    const media = document.createElement("div");
+    media.className = "image-preview-media";
+    media.append(image);
     const state = document.createElement("small");
     const status = document.createElement("p");
     status.setAttribute("role", "status");
     status.textContent = "正在读取控制图…";
     const actions = document.createElement("div");
     actions.className = "row-actions";
-    frame.append(heading, state, status, image, actions);
+    frame.append(heading, media, state, status, actions);
     container.append(frame);
     const visible = () => isCurrent() && container.contains(frame);
 
@@ -692,7 +735,6 @@ export function mountImageReviews({
       const download = document.createElement("button");
       download.type = "button";
       download.className = "image-download";
-      download.textContent = "↓";
       download.title = "下载控制图原图";
       download.setAttribute("aria-label", download.title);
       download.addEventListener("click", () => downloadImage(src, `control-${id}`, download));
@@ -866,6 +908,8 @@ export function mountImageReviews({
       ].filter(Boolean).join(" · ");
       if (summary.textContent) footer.append(summary);
     }
+    const actions = document.createElement("div");
+    actions.className = state === "unevaluate" ? "review-card-actions" : "row-actions";
     if (state === "unevaluate") {
       if (item.generation?.controlnets?.some(({ new: created }) => created)) {
         const badge = document.createElement("small");
@@ -873,8 +917,6 @@ export function mountImageReviews({
         badge.textContent = "新控制图";
         footer.append(badge);
       }
-      const actions = document.createElement("div");
-      actions.className = "row-actions";
       for (const [state, title] of [["favourite", "收藏"], ["pass", "跳过"]]) {
         const button = document.createElement("button");
         button.type = "button";
@@ -894,7 +936,6 @@ export function mountImageReviews({
         });
         actions.append(button);
       }
-      footer.append(actions);
     }
     if (state === "unevaluate" || state === "pass") {
       const remove = document.createElement("button");
@@ -906,8 +947,9 @@ export function mountImageReviews({
         deleteStatus.textContent = "";
         deleteDialog.showModal();
       });
-      footer.append(remove);
+      actions.append(remove);
     }
+    if (actions.children.length) footer.append(actions);
     frame.append(preview, footer);
     cards.set(key, frame);
     previews.observe(image);
