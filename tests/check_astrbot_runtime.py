@@ -57,6 +57,71 @@ async def check_input_picker(instance, root):
             assert json.loads((await instance.studio.pick_input_file()).body) == {"cancelled": True}
 
 
+async def check_queue_loras(instance, root, name):
+    from astrbot.api.web import PluginRequest, bind_request_context
+    from starlette.requests import Request
+
+    service = instance.service
+    studio = instance.studio
+    folder = root / "models" / "loras" / "illustrious"
+    folder.mkdir(parents=True)
+    entries = {
+        key: {"id": key, "title": key, "number": number, "category": number[0],
+              "filename": f"illustrious/{key}.safetensors", "default_strength": 0.7, "tag": ""}
+        for key, number in (("alpha", "C1"), ("beta", "C2"), ("style", "S1"))
+    }
+
+    async def call(method, route, query=b"", data=None):
+        async def receive():
+            return {"type": "http.request", "body": json.dumps(data).encode()}
+
+        incoming = Request({
+            "type": "http", "method": method, "path": f"/api/{route}",
+            "headers": [], "query_string": query,
+        }, receive)
+        with bind_request_context(PluginRequest(incoming, username="remote")):
+            return await instance.remote_studio.routes[method, route]()
+
+    options = {"input": {"required": {"lora_name": [[row["filename"] for row in entries.values()]]}}}
+    with patch.object(studio.lora_families["illustrious"], "lora_catalog", return_value=entries), patch.object(
+        service.client, "request", return_value={"LoraLoader": options}
+    ), patch.object(service, "_run") as run:
+        catalog = await call("GET", "studio/queue/loras", f"workflow={name}".encode())
+        assert catalog.status_code == 200, catalog.body
+        assert [row["id"] for row in json.loads(catalog.body)["entries"]] == list(entries)
+        stacked = [{"id": "alpha", "strength": 0.4}, {"id": "style", "strength": -0.25}]
+        response = await call("POST", "studio/queue", data={"workflow": name, "positive": "fixture", "loras": stacked})
+        assert response.status_code == 200, response.body
+        assert len(json.loads(response.body)["jobs"]) == 1
+        graph = run.call_args.args[1]
+        assert graph["astrbot_v40_lora"]["inputs"]["strength_model"] == 0.4
+        assert graph["astrbot_v40_lora_2"]["inputs"]["strength_model"] == -0.25
+        assert graph["astrbot_v40_lora_2"]["inputs"]["model"] == ["astrbot_v40_lora", 0]
+        run.reset_mock()
+        response = await call("POST", "studio/queue", data={
+            "workflow": name, "positive": "fixture", "lora_sweep": True, "count": 2,
+        })
+        assert response.status_code == 200, response.body
+        jobs = json.loads(response.body)["jobs"]
+        assert len(jobs) == 4
+        assert jobs[0]["seed"] == jobs[1]["seed"] and jobs[2]["seed"] == jobs[3]["seed"]
+        assert [
+            row.args[1]["astrbot_v40_lora"]["inputs"]["lora_name"] for row in run.call_args_list
+        ] == [entries[key]["filename"] for key in ("alpha", "beta", "alpha", "beta")]
+        run.reset_mock()
+        response = await call("POST", "studio/queue", data={
+            "workflow": name, "positive": "fixture", "lora_sweep": True, "loras": [stacked[1]],
+        })
+        assert response.status_code == 200, response.body
+        assert run.call_args.args[1]["astrbot_v40_lora"]["inputs"]["lora_name"] == entries["style"]["filename"]
+        run.reset_mock()
+        invalid = await call("POST", "studio/queue", data={
+            "workflow": name, "positive": "fixture", "loras": [{"id": "alpha", "strength": 101}],
+        })
+        assert invalid.status_code == 400
+        run.assert_not_called()
+
+
 async def check(root, archive, core):
     os.environ["ASTRBOT_ROOT"] = str(root)
     plugins = root / "data" / "plugins"
@@ -87,6 +152,8 @@ async def check(root, archive, core):
         assert ("POST", f"/{PLUGIN}/studio/input/pick") in context.routes
         assert ("POST", "studio/input/pick") in instance.remote_studio.routes
         await check_input_picker(instance, root)
+        assert ("GET", f"/{PLUGIN}/studio/queue/loras") in context.routes
+        await check_queue_loras(instance, root, module.ADVANCED_V40_WORKFLOW)
         print(f"Loaded {len(service.workflows)} workflows and {len(context.routes)} web routes.")
     finally:
         await instance.terminate()

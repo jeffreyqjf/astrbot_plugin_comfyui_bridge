@@ -539,10 +539,13 @@ class AnimaSettings(LoraSettings):
         if not allow_nsfw:
             options["nsfw_repair"] = False
         workflow = await self.for_generation(workflow, options, False, state)
+        return await self.apply_lora_variants(workflow, [[{"id": entry["id"]}] for entry in characters], catalog)
+
+    async def apply_lora_variants(self, workflow, variants, catalog):
         schemas = await self.service.client.request("GET", "/object_info/LoraLoaderModelOnly")
         return [
-            await self._apply_loras(workflow, [{"id": entry["id"]}], catalog, schemas)
-            for entry in characters
+            await self._apply_loras(workflow, rows, catalog, schemas)
+            for rows in variants
         ]
 
     async def _apply_loras(self, workflow, loras, catalog, schemas):
@@ -574,7 +577,7 @@ class AnimaSettings(LoraSettings):
                 inputs["model"] = [node, 0]
                 if strength:
                     tags.append(entry["tag"])
-        return Workflow(
+        candidate = Workflow(
             self.workflow_name,
             {"prompt": graph, "astrbot": {
                 "positive_prefix": ", ".join(dict.fromkeys(filter(None, [workflow.positive_prefix, *tags]))),
@@ -584,6 +587,9 @@ class AnimaSettings(LoraSettings):
             }},
             workflow.mapping,
         )
+        candidate.controlnet_outputs.update(workflow.controlnet_outputs)
+        candidate.active.update(workflow.controlnet_outputs.values())
+        return candidate
 
     async def save(self, *, update_config=None):
         if not request.username:

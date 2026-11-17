@@ -27,7 +27,7 @@ API_PATHS = frozenset({
     "studio/workflow/configs", "studio/workflow/configs/import", "studio/workflow/configs/export",
     "studio/lora-tags", "studio/queue/templates/import",
     "studio/presets/import", "studio/queue", "studio/queue/command", "studio/queue/templates", "studio/queue/cancel",
-    "studio/queue/qq-timeout",
+    "studio/queue/qq-timeout", "studio/queue/loras",
     "studio/queue/cancel-all", "studio/images", "studio/images/file", "studio/images/thumbnails", "studio/images/delete",
     "studio/input", "studio/input/preview", "studio/input/pick", "studio/control-assets", "studio/control-assets/preview",
     "studio/prompt-tags", "studio/prompt-tags/preview",

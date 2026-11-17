@@ -559,6 +559,19 @@
                   <input type="number" id="queue-count" value="1" min="1" step="1" required>
                 </label>
               </div>
+              <details id="queue-lora" class="queue-lora" hidden>
+                <summary>LoRA <span id="queue-lora-summary"></span></summary>
+                <div class="queue-lora-picker">
+                  <label class="field">用法
+                    <select id="queue-lora-mode"><option value="stack">叠加</option><option value="sweep">逐个遍历</option></select>
+                  </label>
+                  <label class="field">选择 LoRA<select id="queue-lora-choice"></select></label>
+                  <button type="button" id="queue-lora-add" disabled>添加</button>
+                </div>
+                <small id="queue-lora-hint" class="section-note" hidden>未指定 LoRA 时遍历目录内的全部人物 LoRA。同一批次共用一个种子。</small>
+                <div id="queue-lora-rows"></div>
+                <small id="queue-lora-status" role="status"></small>
+              </details>
               <div id="queue-controlnets" hidden>
                 <h3>ControlNet</h3>
                 <div id="queue-controlnet-branches"></div>
@@ -588,7 +601,7 @@
                   </div>
                 </fieldset>
               </template>
-              <small class="section-note">多批次会分别入队，每项使用随机种子，可单独取消。提示词按原文提交。超时从 ComfyUI 接收任务后计时，包含 ComfyUI 内的排队和执行。</small>
+              <small class="section-note">多批次会分别入队，任务可单独取消。提示词按原文提交。超时从 ComfyUI 接收任务后计时，包含 ComfyUI 内的排队和执行。</small>
               <footer><button type="submit" class="primary" id="queue-add">加入队列</button></footer>
             </form>
             <div class="field queue-reference" id="queue-reference" hidden>参考图

@@ -519,14 +519,19 @@ class ComfyService:
 
     async def start_lora_sweep(
         self, owner, workflows, prompts, seed, *, image_folder, timeout_seconds, allow_nsfw, image_data=None,
+        repeat_seeds=(), control_sources=None, control_archive=None,
     ):
         await self.initialize()
         requests = [
-            (wf, prompt, negative, seed, image_folder, preset)
+            (wf, prompt, negative, batch_seed, image_folder, preset)
+            for batch_seed in (seed, *repeat_seeds)
             for prompt, negative, preset in prompts
             for wf in workflows
         ]
-        return self._enqueue(owner, requests, image_data, timeout_seconds=timeout_seconds, allow_nsfw=allow_nsfw)
+        return self._enqueue(
+            owner, requests, image_data, timeout_seconds=timeout_seconds, allow_nsfw=allow_nsfw,
+            control_sources=control_sources, control_archive=control_archive,
+        )
 
     @property
     def queue_limit(self):

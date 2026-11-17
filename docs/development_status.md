@@ -38,3 +38,9 @@
 - 增加 ControlNet 选框和操作按钮之间的间距。「浏览 ComfyUI input」在 Windows 主机打开文件选择窗口，初始目录为已配置的 ComfyUI input。手机发起该操作时由 Windows 主机完成选图。当前设备可用「网页预览」查看目录内缩略图，也可用「上传本地图片」打开本机文件选择器。
 - 29 项回归测试通过。安装包在隔离 AstrBot 实例加载了 11 条工作流和 59 条 Web 路由。选图接口使用模拟 Windows 窗口结果验证了登录限制、目录限制、选中和取消。Chromium 在 1100px 和 360px 宽度下验证了间距、两种选择入口和目录内缩略图。实际 Windows 选图操作、真机手机和运行实例更新待验证。
 - Git Commit Message 为 `fix: use Windows file picker for ControlNet inputs`。
+
+## v2.26.0 · 简易添加 LoRA
+
+- 已配置 LoRA 目录的工作流可在「简易添加」展开 LoRA 区域。支持多项叠加和逐个遍历，遍历名单留空时选取目录内人物 LoRA。每批复用一个种子。折叠保留选择，滑条和数字输入同步，提交按展开前的实际配置入队。
+- 29 项回归测试通过。隔离 AstrBot 加载 11 条工作流和 60 条 Web 路由，通过模拟生成验证 V40 的多 LoRA 顺序、负强度、指定及全部人物遍历、批次种子和无效强度。Chromium 在 1100px 和 360px 宽度下验证交互与提交数据。实际 ComfyUI 生成和安装副本更新待验证。
+- Git Commit Message 为 `feat: add LoRA stacking and sweeps to quick task creation`。

@@ -50,6 +50,7 @@ from ..workflows.illustrious import (
     wai_generation,
     wai_prompt_modes,
     wai_workflow,
+    workflow_loras,
 )
 from ..workflows.lightning import (
     add_lightning_output_nodes,
@@ -77,6 +78,7 @@ from ..workflows.v40 import (
     REPAIR_OPTIONS,
     V40_FBCNN_SCHEMA,
     V40_WORKFLOWS,
+    advanced_v40_loras,
     v40_branches,
     v40_workflow,
 )
@@ -615,6 +617,7 @@ class StudioSettings:
                         {
                             **workflow.describe(),
                             "controlnets": controlnet_capabilities(workflow.name),
+                            "sweep_lora_family": workflow.sweep_lora_family,
                             **({"kind": "auto_image", "requires_image": False} if workflow.name == AIO_WORKFLOW else {}),
                         }
                         for workflow in self.service.workflows.values()
@@ -1188,6 +1191,50 @@ class StudioSettings:
             }
         return bindings, sources, archive
 
+    async def queue_loras(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        try:
+            await self.service.initialize()
+            workflow = self.service.workflows.get(request.query.get("workflow"))
+            if workflow is None or workflow.sweep_lora_family is None:
+                raise WorkflowError("此工作流未配置 LoRA 目录。")
+            family = await self.lora_catalog_for(workflow.sweep_lora_family)
+            catalog = await asyncio.to_thread(family.lora_catalog)
+            return json_response({"entries": [
+                {key: entry[key] for key in ("id", "number", "title", "default_strength")}
+                for entry in catalog.values()
+            ]})
+        except (OSError, ValueError) as exc:
+            return error_response(str(exc), status_code=400)
+
+    async def _queue_lora_variants(self, workflow, loras, sweep, count, controls):
+        if workflow.sweep_lora_family is None:
+            raise WorkflowError("此工作流未配置 LoRA 目录。")
+        family = await self.lora_catalog_for(workflow.sweep_lora_family)
+        catalog = await asyncio.to_thread(family.lora_catalog)
+        rows = family.parse_loras(loras, catalog)
+        if sweep and not rows:
+            rows = family.parse_loras([{"id": key} for key, entry in catalog.items() if entry["category"] == "C"], catalog)
+            if not rows:
+                raise WorkflowError("此目录没有人物 LoRA。请手动选择，或在「LoRA 编号」调整分类。")
+        variants = [[row] for row in rows] if sweep else [rows]
+        self.service.check_queue_capacity(workflow.name, count * len(variants))
+        if workflow.name == ANIMA_WORKFLOW:
+            base = await self.anima.for_generation(workflow, {"loras": []}, False, {}, controlnets=controls)
+            return await self.anima.apply_lora_variants(base, variants, catalog)
+        files = await lora_loader_files(self.service.client)
+        if workflow.name == WAI_WORKFLOW:
+            _, _, _, settings, base, mapping = await asyncio.to_thread(self._read, WAI_WORKFLOW)
+            return [
+                await wai_generation(base, settings, mapping, family, {"loras": rows}, catalog=catalog, files=files)
+                for rows in variants
+            ]
+        if workflow.name == ADVANCED_V40_WORKFLOW:
+            base = await self.v40_generation(workflow.name, {}, controlnets=controls)
+            return [advanced_v40_loras(base, rows, catalog, files) for rows in variants]
+        return [workflow_loras(workflow, rows, catalog, files) for rows in variants]
+
     async def add_jobs(self):
         if not request.username:
             return error_response("请登录 AstrBot 面板。", status_code=401)
@@ -1236,6 +1283,28 @@ class StudioSettings:
                 if negative is None:
                     negative = row["negative"] or None
             owner = f"studio:{request.username}"
+            loras, sweep, count = data.get("loras", []), data.get("lora_sweep", False), data.get("count", 1)
+            if not isinstance(loras, list) or len(loras) > 128 or type(sweep) is not bool:
+                raise WorkflowError("LoRA 任务参数无效。")
+            if type(count) is not int or not 1 <= count <= self.service.queue_limit:
+                raise WorkflowError(f"生成批次须为 1 到 {self.service.queue_limit} 的整数。")
+            if loras or sweep:
+                variants = await self._queue_lora_variants(workflow, loras, sweep, count, controls)
+                settings = {
+                    "timeout_seconds": self.service.qq_timeout_for(workflow), "image_data": image,
+                    "control_sources": sources, "control_archive": control_archive,
+                }
+                if sweep:
+                    seed, *repeat_seeds = [secrets.randbelow(2**63) for _ in range(count)]
+                    jobs = await self.service.start_lora_sweep(
+                        owner, variants, [(prompt, negative, preset_details)], seed,
+                        image_folder=None, allow_nsfw=True, repeat_seeds=repeat_seeds, **settings,
+                    )
+                else:
+                    jobs = await self.service.start_batch(
+                        owner, prompt, variants[0], negative, count, preset=preset_details, **settings,
+                    )
+                return json_response({"jobs": [self._queue_row(job) for job in jobs]})
             catalog = self.anima if workflow.name == ANIMA_WORKFLOW else (
                 self.lora_families["illustrious"] if workflow.name == WAI_WORKFLOW else None
             )
@@ -1252,7 +1321,7 @@ class StudioSettings:
                 elif controls:
                     workflow = await self.v40_generation(workflow.name, {}, controlnets=controls)
                 jobs = await self.service.start_batch(
-                    owner, prompt, workflow, negative, data.get("count", 1),
+                    owner, prompt, workflow, negative, count,
                     timeout_seconds=self.service.qq_timeout_for(workflow), preset=preset_details, image_data=image,
                     control_sources=sources, control_archive=control_archive,
                 )

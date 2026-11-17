@@ -2096,8 +2096,113 @@ commandTemplateDelete.addEventListener("click", () =>
 
 const queueMode = get("queue-create-mode");
 const queueWorkflow = get("queue-workflow");
+const queueLora = get("queue-lora");
+const queueLoraMode = get("queue-lora-mode");
+const queueLoraChoice = get("queue-lora-choice");
+const queueLoraAdd = get("queue-lora-add");
+const queueLoraRows = get("queue-lora-rows");
+const queueLoraStatus = get("queue-lora-status");
+const queueLoras = new Map();
+let queueLoraWorkflow;
+let queueLoraFamily;
+let queueLoraRequest = 0;
+let queueLoraEntries;
 const taskControlnets = new Map();
 let taskControlWorkflow;
+
+function renderQueueLoraChoices() {
+  const previous = queueLoraChoice.value;
+  const entries = (queueLoraEntries ?? []).filter(({ id }) => !queueLoras.has(id));
+  queueLoraChoice.replaceChildren(new Option("请选择", ""), ...entries.map(
+    ({ id, number, title }) => new Option(`${number} · ${title}`, id)
+  ));
+  if (entries.some(({ id }) => id === previous)) queueLoraChoice.value = previous;
+  queueLoraAdd.disabled = !queueLoraChoice.value;
+  const sweep = queueLoraMode.value === "sweep";
+  const count = queueLoras.size;
+  get("queue-lora-hint").hidden = !sweep;
+  get("queue-lora-summary").textContent = sweep
+    ? (count ? `遍历 · ${count} 项` : "遍历 · 全部人物")
+    : (count ? `叠加 · ${count} 项` : "");
+}
+
+async function loadQueueLoras() {
+  if (!queueLora.open || !queueLoraFamily || queueLoraEntries) return;
+  const version = ++queueLoraRequest;
+  queueLoraStatus.textContent = "正在读取 LoRA…";
+  try {
+    const { entries } = await bridge.apiGet("studio/queue/loras", { workflow: queueLoraWorkflow });
+    if (version !== queueLoraRequest) return;
+    queueLoraEntries = entries;
+    renderQueueLoraChoices();
+    queueLoraStatus.textContent = entries.length ? "" : "此目录没有可用的 LoRA。";
+  } catch (error) {
+    if (version === queueLoraRequest) queueLoraStatus.textContent = error.message;
+  }
+}
+
+function renderQueueLoras() {
+  const name = queueWorkflow.value;
+  const family = studio.workflows.find((workflow) => workflow.name === name)?.sweep_lora_family;
+  queueLora.hidden = !family;
+  if (name === queueLoraWorkflow && family === queueLoraFamily) return;
+  queueLoraWorkflow = name;
+  queueLoraFamily = family;
+  queueLoraRequest++;
+  queueLoraEntries = undefined;
+  queueLoras.clear();
+  queueLoraRows.replaceChildren();
+  queueLoraMode.value = "stack";
+  queueLoraStatus.textContent = "";
+  if (!family) queueLora.open = false;
+  renderQueueLoraChoices();
+  loadQueueLoras();
+}
+
+queueLora.addEventListener("toggle", loadQueueLoras);
+queueLoraMode.addEventListener("change", renderQueueLoraChoices);
+queueLoraChoice.addEventListener("change", () => { queueLoraAdd.disabled = !queueLoraChoice.value; });
+queueLoraAdd.addEventListener("click", () => {
+  const entry = queueLoraEntries?.find(({ id }) => id === queueLoraChoice.value);
+  if (!entry || queueLoras.has(entry.id)) return;
+  const row = document.createElement("div");
+  row.className = "queue-lora-row";
+  const title = document.createElement("span");
+  title.textContent = entry.title;
+  const slider = document.createElement("input");
+  slider.type = "range";
+  slider.step = "0.01";
+  slider.setAttribute("aria-label", `${entry.title} 强度滑条`);
+  const number = document.createElement("input");
+  number.type = "number";
+  number.step = "any";
+  number.inputMode = "decimal";
+  number.setAttribute("aria-label", `${entry.title} 强度`);
+  number.value = entry.default_strength;
+  function syncSlider() {
+    const strength = number.valueAsNumber;
+    if (!(strength >= -100 && strength <= 100)) return;
+    slider.min = Math.min(-2, Math.floor(strength));
+    slider.max = Math.max(2, Math.ceil(strength));
+    slider.value = strength;
+  }
+  syncSlider();
+  slider.addEventListener("input", () => { number.value = slider.value; });
+  number.addEventListener("input", syncSlider);
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.textContent = "移除";
+  remove.setAttribute("aria-label", `移除 ${entry.title}`);
+  remove.addEventListener("click", () => {
+    queueLoras.delete(entry.id);
+    row.remove();
+    renderQueueLoraChoices();
+  });
+  queueLoras.set(entry.id, number);
+  row.append(title, slider, number, remove);
+  queueLoraRows.append(row);
+  renderQueueLoraChoices();
+});
 
 function commandWorkflow() {
   const command = get("queue-command-text").value.trim().replace(/^\/?(?:comfy|绘图)(?:\s+|$)/i, "");
@@ -2247,12 +2352,14 @@ async function queueControlnetPayload() {
 
 queueWorkflow.addEventListener("change", () => {
   showQueueReference();
+  renderQueueLoras();
   renderTaskControlnets();
 });
 async function showCreateMode() {
   const mode = queueMode.value;
   get("remote-command-form").hidden = mode !== "command";
   get("queue-form").hidden = mode !== "simple";
+  if (mode === "simple") renderQueueLoras();
   showQueueReference();
   renderTaskControlnets();
   if (!mode) return;
@@ -2356,6 +2463,16 @@ get("queue-form").addEventListener("submit", (event) => {
     negative: get("queue-negative").value,
     count: get("queue-count").valueAsNumber,
   };
+  if (!queueLora.hidden) {
+    const loras = [...queueLoras].map(([id, input]) => ({ id, strength: input.valueAsNumber }));
+    if (loras.some(({ strength }) => !(strength >= -100 && strength <= 100))) {
+      queueLora.open = true;
+      createTaskMessage("LoRA 强度须为 -100 到 100 的数值。", true);
+      return;
+    }
+    if (loras.length) data.loras = loras;
+    if (queueLoraMode.value === "sweep") data.lora_sweep = true;
+  }
   changeQueue("studio/queue", async () => {
     const [reference, controlnets] = await Promise.all([
       queueUsesReference(workflow) ? queueReferencePayload() : {},
