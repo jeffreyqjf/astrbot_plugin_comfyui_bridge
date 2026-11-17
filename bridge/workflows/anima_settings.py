@@ -534,11 +534,11 @@ class AnimaSettings(LoraSettings):
         add_controlnet_previews(workflow, controlnets)
         return workflow
 
-    async def lora_sweep(self, workflow, characters, catalog, state, *, allow_nsfw):
+    async def lora_sweep(self, workflow, characters, catalog, state, *, allow_nsfw, controlnets=None):
         options = {"img2img": False, "loras": []}
         if not allow_nsfw:
             options["nsfw_repair"] = False
-        workflow = await self.for_generation(workflow, options, False, state)
+        workflow = await self.for_generation(workflow, options, False, state, controlnets=controlnets)
         return await self.apply_lora_variants(workflow, [[{"id": entry["id"]}] for entry in characters], catalog)
 
     async def apply_lora_variants(self, workflow, variants, catalog):

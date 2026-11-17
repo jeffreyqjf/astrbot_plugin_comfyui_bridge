@@ -920,6 +920,7 @@ function showPanel(id, tab) {
 const imageReviews = mountImageReviews({
   get, bridge, showPanel, message, notify, workflowTitle,
   openPreset: openImagePreset,
+  onReferenceChange: scheduleCommandControls,
   canOpen: () => Boolean(studio && !loading && !get("save").disabled),
 });
 const queueMask = imageReviews.mask;
@@ -2025,6 +2026,7 @@ const builtinQueueCommands = [
   ["Detailer V40 局部修复", "/comfy gen --wf detailer detailed face"],
   ["Advanced Gemma V40", "/comfy gen --wf v40 --feet on 1girl, full body --raw"],
   ["按多个预设遍历人物 LoRA", "/comfy sweep lora --wf v40 --preset 1,2 --seed 42"],
+  ["Anima T2I 深度控制", "/comfy gen --wf t2i 雨夜街景 --raw"],
 ];
 const commandTemplateSelect = get("queue-command-template");
 const commandTemplateSave = get("queue-command-template-save");
@@ -2087,7 +2089,7 @@ commandTemplateSelect.addEventListener("change", () => {
   const name = saved ? value.slice(6) : "";
   get("queue-command-template-name").value = name;
   get("queue-command-text").value = saved ? savedQueueCommands.get(name) : builtinQueueCommands[Number(value.slice(8))][1];
-  renderTaskControlnets();
+  scheduleCommandControls();
 });
 commandTemplateSave.addEventListener("click", () =>
   changeCommandTemplate(get("queue-command-template-name").value, get("queue-command-text").value));
@@ -2204,26 +2206,50 @@ queueLoraAdd.addEventListener("click", () => {
   renderQueueLoraChoices();
 });
 
-function commandWorkflow() {
-  const command = get("queue-command-text").value.trim().replace(/^\/?(?:comfy|绘图)(?:\s+|$)/i, "");
-  const tokens = command.match(/(?:[^\s"']+=)?(?:"[^"]*"|'[^']*')|\S+/g) ?? [];
-  if (tokens.includes("--help")) return undefined;
-  const [verb, ...args] = tokens;
-  const lower = verb?.toLowerCase();
-  const action = { "生成": "gen", "文生图": "t2i" }[lower] ?? lower;
-  const custom = Object.entries(studio.workflow_aliases ?? {}).find(([, alias]) => alias === action)?.[0];
-  if (!custom && !["gen", "t2i", "i2i", "illustrious"].includes(action)) return undefined;
-  const index = args.findLastIndex((token) => token === "--wf" || token.startsWith("--wf="));
-  const option = index < 0 ? undefined : args[index] === "--wf" ? args[index + 1] : args[index].slice(5);
-  const value = (option?.replace(/^(['"])(.*)\1$/, "$2") ?? custom ?? (action === "gen" ? "" : action)).toLowerCase();
-  if (!value) return undefined;
-  return studio.command_workflow_aliases?.[value]
-    ?? Object.entries(studio.workflow_aliases ?? {}).find(([, alias]) => alias === value)?.[0]
-    ?? studio.workflows.find(({ name }) => name.toLowerCase() === value)?.name
-    ?? (/^[1-9]\d*$/.test(value) ? studio.workflows[Number(value) - 1]?.name : undefined);
+const queueCommand = get("queue-command-text");
+let commandControlsTimer;
+let commandControlsRequest;
+
+function commandHasReference() {
+  return Boolean(get("queue-reference-id").value || get("queue-reference-file").files.length);
 }
 
-get("queue-command-text").addEventListener("input", renderTaskControlnets);
+async function resolveCommandControls() {
+  clearTimeout(commandControlsTimer);
+  if (queueMode.value !== "command") return false;
+  const command = queueCommand.value.trim();
+  const hasReference = commandHasReference();
+  if (!command) {
+    commandControlsRequest = undefined;
+    renderTaskControlnets(null);
+    return true;
+  }
+  if (commandControlsRequest?.command !== command || commandControlsRequest.hasReference !== hasReference) {
+    const result = bridge.apiPost("studio/queue/command/workflow", { command, has_reference: hasReference });
+    commandControlsRequest = { command, hasReference, result };
+  }
+  const request = commandControlsRequest;
+  try {
+    const { workflow } = await request.result;
+    if (request !== commandControlsRequest || queueMode.value !== "command"
+        || command !== queueCommand.value.trim() || hasReference !== commandHasReference()) return false;
+    renderTaskControlnets(workflow);
+    return true;
+  } catch (error) {
+    if (request !== commandControlsRequest) return false;
+    commandControlsRequest = undefined;
+    throw error;
+  }
+}
+
+function scheduleCommandControls() {
+  clearTimeout(commandControlsTimer);
+  if (queueMode.value === "command") {
+    commandControlsTimer = setTimeout(() => resolveCommandControls().catch(() => {}), 200);
+  }
+}
+
+queueCommand.addEventListener("input", scheduleCommandControls);
 function queueUsesReference(name) {
   return name === detailerWorkflow
     || (name === advancedV40 && studio?.workflows.find((workflow) => workflow.name === name)?.image_inputs?.length);
@@ -2239,14 +2265,13 @@ function showQueueReference() {
   }
 }
 
-function renderTaskControlnets() {
+function renderTaskControlnets(selectedName = queueWorkflow.value) {
   const isCommand = queueMode.value === "command";
   const form = get(isCommand ? "remote-command-form" : "queue-form");
   const controls = get("queue-controlnets");
   const reference = get("queue-reference");
   const position = form.contains(reference) && !reference.hidden ? reference : form.querySelector("footer");
   if (controls.nextElementSibling !== position) position.before(controls);
-  const selectedName = isCommand ? commandWorkflow() : queueWorkflow.value;
   if (selectedName === taskControlWorkflow) return;
   taskControlWorkflow = selectedName;
   const workflow = studio.workflows.find(({ name }) => name === selectedName);
@@ -2361,7 +2386,8 @@ async function showCreateMode() {
   get("queue-form").hidden = mode !== "simple";
   if (mode === "simple") renderQueueLoras();
   showQueueReference();
-  renderTaskControlnets();
+  if (mode === "command") scheduleCommandControls();
+  else renderTaskControlnets();
   if (!mode) return;
   if (mode === "command") refreshCommandTemplates();
   const accounts = get(mode === "command" ? "remote-command-account" : "queue-preset-account");
@@ -2389,7 +2415,6 @@ function openCreateTask() {
     }
     if ([...queueWorkflow.options].some((item) => item.value === studio.default)) queueWorkflow.value = studio.default;
     get("queue-add").disabled = !queueWorkflow.options.length || queueWriting;
-    renderTaskControlnets();
   }
   showCreateMode();
 }
@@ -2514,10 +2539,17 @@ async function queueReferencePayload() {
   return { reference_id: referenceId, image, mask };
 }
 
-get("remote-command-form").addEventListener("submit", (event) => {
+get("remote-command-form").addEventListener("submit", async (event) => {
   event.preventDefault();
+  const target = event.currentTarget;
+  try {
+    if (!await resolveCommandControls()) return;
+  } catch (error) {
+    createTaskMessage(error.message, true);
+    return;
+  }
   const button = get("remote-command-send");
-  const form = new FormData(event.target);
+  const form = new FormData(target);
   const file = get("queue-reference-file").files[0];
   const options = { create: true, opensQueue: ({ queued }) => queued === true };
   const hasControls = [...taskControlnets.values()].some(({ enabled }) => enabled.value);

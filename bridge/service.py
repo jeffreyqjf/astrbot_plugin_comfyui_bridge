@@ -503,7 +503,10 @@ class ComfyService:
             control_sources=control_sources, control_archive=control_archive,
         )
 
-    async def start_preset_sweep(self, owner, workflow, presets, seed, *, timeout_seconds=None, allow_nsfw=True, account=""):
+    async def start_preset_sweep(
+        self, owner, workflow, presets, seed, *, timeout_seconds=None, allow_nsfw=True, account="",
+        control_sources=None, control_archive=None,
+    ):
         await self.initialize()
         if not presets:
             raise WorkflowError("当前账号没有可运行的提示词预设。")
@@ -515,7 +518,10 @@ class ComfyService:
             )
             for index, row in enumerate(presets, 1)
         ]
-        return self._enqueue(owner, requests, None, timeout_seconds=timeout_seconds, allow_nsfw=allow_nsfw)
+        return self._enqueue(
+            owner, requests, None, timeout_seconds=timeout_seconds, allow_nsfw=allow_nsfw,
+            control_sources=control_sources, control_archive=control_archive,
+        )
 
     async def start_lora_sweep(
         self, owner, workflows, prompts, seed, *, image_folder, timeout_seconds, allow_nsfw, image_data=None,

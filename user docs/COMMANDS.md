@@ -1,6 +1,6 @@
 # QQ 指令集
 
-发送 `/comfy help` 或 `/comfy --help` 查看总览。`/绘图` 可替代 `/comfy`。工作台的「任务队列 → 创建任务 → 命令添加」也可提交生成类指令和查看 `--help`。使用 `--preset` 时，在表单选择预设所属用户。
+发送 `/comfy help` 或 `/comfy --help` 查看总览。`/绘图` 可替代 `/comfy`。工作台的「新建任务 → 命令添加」也可提交生成类指令和查看 `--help`。使用 `--preset` 时，在表单选择预设所属用户。Advanced Gemma V40 和 Anima T2I 的 ControlNet 在命令下方选图，可用于普通生成、人物 LoRA 遍历和提示词预设遍历。
 
 | 入口 | 用途 |
 | --- | --- |

@@ -541,7 +541,7 @@
                 </label>
                 <label class="field">预设所属用户<select id="remote-command-account" name="account"></select></label>
               </div>
-              <small class="section-note">选择模板后可先编辑再发送。支持 gen、lora、sweep 和 --help，描述按原文提交。用 --wf 指定支持 ControlNet 的工作流后可设置本次控制图。</small>
+              <small class="section-note">支持 gen、lora、sweep 和 --help。用 --wf v40 或 --wf t2i 时，可在下方设置生成或遍历任务的 ControlNet。</small>
               <footer><button type="submit" class="primary" id="remote-command-send">提交命令</button></footer>
             </form>
             <form id="queue-form" hidden>

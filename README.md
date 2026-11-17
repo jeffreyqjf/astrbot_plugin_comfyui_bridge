@@ -1,6 +1,6 @@
 # ComfyUI 工作台
 
-AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、图像反推、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v2.26.0。
+AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、图像反推、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v2.27.0。
 
 ## 安装和上手
 
@@ -94,7 +94,7 @@ QQ 可附图或回复图片并发送 `/comfy gen --wf detailer detailed face --r
 
 ### ControlNet 选图与评价
 
-在「新建任务」选择 Advanced Gemma V40 的 OpenPose、Any（Canny 或 Depth），或 Anima T2I 的深度 LLLite。命令添加时用 `--wf v40` 或 `--wf t2i` 指定工作流。每支可直接使用已处理图，或预处理一张原图。
+在「新建任务」选择 Advanced Gemma V40 的 OpenPose、Any（Canny 或 Depth），或 Anima T2I 的深度 LLLite。命令添加会根据实际解析出的工作流显示控制分支，例如 `/comfy gen --wf v40 全身像`。每支可直接使用已处理图，或预处理一张原图。用 `sweep lora` 或 `sweep presets` 时，整批任务使用表单中同一组 ControlNet 设置。
 
 - 「浏览 ComfyUI input」在运行 AstrBot 的 Windows 电脑上打开系统文件选择器，初始位置是 ComfyUI 的 input。手机点这个按钮时，仍在该电脑上完成选择。
 - 「网页预览」在当前设备按原目录查看缩略图和选图。非 Windows 主机直接从「浏览 ComfyUI input」进入此界面。

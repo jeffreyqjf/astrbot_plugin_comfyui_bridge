@@ -1,7 +1,9 @@
 """Load an installation ZIP under a temporary AstrBot data root."""
 
 import asyncio
+import base64
 import importlib
+import io
 import json
 import os
 import sys
@@ -119,6 +121,64 @@ async def check_queue_loras(instance, root, name):
             "workflow": name, "positive": "fixture", "loras": [{"id": "alpha", "strength": 101}],
         })
         assert invalid.status_code == 400
+        run.assert_not_called()
+        await check_command_controls(instance, root, name, call, run)
+
+
+async def check_command_controls(instance, root, name, call, run):
+    from PIL import Image
+
+    studio = instance.studio
+    (root / "input").mkdir(exist_ok=True)
+    with io.BytesIO() as buffer:
+        Image.new("RGB", (2, 2)).save(buffer, "PNG")
+        image = buffer.getvalue()
+    supplied = {"any": {"type": "canny", "mode": "preprocess", "image": base64.b64encode(image).decode()}}
+    schemas = {
+        "LoadImage": {}, "ControlNetApplyAdvanced": {}, "PreviewImage": {},
+        "ControlNetLoader": {"input": {"required": {"control_net_name": [["control-lora-canny-rank256.safetensors"]]}}},
+        "AIO_Preprocessor": {"input": {"optional": {"preprocessor": [["none", "CannyEdgePreprocessor"]]}}},
+    }
+    presets = [{"name": "fixture", "positive": "fixture", "negative": ""}]
+    resolution = "studio/queue/command/workflow"
+    with patch.dict(instance.service.selections, {"studio:remote": name}):
+        for command, wanted in (
+            ("/comfy gen subject", name),
+            ('/comfy gen --wf="v40" subject', name),
+            ("/comfy lora sweep-loras --wf v40 subject", name),
+            ("/comfy sweep presets --wf v40 --lora C1", name),
+            ("/comfy gen --wf t2i fixture", instance.service.resolve("studio:remote", "t2i").name),
+            ("/comfy gen --wf v40 --help", None),
+            ("/comfy lora --wf v40 list", None),
+        ):
+            response = await call("POST", resolution, data={"command": command, "has_reference": False})
+            assert response.status_code == 200, response.body
+            assert json.loads(response.body)["workflow"] == wanted
+    with patch.object(instance.service.client, "node_schemas", return_value=schemas), patch.object(
+        studio, "preset_rows", return_value=presets
+    ):
+        for command, count in (
+            ("/comfy gen --wf v40 fixture", 1),
+            ("/comfy sweep lora --wf v40 fixture", 2),
+            ("/comfy sweep presets --wf v40 --lora C1", 1),
+        ):
+            run.reset_mock()
+            response = await call("POST", "studio/queue/command", data={
+                "command": command, "account": "fixture", "controlnets": supplied,
+            })
+            assert response.status_code == 200, response.body
+            assert json.loads(response.body)["queued"]
+            assert run.call_count == count
+            for submitted in run.call_args_list:
+                graph = submitted.args[1]
+                assert graph["165"]["inputs"]["image"] == ["172", 0]
+                assert submitted.kwargs["control_sources"]["any"]["data"] == image
+                assert submitted.kwargs["control_outputs"] == {"any": "astrbot_controlnet_any"}
+        run.reset_mock()
+        rejected = await call("POST", "studio/queue/command", data={
+            "command": "/comfy gen --wf sdxl fixture", "controlnets": supplied,
+        })
+        assert rejected.status_code == 400
         run.assert_not_called()
 
 

@@ -6,7 +6,9 @@ export const controlTypeTitle = (name) => controlTypes[name] ?? name;
 const controlAssetId = (asset) => asset.asset_id ?? asset.id;
 const controlAssetTitle = (asset) => `${controlBranchTitle(asset.branch)} · ${controlTypeTitle(asset.type)}`;
 
-export function mountImageReviews({ get, bridge, showPanel, message, notify, canOpen, workflowTitle, openPreset }) {
+export function mountImageReviews({
+  get, bridge, showPanel, message, notify, canOpen, workflowTitle, openPreset, onReferenceChange,
+}) {
   const pending = get("image-review");
   const gallery = get("image-gallery");
   const dialog = get("image-original");
@@ -246,6 +248,7 @@ export function mountImageReviews({ get, bridge, showPanel, message, notify, can
     editReference.disabled = !label;
     get("queue-reference-clear").hidden = !label;
     renderReferenceStatus();
+    onReferenceChange?.();
     if (label) notify(label);
   }
 
