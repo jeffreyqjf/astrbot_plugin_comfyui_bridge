@@ -387,6 +387,15 @@ async def check(root, archive, core):
         assert ("GET", f"/{PLUGIN}/studio/controlnet/profiles") in context.routes
         assert ("POST", f"/{PLUGIN}/studio/controlnet/profiles") in context.routes
         await check_controlnet_profiles(instance, root, module.ADVANCED_V40_WORKFLOW)
+        assert (plugin / "user docs" / "MINIMAX_H3_SEED_HUNTER.md").is_file()
+        with patch.object(service, "_run") as run:
+            result = await instance.run_remote_command("/comfy gen --wf h3 --seed 1000 A fox --raw", "", None)
+            assert result["queued"]
+            assert run.call_args.args[2] == ["15", "35", "55"]
+            assert run.call_args.args[1]["16"]["inputs"]["value"] == 1000
+            response = await instance.run_remote_command("/comfy gen --wf h3-final --seed 2000 A fox --raw", "", None)
+            assert response["queued"] and run.call_args.args[2] == ["67"]
+            assert run.call_args.args[1]["16"]["inputs"]["value"] == 2000
         print(f"Loaded {len(service.workflows)} workflows and {len(context.routes)} web routes.")
     finally:
         await instance.terminate()

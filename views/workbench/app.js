@@ -23,6 +23,8 @@ const names = {
   WAN22_I2V_AstrBot: "WAN 2.2 · 图生视频",
   [sviWorkflow]: "WAN 2.2 SVI · 分段图生视频",
   [lightningWorkflow]: "WAN 2.2 Lightning · 长视频",
+  MiniMax_H3_Seed_Hunter_AstrBot: "MiniMax H3 · Seed Hunter",
+  MiniMax_H3_Seed_Final_AstrBot: "MiniMax H3 · 放大定稿",
   SDXL_Turbo_T2I_AstrBot: "SDXL Turbo",
 };
 let studio;
@@ -2066,6 +2068,8 @@ const builtinQueueCommands = [
   ["Advanced Gemma V40", "/comfy gen --wf v40 --feet on 1girl, full body --raw"],
   ["按多个预设遍历人物 LoRA", "/comfy sweep lora --wf v40 --preset 1,2 --seed 42"],
   ["Anima T2I 深度控制", "/comfy gen --wf t2i 雨夜街景 --raw"],
+  ["MiniMax H3 · 搜种", "/comfy gen --wf h3 --seed 1000 A red fox walks through snow --raw"],
+  ["MiniMax H3 · 放大定稿", "/comfy gen --wf h3-final --seed 2000 A red fox walks through snow --raw"],
 ];
 const commandTemplateSelect = get("queue-command-template");
 const commandTemplateSave = get("queue-command-template-save");
@@ -2291,6 +2295,7 @@ function scheduleCommandControls() {
 queueCommand.addEventListener("input", scheduleCommandControls);
 function queueUsesReference(name) {
   return name === detailerWorkflow
+    || studio?.workflows.find((workflow) => workflow.name === name)?.supports_reference
     || (name === advancedV40 && studio?.workflows.find((workflow) => workflow.name === name)?.image_inputs?.length);
 }
 

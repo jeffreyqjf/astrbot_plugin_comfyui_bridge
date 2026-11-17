@@ -1,6 +1,6 @@
 # ComfyUI 工作台
 
-AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v2.32.1。
+AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v2.33.0。
 
 ## 安装和上手
 
@@ -34,6 +34,8 @@ AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘�
 各层指令都可加 `--help`，例如 `/comfy lora wai use --help`。查看单个工作流用 `/comfy gen --wf wai --help`，也可用 `/comfy wf wai --help`。`wai` 可换成简称、完整名称或 `/comfy wf` 里的编号。原有指令仍可用，完整示例见 [QQ 指令集](user%20docs/COMMANDS.md)。
 
 ## 内置工作流
+
+MiniMax H3 使用 `h3` 生成带音频的三个种子候选，再用 `h3-final` 重现选中的候选并放大定稿。详见 [Seed Hunter 使用教程](user%20docs/MINIMAX_H3_SEED_HUNTER.md)。
 
 | 简称 | 工作流 | 随包用途 |
 | --- | --- | --- |

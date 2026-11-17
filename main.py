@@ -35,11 +35,13 @@ from .bridge.studio.studio_settings import StudioSettings
 from .bridge.workflows.anima_aio import AIO_WORKFLOW
 from .bridge.workflows.anima_settings import ANIMA_RUN_BRANCHES, BRANCH_CATEGORIES, AnimaSettings
 from .bridge.workflows.illustrious import lora_loader_files, workflow_loras
+from .bridge.workflows.minimax_h3 import h3_with_reference
 from .bridge.workflows.svi import NUMERIC_RUN_OPTIONS, parse_stage_loras, parse_stages
 from .bridge.workflows.svi import RUN_OPTIONS as VIDEO_RUN_OPTIONS
 from .bridge.workflows.v40 import V40_WORKFLOWS, advanced_v40_lora_sweep, advanced_v40_loras
 from .bridge.workflows.workflow import (
     ADVANCED_V40_WORKFLOW,
+    H3_WORKFLOWS,
     LIGHTNING_WORKFLOW,
     REVERSE_WORKFLOW,
     SEGMENTED_VIDEO_WORKFLOWS,
@@ -518,6 +520,11 @@ class ComfyUIBridge(Star):
             return workflow, await read_image()
         if VIDEO_RUN_OPTIONS & anima_options.keys():
             raise WorkflowError("分段视频参数适用于 /comfy gen --wf svi 或 --wf lightning。")
+        if workflow.name in H3_WORKFLOWS:
+            if anima_options:
+                raise WorkflowError("MiniMax H3 的模型、采样和视频尺寸在工作台参数页设置。")
+            data = await read_image(False)
+            return h3_with_reference(workflow) if data is not None else workflow, data
         if workflow.name == AIO_WORKFLOW:
             if set(anima_options) - {"denoise", "img2img"}:
                 raise WorkflowError("I2I AIO 的 LoRA 和增强分支在面板设置。单次指令可用 --denoise。")

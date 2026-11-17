@@ -65,6 +65,7 @@ from ..workflows.lightning import (
     lightning_options,
     lightning_workflow,
 )
+from ..workflows.minimax_h3 import h3_with_reference
 from ..workflows.parameter_layout import (
     preserve_parameter_layout,
     read_parameter_layout,
@@ -92,6 +93,7 @@ from ..workflows.v40 import (
 from ..workflows.workflow import (
     ADVANCED_V40_WORKFLOW,
     DETAILER_WORKFLOW,
+    H3_WORKFLOWS,
     LIGHTNING_WORKFLOW,
     REVERSE_WORKFLOW,
     SEGMENTED_VIDEO_WORKFLOWS,
@@ -631,6 +633,7 @@ class StudioSettings:
                         {
                             **workflow.describe(),
                             "controlnets": controlnet_capabilities(workflow.name, control_profiles),
+                            **({"supports_reference": True} if workflow.name in H3_WORKFLOWS else {}),
                             "sweep_lora_family": workflow.sweep_lora_family,
                             **({"kind": "auto_image", "requires_image": False} if workflow.name == AIO_WORKFLOW else {}),
                         }
@@ -1401,7 +1404,7 @@ class StudioSettings:
                 self.prepare_controls, workflow.name, data.get("controlnets"),
             )
             image = None
-            if workflow.name == DETAILER_WORKFLOW or (
+            if workflow.name in H3_WORKFLOWS | {DETAILER_WORKFLOW} or (
                 workflow.name == ADVANCED_V40_WORKFLOW and workflow.image_inputs
             ):
                 image = await asyncio.to_thread(self.read_queue_reference, data)
@@ -1456,6 +1459,8 @@ class StudioSettings:
                     workflow = await asyncio.to_thread(self.aio_generation, False)
                 elif workflow.name == WAI_WORKFLOW:
                     workflow = await self.illustrious_generation(options)
+                elif workflow.name in H3_WORKFLOWS and image is not None:
+                    workflow = h3_with_reference(workflow)
                 elif controls:
                     workflow = await self.v40_generation(workflow.name, {}, controlnets=controls)
                 jobs = await self.service.start_batch(

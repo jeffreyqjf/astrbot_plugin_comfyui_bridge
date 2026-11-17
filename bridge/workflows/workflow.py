@@ -25,6 +25,9 @@ SWEEP_LORA_DEFAULTS = {
 
 
 VIDEO_FOLDER = "vedio"
+H3_SEED_HUNTER = "MiniMax_H3_Seed_Hunter_AstrBot"
+H3_SEED_FINAL = "MiniMax_H3_Seed_Final_AstrBot"
+H3_WORKFLOWS = {H3_SEED_HUNTER, H3_SEED_FINAL}
 VIDEO_OUTPUT_NODES = frozenset({"SaveVideo", "SaveWEBM", "VHS_VideoCombine"})
 
 

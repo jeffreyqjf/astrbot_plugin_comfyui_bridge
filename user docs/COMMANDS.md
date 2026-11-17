@@ -1,5 +1,7 @@
 # QQ 指令集
 
+MiniMax H3 用 `/comfy gen --wf h3 --seed 1000 描述` 生成三个候选。选定后用 `--wf h3-final` 和候选的实际种子定稿。两条工作流都可附一张参考图。[使用教程](MINIMAX_H3_SEED_HUNTER.md)
+
 发送 `/comfy help` 或 `/comfy --help` 查看总览。`/绘图` 可替代 `/comfy`。工作台的「新建任务 → 命令添加」也可提交生成类指令和查看 `--help`。使用 `--preset` 时，在表单选择预设所属用户。Advanced Gemma V40 和 Anima T2I 的 ControlNet 在命令下方选图，可用于普通生成、人物 LoRA 遍历和提示词预设遍历。
 
 | 入口 | 用途 |

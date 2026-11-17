@@ -92,6 +92,13 @@ GENERATION_HELP = """通用：--seed 42 固定种子（-1 随机），--negative
 REFERENCE_HELP = "QQ 优先取本条附图，其次取引用图。--image 2 选择第 2 张，默认第 1 张。"
 
 WORKFLOW_HELP = {
+    "h3": """MiniMax H3 · Seed Hunter
+从同一提示词生成三个有声 MP4 候选，种子是基准值、加 1000、加 2000。可附一张参考图，并在描述中用 <Picture 1> 引用。
+例：/comfy gen --wf h3 --seed 1000 A red fox walks through snow --raw
+选定后用 --wf h3-final 和候选实际种子做放大定稿。""",
+    "h3-final": """MiniMax H3 · 放大定稿
+保持预览时的描述、参考图和首轮参数，用 --seed 指定候选实际种子，再运行潜空间放大和第二轮采样。
+例：/comfy gen --wf h3-final --seed 2000 A red fox walks through snow --raw""",
     "t2i": """Anima T2I · 文生图
 输入画面描述。明确用 --wf t2i 时走文生图。若启用 ControlNet 参考分支，图像来源按工作台设置。
 --hands / --face / --eyes / --feet 用 on 或 off 切换本次修复；--denoise 0–1。

@@ -15,6 +15,8 @@ from .workflow import (
     AIO_WORKFLOW,
     ANIMA_WORKFLOW,
     DETAILER_WORKFLOW,
+    H3_SEED_FINAL,
+    H3_SEED_HUNTER,
     LIGHTNING_WORKFLOW,
     REVERSE_WORKFLOW,
     SDXL_WORKFLOW,
@@ -43,6 +45,8 @@ WORKFLOW_SHORT_NAMES = {
     "WAN22_I2V_AstrBot": "wan-i2v",
     SVI_WORKFLOW: "svi",
     LIGHTNING_WORKFLOW: "lightning",
+    H3_SEED_HUNTER: "h3",
+    H3_SEED_FINAL: "h3-final",
     REVERSE_WORKFLOW: "reverse",
 }
 WORKFLOW_ALIASES = {

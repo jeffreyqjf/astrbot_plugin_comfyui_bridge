@@ -1,0 +1,461 @@
+{
+  "prompt": {
+    "1": {
+      "inputs": {
+        "unet_name": "Minimax-h3_Singularity_ref2va_Pruned_v1.3_int8.safetensors",
+        "weight_dtype": "default"
+      },
+      "class_type": "UNETLoader",
+      "_meta": {
+        "title": "H3 Ref2VA model"
+      }
+    },
+    "2": {
+      "inputs": {
+        "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+        "type": "minimax",
+        "device": "default"
+      },
+      "class_type": "CLIPLoader",
+      "_meta": {
+        "title": "H3 text encoder"
+      }
+    },
+    "3": {
+      "inputs": {
+        "vae_name": "minimax_h3_video_vae_int8_convrot.safetensors"
+      },
+      "class_type": "VAELoader",
+      "_meta": {
+        "title": "H3 video VAE"
+      }
+    },
+    "4": {
+      "inputs": {
+        "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+      },
+      "class_type": "VAELoader",
+      "_meta": {
+        "title": "H3 audio VAE"
+      }
+    },
+    "6": {
+      "inputs": {
+        "lora_name": "MiniMaxH3\\minimax_h3_ref2v_turbo_silver_dareties_comfy_pruned_v2.safetensors",
+        "strength_model": 0.75,
+        "model": [
+          "1",
+          0
+        ]
+      },
+      "class_type": "LoraLoaderModelOnly",
+      "_meta": {
+        "title": "Turbo LoRA for both passes"
+      }
+    },
+    "5": {
+      "inputs": {
+        "prompt": "A red fox walks through a snowy pine forest. The camera follows at ground level. Soft wind and footsteps in snow.",
+        "width": 544,
+        "height": 960,
+        "length": 107,
+        "ref_image_size": "max",
+        "clip": [
+          "2",
+          0
+        ],
+        "vae": [
+          "3",
+          0
+        ],
+        "audio_vae": [
+          "4",
+          0
+        ]
+      },
+      "class_type": "MiniMaxH3ReferenceToVideo",
+      "_meta": {
+        "title": "Prompt and preview dimensions"
+      }
+    },
+    "7": {
+      "inputs": {
+        "scheduler": "beta",
+        "steps": 6,
+        "denoise": 1,
+        "model": [
+          "6",
+          0
+        ]
+      },
+      "class_type": "BasicScheduler",
+      "_meta": {
+        "title": "First pass schedule"
+      }
+    },
+    "8": {
+      "inputs": {
+        "sampler_name": "er_sde"
+      },
+      "class_type": "KSamplerSelect",
+      "_meta": {
+        "title": "First pass sampler"
+      }
+    },
+    "9": {
+      "inputs": {
+        "model": [
+          "6",
+          0
+        ],
+        "conditioning": [
+          "5",
+          0
+        ]
+      },
+      "class_type": "BasicGuider",
+      "_meta": {
+        "title": "Shared first pass conditioning"
+      }
+    },
+    "16": {
+      "inputs": {
+        "value": 770942841899791
+      },
+      "class_type": "PrimitiveInt",
+      "_meta": {
+        "title": "Base seed (paste candidate seed for final)"
+      }
+    },
+    "11": {
+      "inputs": {
+        "noise_seed": [
+          "16",
+          0
+        ]
+      },
+      "class_type": "RandomNoise",
+      "_meta": {
+        "title": "Candidate 1 noise"
+      }
+    },
+    "12": {
+      "inputs": {
+        "noise": [
+          "11",
+          0
+        ],
+        "guider": [
+          "9",
+          0
+        ],
+        "sampler": [
+          "8",
+          0
+        ],
+        "sigmas": [
+          "7",
+          0
+        ],
+        "latent_image": [
+          "5",
+          1
+        ]
+      },
+      "class_type": "SamplerCustomAdvanced",
+      "_meta": {
+        "title": "Candidate 1 sample"
+      }
+    },
+    "13": {
+      "inputs": {
+        "samples": [
+          "12",
+          0
+        ],
+        "vae": [
+          "3",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "Candidate 1 video"
+      }
+    },
+    "14": {
+      "inputs": {
+        "samples": [
+          "12",
+          0
+        ],
+        "vae": [
+          "4",
+          0
+        ]
+      },
+      "class_type": "VAEDecodeAudio",
+      "_meta": {
+        "title": "Candidate 1 audio"
+      }
+    },
+    "15": {
+      "inputs": {
+        "frame_rate": 24,
+        "loop_count": 0,
+        "filename_prefix": "vedio/H3_Candidate_1",
+        "format": "video/h264-mp4",
+        "pingpong": false,
+        "save_output": true,
+        "images": [
+          "13",
+          0
+        ],
+        "audio": [
+          "14",
+          0
+        ],
+        "pix_fmt": "yuv420p",
+        "crf": 12,
+        "trim_to_audio": false,
+        "save_metadata": true
+      },
+      "class_type": "VHS_VideoCombine",
+      "_meta": {
+        "title": "Candidate 1"
+      }
+    },
+    "30": {
+      "inputs": {
+        "expression": "(a + 1000) % 9223372036854775808",
+        "values.a": [
+          "16",
+          0
+        ]
+      },
+      "class_type": "ComfyMathExpression",
+      "_meta": {
+        "title": "Candidate 2 seed"
+      }
+    },
+    "31": {
+      "inputs": {
+        "noise_seed": [
+          "30",
+          1
+        ]
+      },
+      "class_type": "RandomNoise",
+      "_meta": {
+        "title": "Candidate 2 noise"
+      }
+    },
+    "32": {
+      "inputs": {
+        "noise": [
+          "31",
+          0
+        ],
+        "guider": [
+          "9",
+          0
+        ],
+        "sampler": [
+          "8",
+          0
+        ],
+        "sigmas": [
+          "7",
+          0
+        ],
+        "latent_image": [
+          "5",
+          1
+        ]
+      },
+      "class_type": "SamplerCustomAdvanced",
+      "_meta": {
+        "title": "Candidate 2 sample"
+      }
+    },
+    "33": {
+      "inputs": {
+        "samples": [
+          "32",
+          0
+        ],
+        "vae": [
+          "3",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "Candidate 2 video"
+      }
+    },
+    "34": {
+      "inputs": {
+        "samples": [
+          "32",
+          0
+        ],
+        "vae": [
+          "4",
+          0
+        ]
+      },
+      "class_type": "VAEDecodeAudio",
+      "_meta": {
+        "title": "Candidate 2 audio"
+      }
+    },
+    "35": {
+      "inputs": {
+        "frame_rate": 24,
+        "loop_count": 0,
+        "filename_prefix": "vedio/H3_Candidate_2",
+        "format": "video/h264-mp4",
+        "pingpong": false,
+        "save_output": true,
+        "images": [
+          "33",
+          0
+        ],
+        "audio": [
+          "34",
+          0
+        ],
+        "pix_fmt": "yuv420p",
+        "crf": 12,
+        "trim_to_audio": false,
+        "save_metadata": true
+      },
+      "class_type": "VHS_VideoCombine",
+      "_meta": {
+        "title": "Candidate 2"
+      }
+    },
+    "50": {
+      "inputs": {
+        "expression": "(a + 2000) % 9223372036854775808",
+        "values.a": [
+          "16",
+          0
+        ]
+      },
+      "class_type": "ComfyMathExpression",
+      "_meta": {
+        "title": "Candidate 3 seed"
+      }
+    },
+    "51": {
+      "inputs": {
+        "noise_seed": [
+          "50",
+          1
+        ]
+      },
+      "class_type": "RandomNoise",
+      "_meta": {
+        "title": "Candidate 3 noise"
+      }
+    },
+    "52": {
+      "inputs": {
+        "noise": [
+          "51",
+          0
+        ],
+        "guider": [
+          "9",
+          0
+        ],
+        "sampler": [
+          "8",
+          0
+        ],
+        "sigmas": [
+          "7",
+          0
+        ],
+        "latent_image": [
+          "5",
+          1
+        ]
+      },
+      "class_type": "SamplerCustomAdvanced",
+      "_meta": {
+        "title": "Candidate 3 sample"
+      }
+    },
+    "53": {
+      "inputs": {
+        "samples": [
+          "52",
+          0
+        ],
+        "vae": [
+          "3",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "Candidate 3 video"
+      }
+    },
+    "54": {
+      "inputs": {
+        "samples": [
+          "52",
+          0
+        ],
+        "vae": [
+          "4",
+          0
+        ]
+      },
+      "class_type": "VAEDecodeAudio",
+      "_meta": {
+        "title": "Candidate 3 audio"
+      }
+    },
+    "55": {
+      "inputs": {
+        "frame_rate": 24,
+        "loop_count": 0,
+        "filename_prefix": "vedio/H3_Candidate_3",
+        "format": "video/h264-mp4",
+        "pingpong": false,
+        "save_output": true,
+        "images": [
+          "53",
+          0
+        ],
+        "audio": [
+          "54",
+          0
+        ],
+        "pix_fmt": "yuv420p",
+        "crf": 12,
+        "trim_to_audio": false,
+        "save_metadata": true
+      },
+      "class_type": "VHS_VideoCombine",
+      "_meta": {
+        "title": "Candidate 3"
+      }
+    }
+  },
+  "astrbot": {
+    "node_mapping": {
+      "positive": [
+        "5.prompt"
+      ],
+      "seed": [
+        "16.value"
+      ]
+    }
+  }
+}

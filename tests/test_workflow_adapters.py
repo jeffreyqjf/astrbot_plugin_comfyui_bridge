@@ -15,12 +15,15 @@ from bridge.workflows.controlnet import (
     without_controlnet_images,
 )
 from bridge.workflows.detailer import LEGACY_FEET_LINKS
+from bridge.workflows.minimax_h3 import h3_with_reference
 from bridge.workflows.v40 import advanced_v40_loras, upgrade_detailer, v40_workflow
 from bridge.workflows.workflow import (
     ADVANCED_V40_WORKFLOW,
     AIO_WORKFLOW,
     ANIMA_WORKFLOW,
     DETAILER_WORKFLOW,
+    H3_SEED_FINAL,
+    H3_SEED_HUNTER,
     WAI_WORKFLOW,
     Workflow,
     WorkflowError,
@@ -40,6 +43,39 @@ def node(kind, **inputs):
 
 def combo(field, choices, *, group="required"):
     return {"input": {group: {field: [choices]}}}
+
+
+class MiniMaxH3WorkflowsTest(unittest.TestCase):
+    def test_candidate_seed_offsets_and_final_preserve_first_pass(self):
+        hunter = Workflow(H3_SEED_HUNTER, profile(H3_SEED_HUNTER))
+        final = Workflow(H3_SEED_FINAL, profile(H3_SEED_FINAL))
+        first, actual = hunter.prepare("A fox", seed=1000)
+        self.assertEqual(actual, 1000)
+        self.assertEqual(hunter.outputs, ["15", "35", "55"])
+        self.assertEqual(first["16"]["inputs"]["value"], 1000)
+        for node_id, offset, noise in (("30", 1000, "31"), ("50", 2000, "51")):
+            self.assertEqual(first[node_id]["inputs"]["expression"], f"(a + {offset}) % 9223372036854775808")
+            self.assertEqual(first[noise]["inputs"]["noise_seed"], [node_id, 1])
+        for output in hunter.outputs:
+            self.assertTrue(first[output]["inputs"]["filename_prefix"].startswith("vedio/H3_Candidate_"))
+            self.assertIn("audio", first[output]["inputs"])
+        for node_id in ("1", "2", "3", "4", "5", "6", "7", "8", "9", "11", "12", "16"):
+            self.assertEqual(hunter.graph[node_id], final.graph[node_id])
+        rendered, _ = final.prepare("A fox", seed=2000)
+        self.assertEqual(final.outputs, ["67"])
+        self.assertEqual(rendered["16"]["inputs"]["value"], 2000)
+        self.assertEqual(rendered["63"]["inputs"]["noise_seed"], final.graph["63"]["inputs"]["noise_seed"])
+        self.assertEqual(rendered["61"]["inputs"]["samples"], ["12", 1])
+
+    def test_optional_reference_keeps_seed_mapping_and_does_not_change_base_graph(self):
+        for name in (H3_SEED_HUNTER, H3_SEED_FINAL):
+            workflow = Workflow(name, profile(name))
+            referenced = h3_with_reference(workflow)
+            graph, seed = referenced.prepare("Keep <Picture 1>", seed=42, image_filename="uploaded.png")
+            self.assertEqual(seed, 42)
+            self.assertEqual(graph["5"]["inputs"]["ref_images.ref_image_0"], ["astrbot_h3_reference", 0])
+            self.assertEqual(graph["astrbot_h3_reference"]["inputs"]["image"], "uploaded.png")
+            self.assertNotIn("ref_images.ref_image_0", workflow.graph["5"]["inputs"])
 
 
 SCHEMAS = {

@@ -37,6 +37,7 @@ def build(target=None):
         "bridge/workflows/controlnet.py",
         "bridge/workflows/illustrious.py",
         "bridge/workflows/lightning.py",
+        "bridge/workflows/minimax_h3.py",
         "bridge/workflows/parameter_layout.py",
         "bridge/workflows/svi.py",
         "bridge/workflows/v40.py",
@@ -63,6 +64,7 @@ def build(target=None):
         "README.md",
         "user docs/COMMANDS.md",
         "user docs/CONFIGURATION.md",
+        "user docs/MINIMAX_H3_SEED_HUNTER.md",
         "LICENSE",
     ]
     json.loads((root / "_conf_schema.json").read_text(encoding="utf-8"))
