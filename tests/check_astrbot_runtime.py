@@ -48,7 +48,7 @@ async def check_input_picker(instance, root):
         with bind_request_context(PluginRequest(request)):
             assert (await instance.studio.pick_input_file()).status_code == 401
             dialog.assert_not_called()
-        with bind_request_context(PluginRequest(request, username="remote")):
+        with bind_request_context(PluginRequest(request, username="test", plugin_name=PLUGIN)):
             dialog.return_value = CompletedProcess([], 0, stdout=f"{image}\n")
             response = await instance.studio.pick_input_file()
             assert response.status_code == 200, response.body
@@ -378,7 +378,7 @@ async def check(root, archive, core):
         assert ("GET", f"/{PLUGIN}/studio/images") in context.routes
         assert ("GET", "studio/images") in instance.remote_studio.routes
         assert ("POST", f"/{PLUGIN}/studio/input/pick") in context.routes
-        assert ("POST", "studio/input/pick") in instance.remote_studio.routes
+        assert ("POST", "studio/input/pick") not in instance.remote_studio.routes
         await check_input_picker(instance, root)
         assert ("GET", f"/{PLUGIN}/studio/queue/loras") in context.routes
         await check_queue_loras(instance, root, module.ADVANCED_V40_WORKFLOW)

@@ -1,6 +1,6 @@
 # ComfyUI 工作台
 
-AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v2.32.0。
+AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v2.32.1。
 
 ## 安装和上手
 
@@ -100,8 +100,8 @@ QQ 可附图或回复图片并发送 `/comfy gen --wf detailer detailed face --r
 
 未配置预设的分支继续使用内置类型，包含 Advanced Gemma V40 的 OpenPose、Any（Canny 或 Depth），以及 Anima T2I 的深度 LLLite。命令添加根据解析出的工作流显示控制分支，例如 `/comfy gen --wf v40 全身像`。用 `sweep lora` 或 `sweep presets` 时，整批任务使用表单中同一组 ControlNet 设置。
 
-- 「浏览 ComfyUI input」在运行 AstrBot 的 Windows 电脑上打开系统文件选择器，初始位置是 ComfyUI 的 input。手机点这个按钮时，仍在该电脑上完成选择。
-- 「网页预览」在当前设备按原目录查看缩略图和选图。非 Windows 主机直接从「浏览 ComfyUI input」进入此界面。
+- 电脑的 AstrBot 插件内嵌工作台显示「浏览 ComfyUI input」，在 Windows 主机上打开系统文件选择窗口，初始位置是 ComfyUI 的 input。非 Windows 主机使用网页选图。
+- 手机和远程工作台显示「网页浏览」，在当前设备按原目录查看缩略图和选图。
 - 「上传本地图片」打开当前设备的文件选择器，手机从手机选图。也可复用控制图集的图。重绘参考与遮罩使用各自的入口。
 - 「从图集选图」可浏览收藏、Pass 和待评价的生成图，沿用各图集支持的分类、预设、工作流和 LoRA 筛选，以及 LoRA 全部匹配。点开缩略图预览后确认使用。直接使用模式也可选择匹配当前类型的控制图。选好后，参考图和控制图会在各自表单中按原比例显示小预览。
 

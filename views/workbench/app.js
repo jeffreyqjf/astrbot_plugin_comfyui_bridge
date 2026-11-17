@@ -2327,7 +2327,7 @@ function renderTaskControlnets(selectedName = queueWorkflow.value) {
     const profile = row.querySelector("[data-control-profile]");
     const mode = row.querySelector("[data-control-mode]");
     const browse = row.querySelector("[data-control-input]");
-    const browseWeb = row.querySelector("[data-control-input-web]");
+    const browseOnWeb = remote || matchMedia("(hover: none) and (pointer: coarse)").matches;
     const chooseGallery = row.querySelector("[data-control-gallery]");
     const upload = row.querySelector("[data-control-upload]");
     const clear = row.querySelector("[data-control-clear]");
@@ -2354,7 +2354,7 @@ function renderTaskControlnets(selectedName = queueWorkflow.value) {
     updateProfiles();
     enabled.querySelector('option[value="on"]').disabled = !mode.options.length;
     browse.disabled = !studio.input_available;
-    browseWeb.hidden = !studio.input_file_dialog;
+    browse.textContent = browseOnWeb ? "网页浏览" : "浏览 ComfyUI input";
 
     function setSource(source, preview) {
       sourceVersion++;
@@ -2387,14 +2387,13 @@ function renderTaskControlnets(selectedName = queueWorkflow.value) {
     const pickInputOnWeb = () => imageReviews.pickResource("input", ({ entry, src }) => {
       setSource({ id: entry.id, label: entry.id }, src);
     });
-    browseWeb.addEventListener("click", pickInputOnWeb);
     browse.addEventListener("click", async () => {
-      if (!studio.input_file_dialog) {
+      if (browseOnWeb || !studio.input_file_dialog) {
         pickInputOnWeb();
         return;
       }
       const version = sourceVersion;
-      browse.disabled = browseWeb.disabled = true;
+      browse.disabled = true;
       status.textContent = "请在运行 AstrBot 的 Windows 电脑上选择图片。";
       try {
         const result = await bridge.apiPost("studio/input/pick", {});
@@ -2404,7 +2403,7 @@ function renderTaskControlnets(selectedName = queueWorkflow.value) {
         status.textContent = settings.source?.label ?? "";
         notify(error.message, true);
       } finally {
-        browse.disabled = browseWeb.disabled = false;
+        browse.disabled = false;
       }
     });
     chooseGallery.addEventListener("click", () => imageReviews.pickResource("gallery", ({ entry, kind, state, src, label }) => {

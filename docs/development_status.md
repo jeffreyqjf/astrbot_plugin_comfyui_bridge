@@ -107,3 +107,8 @@
 - 工作台新增 ControlNet 配置页。按 Advanced Gemma V40 的 OpenPose、Any 或 Anima T2I 的 LLLite 分支管理类型、模型、预处理、分辨率、强度与生效比例。首次保存写入插件数据目录的 `controlnet_profiles.json`，简易添加和命令添加可选择同类型的不同预设。未配置的分支使用内置规则。
 - 30 项回归测试通过。隔离 AstrBot 加载 11 条工作流和 64 条路由，验证模型列表、配置保存、版本冲突、不同预设切换、删除回退和模拟入队。Chromium 在 360px 和 1100px 宽度下验证编辑和任务选择。使用本机 ComfyUI 的模型及节点列表构建了 V40 Illustrious Canny 预设图与 OpenPose 默认图，实际出图及运行实例更新待验证。
 - Git Commit Message 为 `feat: configure ControlNet model presets for task creation`。
+
+## v2.32.1 · 区分手机和电脑选图入口
+
+- 手机及远程工作台只提供网页浏览。Windows 电脑的 AstrBot 内嵌工作台使用系统文件选择窗口。远程路由仅保留目录和缩略图查询。
+- Git Commit Message 为 `fix: separate mobile and desktop ComfyUI input pickers`。

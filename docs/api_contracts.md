@@ -10,7 +10,7 @@
 | `GET studio/queue/loras` | 按 `workflow` 读取该工作流目录下可选 LoRA 的 ID、编号、名称和默认强度 |
 | `GET/POST studio/controlnet/profiles` | GET 按 `workflow`、`branch` 读取预设、ComfyUI 模型和预处理器选项及文件修订号。POST 传 `workflow`、`branch`、`revision`、`profile`，编辑或删除时加 `id`，删除用 `profile: null`。修订不匹配返回 409 |
 | `GET studio/input`、`GET studio/input/preview` | 用 `directory`、`page` 浏览受限的本机 ComfyUI input，`id` 指定要预览的图片 |
-| `POST studio/input/pick` | 登录后发送空对象，在 Windows 主机的 ComfyUI input 中打开文件选择窗口。选图返回 `id`（input 相对路径），取消返回 `cancelled: true`。已有文件窗口返回 409，超时返回 408，窗口或目录不可用返回 503 |
+| `POST studio/input/pick` | AstrBot 内嵌工作台登录后发送空对象，在 Windows 主机的 ComfyUI input 中打开文件选择窗口。选图返回 `id`（input 相对路径），取消返回 `cancelled: true`。已有文件窗口返回 409，超时返回 408，窗口或目录不可用返回 503。远程工作台使用目录和预览查询 |
 | `GET/POST studio/control-assets`、`GET studio/control-assets/preview` | 按控制图状态分页，查询可传 `type` 在分页前限定控制类型。按稳定 ID 预览或设置独立评价状态，预览返回 `src` 和 `asset` |
 | `POST studio/queue/cancel`、`POST studio/queue/cancel-all` | 取消指定插件任务或插件任务队列，区分已提交和本地排队 |
 | `GET studio/images` | `state` 默认 `unevaluate`，图库用 `favourite` 或 `pass`。可传 `rating`、JSON `filters`、`facets=1` 或 `lora_match=all`。页码 `page` 从 1 开始，待评按任务计数，图库按图片计数 |
