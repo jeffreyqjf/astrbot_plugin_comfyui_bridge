@@ -300,7 +300,7 @@ function fieldControl(field) {
 function parameterGroup(fields, title = "", branchId) {
   const group = document.createElement("div");
   group.className = title ? "parameter-group repair-group" : "parameter-group";
-  if (title && !branchId && fields.length > 0 && fields.length <= 2 && fields.every(
+  if (title && !branchId && fields.length > 0 && fields.length <= 3 && fields.every(
     (field) => !field.editor && !field.multiline && ["INT", "FLOAT", "BOOLEAN", "select"].includes(field.kind)
   )) group.classList.add("parameter-group-compact");
   group.dataset.search = title.toLowerCase();

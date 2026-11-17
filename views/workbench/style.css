@@ -106,14 +106,15 @@ small, #count { font-weight: 400; font-size: 12px; }
 .parameter-card[open] > summary { border-radius: 9px 9px 0 0; }
 .parameter-count { float: right; color: var(--muted); font-size: 12px; font-weight: 400; }
 .parameter-groups {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 214px), 1fr));
+  display: flex; flex-wrap: wrap;
   gap: 1px; overflow: hidden; border-radius: 0 0 9px 9px;
 }
 .parameter-groups > .parameter-group {
-  grid-column: 1 / -1; min-width: 0; box-shadow: 1px 0 var(--line), 0 1px var(--line), 1px 1px var(--line);
+  flex: 0 0 100%; min-width: 0; box-shadow: 1px 0 var(--line), 0 1px var(--line), 1px 1px var(--line);
 }
-.parameter-groups > .parameter-group-compact:not(.lora-parameter-group) { grid-column: auto; }
+.parameter-groups > .parameter-group-compact:not(.lora-parameter-group) { flex: 1 1 min(100%, 214px); }
 .parameter-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr)); margin: 0; padding: 14px; }
+.parameter-group-compact .parameter-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); }
 .parameter-grid .field { min-width: 0; overflow-wrap: anywhere; }
 .parameter-toggle { display: flex; align-items: center; gap: 6px; }
 .parameter-dormant { display: block; padding: 12px 14px; }

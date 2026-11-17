@@ -96,3 +96,8 @@
 - 简短的节点参数组按参数区宽度分列，同行用纵线分隔，行间用横线分隔。长文本、复杂编辑器和带分支开关的设置保留整行。
 - Chromium 在 320px、360px、746px 和 1100px 宽度下通过分列、搜索、旁路显隐及恢复已保存顺序的检查。
 - Git Commit Message 为 `fix: use responsive columns for workflow option groups`。
+
+## v2.31.3 · 工作流参数行宽
+
+- 简短参数组按每行的实际组数分配宽度，单组占满整行。扩散模型、文本编码器和 VAE 等简短组可并排摆放。Chromium 在 320px、360px、746px 和 1100px 宽度下通过布局和参数顺序检查。
+- Git Commit Message 为 `fix: fill unused space in workflow option rows`。
