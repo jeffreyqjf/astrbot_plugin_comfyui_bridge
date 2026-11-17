@@ -9,8 +9,8 @@ from ..workflows.workflow import WorkflowError
 MASK_PIXELS = 24_000_000
 
 
-def reference_body_limit(image_limit):
-    return 8 * ((image_limit + 2) // 3) + 128 * 1024
+def reference_body_limit(image_limit, *, controls=0):
+    return 4 * (2 + controls) * ((image_limit + 2) // 3) + 128 * 1024
 
 
 def apply_mask(image_data, mask_data, limit):

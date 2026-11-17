@@ -1060,7 +1060,7 @@
     "73": {
       "inputs": {
         "image_a": [
-          "500",
+          "88",
           0
         ],
         "image_b": [
@@ -1703,7 +1703,7 @@
         "low_threshold": 0.35,
         "high_threshold": 0.75,
         "image": [
-          "58",
+          "500",
           0
         ]
       },
@@ -1897,7 +1897,7 @@
       "inputs": {
         "expression": "min(b,max(c,a.width))",
         "a": [
-          "58",
+          "500",
           0
         ],
         "b": [
@@ -1919,7 +1919,7 @@
       "inputs": {
         "expression": "min(b,max(c,a.height))",
         "a": [
-          "58",
+          "500",
           0
         ],
         "b": [
@@ -2066,7 +2066,7 @@
         "force_uniform_tiles": true,
         "batch_size": 1,
         "image": [
-          "58",
+          "500",
           0
         ],
         "model": [
@@ -2132,7 +2132,7 @@
       "inputs": {
         "filename_prefix": "Detailer_V40",
         "images": [
-          "500",
+          "88",
           0
         ]
       },
@@ -2390,7 +2390,7 @@
     },
     "18": {
       "inputs": {
-        "control_net_name": "SDXL\\control-lora-canny-rank256.safetensors"
+        "control_net_name": "control-lora-canny-rank256.safetensors"
       },
       "class_type": "ControlNetLoader",
       "_meta": {
@@ -2663,7 +2663,7 @@
         "inpaint_model": false,
         "noise_mask_feather": 64,
         "image": [
-          "88",
+          "58",
           0
         ],
         "detailer_pipe": [
@@ -2709,7 +2709,7 @@
       "inputs": {
         "switch": false,
         "on_false": [
-          "88",
+          "58",
           0
         ],
         "on_true": [

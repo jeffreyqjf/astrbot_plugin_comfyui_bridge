@@ -85,10 +85,10 @@
         }
       },
       "widgets_values": [
-        "anima-lllite-any-test-like-v2.safetensors"
+        "anima\\anima-lllite-depth-1.safetensors"
       ],
       "widgets_values_named": {
-        "name": "anima-lllite-any-test-like-v2.safetensors"
+        "name": "anima\\anima-lllite-depth-1.safetensors"
       },
       "color": "#323",
       "bgcolor": "#535"

@@ -7,7 +7,7 @@ import secrets
 import shlex
 from collections import Counter
 from contextlib import nullcontext
-from itertools import islice
+from itertools import cycle, islice
 from pathlib import Path
 
 from astrbot.api import AstrBotConfig, logger
@@ -251,6 +251,7 @@ class ComfyUIBridge(Star):
             ("studio/navigation-order", self.studio.save_navigation_order, "POST"),
             ("studio/workflow", self.studio.workflow, "GET"),
             ("studio/workflow", self.studio.save_workflow, "POST"),
+            ("studio/workflow/layout", self.studio.save_parameter_layout, "POST"),
             ("studio/workflow/alias", self.studio.save_workflow_alias, "POST"),
             ("studio/workflow/configs", self.studio.workflow_configs, "GET"),
             ("studio/workflow/configs", self.studio.edit_workflow_config, "POST"),
@@ -283,6 +284,11 @@ class ComfyUIBridge(Star):
             ("studio/queue/templates/import", self.studio.import_command_templates, "POST"),
             ("studio/queue/cancel", self.studio.cancel_job, "POST"),
             ("studio/queue/cancel-all", self.studio.cancel_all, "POST"),
+            ("studio/input", self.studio.input_entries, "GET"),
+            ("studio/input/preview", self.studio.input_preview, "GET"),
+            ("studio/control-assets", self.studio.control_assets, "GET"),
+            ("studio/control-assets", self.studio.rate_control_asset, "POST"),
+            ("studio/control-assets/preview", self.studio.control_asset_preview, "GET"),
             ("studio/images", self.studio.images, "GET"),
             ("studio/images", self.studio.rate_image, "POST"),
             ("studio/images/delete", self.studio.delete_image, "POST"),
@@ -482,7 +488,8 @@ class ComfyUIBridge(Star):
         return self.service.resolve(owner, ANIMA_WORKFLOW), {**options, "img2img": False}, images
 
     async def _generation_inputs(
-        self, event, workflow, image_index, anima_options, state, images, *, image_data=QQ_REFERENCE, allow_nsfw=None,
+        self, event, workflow, image_index, anima_options, state, images, *,
+        image_data=QQ_REFERENCE, allow_nsfw=None, controlnets=None,
     ):
         async def read_image(required=True):
             if image_data is QQ_REFERENCE:
@@ -523,7 +530,9 @@ class ComfyUIBridge(Star):
             rows = anima_options.get("loras")
             if workflow.name == ADVANCED_V40_WORKFLOW:
                 anima_options = {key: value for key, value in anima_options.items() if key != "loras"}
-            candidate = await self.studio.v40_generation(workflow.name, anima_options, allow_nsfw=allow_nsfw)
+            candidate = await self.studio.v40_generation(
+                workflow.name, anima_options, allow_nsfw=allow_nsfw, controlnets=controlnets,
+            )
             if rows is not None and workflow.name == ADVANCED_V40_WORKFLOW:
                 catalog, files = {}, {}
                 if rows:
@@ -555,6 +564,7 @@ class ComfyUIBridge(Star):
                 workflow, anima_options, has_image, state,
                 lora_settings=await self.studio.lora_catalog_for(workflow.sweep_lora_family)
                 if anima_options.get("loras", state.get("loras")) and workflow.sweep_lora_family != "anima" else None,
+                controlnets=controlnets,
             )
         data = await read_image(workflow.image_required) if workflow.image_inputs else None
         return workflow, data
@@ -565,7 +575,7 @@ class ComfyUIBridge(Star):
         try:
             limit = self.service.client.max_image_bytes
             body = await request.body()
-            if len(body) > reference_body_limit(limit):
+            if len(body) > reference_body_limit(limit, controls=2):
                 raise WorkflowError("命令或参考图数据过大。")
             data = json.loads(body)
             if not isinstance(data, dict):
@@ -579,18 +589,23 @@ class ComfyUIBridge(Star):
             image = await asyncio.to_thread(self.studio.read_queue_reference, data)
             result = await self.run_remote_command(
                 command, account, image, owner=f"studio:{request.username}", allow_nsfw=True,
+                controlnets=data.get("controlnets"),
             )
             return json_response(result)
         except (ComfyError, OSError, ValueError) as exc:
             return error_response(str(exc), status_code=400)
 
-    async def run_remote_command(self, command, account, image_data, *, owner="studio:remote", allow_nsfw=False):
+    async def run_remote_command(
+        self, command, account, image_data, *, owner="studio:remote", allow_nsfw=False, controlnets=None,
+    ):
         if not self.config.get("enabled", True):
             raise WorkflowError("ComfyUI 插件已在面板禁用。")
         if not command.strip() or len(command) > 16000:
             raise WorkflowError("请填写不超过 16000 字符的任务命令。")
         action, argument = route_command(command)
         await self.service.initialize()
+        if controlnets not in (None, {}) and action in {"help", "lora", "sweep"}:
+            raise WorkflowError("独立 ControlNet 仅用于创建生成任务。")
         if action == "help":
             return {"message": command_help(argument, lambda name: self.service.resolve(owner, name))}
         custom = self.service.custom_workflow_for_command(action)
@@ -601,9 +616,13 @@ class ComfyUIBridge(Star):
                 raise WorkflowError("LoRA 和扫图命令请清除参考图后提交。")
             return {"message": await self._command_lora(owner, argument)}
         if action == "sweep":
-            return {"message": await self._command_sweep(
-                None, owner, argument, account=account, allow_nsfw=allow_nsfw, image_data=image_data,
-            )}
+            parts = argument.split(maxsplit=1)
+            return {
+                "queued": bool(parts and parts[0].casefold() in {"lora", "preset", "presets"}),
+                "message": await self._command_sweep(
+                    None, owner, argument, account=account, allow_nsfw=allow_nsfw, image_data=image_data,
+                ),
+            }
         if action not in {"gen", "t2i", "i2i", "t2v", "i2v", "illustrious", "svi", "lightning"}:
             raise WorkflowError("此处接受 /comfy gen、/comfy lora 和 /comfy sweep。")
         prompt, name, negative, seed, preset, _, image_index, options = parse_generation(
@@ -619,6 +638,9 @@ class ComfyUIBridge(Star):
         )
         if workflow.kind == "image_to_text":
             raise WorkflowError("请选择图像或视频生成工作流。")
+        bindings, sources, control_archive = await asyncio.to_thread(
+            self.studio.prepare_controls, workflow.name, controlnets,
+        )
         image_folder = None
         if not workflow.is_video:
             prompt, image_folder = self.service.archive.split(prompt, allow_nsfw=allow_nsfw)
@@ -635,12 +657,14 @@ class ComfyUIBridge(Star):
         job, _ = await self._start_generation(
             None, workflow, prompt, negative, seed, 1, options, image_folder,
             preset_details=preset_details, owner=owner, image_data=image_data, allow_nsfw=allow_nsfw,
+            controlnets=bindings, control_sources=sources, control_archive=control_archive,
         )
-        return {"message": f"已加入 1 项生成任务。\n{qq_job_summary(job)}"}
+        return {"queued": True, "message": f"已加入 1 项生成任务。\n{qq_job_summary(job)}"}
 
     async def _start_generation(
         self, event, wf, prompt, negative, seed, image_index, options, image_folder,
         images=None, *, preset_details=None, owner=None, image_data=QQ_REFERENCE, allow_nsfw=None,
+        controlnets=None, control_sources=None, control_archive=None,
     ):
         if wf.kind == "image_to_text":
             raise WorkflowError("请附图或回复图片并发送 /comfy prompt 进行反推。")
@@ -661,12 +685,13 @@ class ComfyUIBridge(Star):
                 options = {**options, "loras": pending}
             wf, data = await self._generation_inputs(
                 event, wf, image_index, options, state, images, image_data=image_data, allow_nsfw=allow_nsfw,
+                controlnets=controlnets,
             )
             parameters = qq_generation_parameters(wf)
             job = await self.service.start(
                 owner, prompt, wf, negative, seed, image_data=data, image_folder=image_folder,
                 timeout_seconds=self.service.qq_timeout_for(wf), preset=preset_details,
-                allow_nsfw=allow_nsfw,
+                allow_nsfw=allow_nsfw, control_sources=control_sources, control_archive=control_archive,
             )
             if pending is not None and catalog.pending_loras.get(reservation) is pending:
                 catalog.pending_loras.pop(reservation)
@@ -988,7 +1013,7 @@ class ComfyUIBridge(Star):
             argument, require_prompt=False,
         )
         if (not prompt and preset is None) or options:
-            raise WorkflowError("用法：/comfy sweep lora --wf v40 --preset 2 补充描述 [--seed 42]。")
+            raise WorkflowError("用法：/comfy sweep lora --wf v40 --preset 1,2 补充描述 [--seed 42]。")
         workflow = self.service.resolve(owner, name)
         if workflow.sweep_lora_family is None:
             raise WorkflowError("此工作流未配置人物 LoRA 扫图目录，请在参数页选择可用目录。")
@@ -998,12 +1023,16 @@ class ComfyUIBridge(Star):
             raise WorkflowError("网页一次上传一张参考图，--image 只能为 1。")
         if not is_v40 and (image_index != 1 or (from_web and image_data is not None)):
             raise WorkflowError("此扫图工作流使用文生图，请清除参考图和 --image。")
+        selected_presets = []
+        if preset is not None:
+            account = preset_account(event) if event is not None else account
+            selected_presets = await self.studio.lora_sweep_presets(account, preset)
         family = await self.studio.lora_catalog_for(workflow.sweep_lora_family)
         catalog = await asyncio.to_thread(family.lora_catalog)
         characters = [entry for entry in catalog.values() if entry["category"] == "C"]
         if not characters:
             raise WorkflowError(f"{family.title} 目录没有人物 LoRA。可在工作台「LoRA 编号」设置分类。")
-        self.service.check_queue_capacity(workflow.name, len(characters))
+        self.service.check_queue_capacity(workflow.name, len(characters) * (len(selected_presets) or 1))
 
         allow_nsfw = can_use_nsfw(event) if allow_nsfw is None else allow_nsfw
         prompt, image_folder = self.service.archive.split(prompt, allow_nsfw=allow_nsfw)
@@ -1011,14 +1040,14 @@ class ComfyUIBridge(Star):
             raise WorkflowError("请填写画面描述，归档标签只用来指定保存目录。")
         if event is not None and prompt and not raw:
             prompt = await self._translate(event, prompt)
-        preset_details = None
-        if preset is not None:
-            account = preset_account(event) if event is not None else account
-            row = await self.studio.get_preset(account, preset)
-            prompt = f"{row['positive']}, {prompt}" if prompt else row["positive"]
-            if negative is None:
-                negative = row["negative"] or None
-            preset_details = self.studio.preset_use(account, row, selector=preset)
+        prompts = [
+            (
+                f"{row['positive']}, {prompt}" if prompt else row["positive"],
+                (row["negative"] or None) if negative is None else negative,
+                details,
+            )
+            for row, details in selected_presets
+        ] or [(prompt, negative, None)]
 
         reference = None
         if is_v40:
@@ -1043,14 +1072,14 @@ class ComfyUIBridge(Star):
                 for entry in characters
             ]
         seed = secrets.randbelow(2**63) if seed is None or seed == -1 else seed
+        workflow_parameters = [qq_generation_parameters(candidate) for candidate in workflows]
         jobs = await self.service.start_lora_sweep(
-            owner, workflows, prompt, negative, seed, preset=preset_details, image_folder=image_folder,
+            owner, workflows, prompts, seed, image_folder=image_folder,
             timeout_seconds=self.service.qq_timeout_for(workflow), allow_nsfw=allow_nsfw,
             image_data=reference,
         )
-        for job, candidate in zip(jobs, workflows, strict=True):
-            parameters = qq_generation_parameters(candidate)
-            job.qq_parameters = (*parameters, f"预设 {preset_details['name']}") if preset_details else parameters
+        for job, parameters in zip(jobs, cycle(workflow_parameters)):
+            job.qq_parameters = (*parameters, f"预设 {job.preset['name']}") if job.preset else parameters
             if event is not None:
                 self._watch_delivery(event, job)
         return f"已加入 {len(jobs)} 个 LoRA 任务 · 种子 {seed}。"

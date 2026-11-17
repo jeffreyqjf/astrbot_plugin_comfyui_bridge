@@ -1,6 +1,27 @@
 # AstrBot ComfyUI Bridge 维护指南
 
-本文件给修改插件或配套 ComfyUI 工作流的 AI 和维护者使用。先读本文件，再按任务查阅 [README](README.md)、[QQ 指令集](docs/COMMANDS.md) 和 [模型与参数说明](docs/CONFIGURATION.md)。用户本轮明确提出的要求优先。修改 ComfyUI 文件时，另读 `G:\ComfyUI\AGENTS.md` 和目标目录下适用的说明。
+本项目是连接 AstrBot 与 ComfyUI 的插件，提供 QQ 绘图、图像反推、视频生成与回传，以及网页创作工作台、图片归档和评价。本文件适用于维护插件和配套工作流的协作者。按任务查阅 [README](README.md)、[QQ 指令集](user%20docs/COMMANDS.md) 和 [模型与参数说明](user%20docs/CONFIGURATION.md)。用户本轮明确提出的要求优先。修改 ComfyUI 文件时，另读 `G:\ComfyUI\AGENTS.md` 和目标目录下适用的说明。
+
+## Agent 职责与文件边界
+
+项目启用 `workflow`、`backend`、`frontend`、`data`、`reviewer` 五个专业角色，主会话担任 Architect。同时运行最多四个子 Agent。下表是分派依据，具体写入范围以每轮批准和派工清单为准。
+
+| 角色 | 职责与默认责任文件 |
+| --- | --- |
+| Architect | 总体架构、拆分需求、分派子 Agent、协调接口、解决冲突、集成验证并向用户汇报等待批准。维护 `AGENTS.md`、`.codex/`、`docs/`、项目打包与版本文件。 |
+| Workflow | 分析执行依赖、模型加载、ControlNet、LoRA 和自动读取的节点参数。维护 `bridge/workflows/`、`workflows/`、工作流类 `templates/` 与获批的 ComfyUI AstrBot 画布及 API 导出。 |
+| Backend | Python 后端、QQ 接入、ComfyUI API、队列、输入文件、图片预处理与服务端接口。负责 `main.py`、`bridge/client.py`、`bridge/service.py`、`bridge/qq/`、`bridge/studio/`、`bridge/video_library.py`、`_conf_schema.json` 和 `templates/drawing_persona.txt`。 |
+| Frontend | 工作台桌面与手机界面、新建任务、参考图和文件交互、图库分页与评价。负责 `views/anima/`，与 Backend 对齐接口并和 Data 对齐图片标识与状态。 |
+| Data | 持久结构、图片元数据、多 LoRA、ControlNet 来源关系、评价状态、迁移。负责 `bridge/image_archive.py`、`bridge/lora_settings.py` 和今后获批的持久层 schema 与迁移文件。 |
+| Reviewer | 只读检查代码质量、工作流、API 契约、数据一致性、安全和回归风险。给出路径、行号及验证依据，由负责该文件的 Agent 修复。 |
+
+## 派工、审批与 Git
+
+1. Architect 先读取实际入口和现有改动，按需要并行派出只读调查。向每个子 Agent 说明目标、可读范围、是否可写、文件清单、接口和验收项。同一时刻每个文件只指定一位写入者，其他 Agent 可以阅读。跨层文件（如 `service.py` 或 `studio_settings.py`）先约定接口，再由 Architect 明确唯一写入者。根据复杂度、技术难度和风险为每项派工选择 Low、Medium、High 或 XHigh，发现新依赖或风险时重新评估。
+2. 若用户尚未批准具体业务变更，Architect 先简述对需求的理解，提交范围、文件、契约或迁移影响和验证方案，澄清影响实施的歧义并等待批准。用户已经批准的范围直接执行。对生产数据迁移、安装或运行副本同步、重载、提交、合并和发布，按用户批准的范围操作。
+3. 只读调查用当前工作区。需要写入的多条独立开发线使用 `codex/<任务>` 分支和独立 Git worktree，注明基线提交与负责人。若任务依赖未提交内容，先确认如何纳入基线。各分支只改获批文件，由 Architect 依次集成。保留用户已有改动。提交、推送及删除工作树按用户授权执行。
+4. 各子 Agent 回报修改或建议、契约影响、检查结果和未验证项。Architect 汇总相关分析文档和 [开发状态](docs/development_status.md)，安排 Reviewer 对集成差异做独立审查。修复后复测，并向用户说明测试、实际生成和 QQ 投递各自的验证范围。细则见 [开发规则](docs/development_rules.md)。
+5. 版本采用 Major.Minor.Patch。Major 用于重大不兼容变化，Minor 用于新增功能，Patch 用于 Bug 修复和小型优化。正式版本更新时校对 `metadata.yaml` 和用户文档，并输出一行 Git Commit Message。详见 [版本规则](docs/version_rules.md)。
 
 ## 开始前核对
 
@@ -13,7 +34,8 @@
 | `D:\QQbot\插件\astrbot_plugin_comfyui_bridge\` | 插件源码、随包图、测试和维护文档 |
 | `G:\ComfyUI\user\default\workflows\` | ComfyUI 用户画布。现有原始画布多在 `main\` 和 `WAN2.2-N\`，适配版在 `AstrBot\`，手动导出的 API 图在 `api\` |
 | 插件 `bridge/` | 内部 Python 模块，按工作流、QQ 和网页工作台归类 |
-| 插件 `docs/` | 指令、配置说明和参考资料 |
+| 插件 `docs/` | 架构、项目地图、工作流、数据、API 与开发记录 |
+| 插件 `user docs/` | 指令、配置说明和参考资料 |
 | 插件 `workflows/` | 随包运行的 API 图或带 `prompt`、`astrbot` 的配置文件，使用规范文件名 |
 | 插件 `templates/` | Anima T2I 同步画布、I2I AIO 参考画布、本机 WD14 辅助 API |
 | AstrBot 实例 `core\data\plugins\astrbot_plugin_comfyui_bridge\` | 本机已安装的插件代码 |
@@ -27,19 +49,21 @@
 1. 优先放进已有分组。`gen` 生成，`prompt` 反推与提示词预设，`wf` 管理工作流，`lora` 管理 LoRA，`set` 设置 Anima T2I 会话参数，`job` 管理任务，`archive` 归档和收藏，`help` 查看用法。新模型优先用 `/comfy gen --wf 简称` 接入。`/绘图`、已有短命令和旧参数继续兼容。
 2. 在 [qq_commands.py](bridge/qq/qq_commands.py) 的 `route_command` 处理路由，按需补 `TOPICS`、`SUBCOMMAND_HELP` 和 `WORKFLOW_HELP`。各层都支持 `--help`，例如 `/comfy archive fav --help` 和 `/comfy gen --wf wai --help`。帮助沿用插件全局权限，查看时不执行对应操作。操作专属权限由实际指令处理器校验。
 3. 在 [main.py](main.py) 的 `command` 接业务。生成类选项由 `OPTION` 和 `parse_generation` 统一解析，兼容 `--参数 值` 与 `--参数=值`。带空格的参数使用英文引号。把解析后的值交给对应工作流校验，只覆盖用户指定的字段。会话或面板默认值由原来的路径解析。
-4. 更新 [COMMANDS.md](docs/COMMANDS.md) 和相关帮助。用户能从工作台或 AI 工具看到的命令示例也一起核对。新增工作流简称在 [workflow_store.py](bridge/workflows/workflow_store.py) 登记，文件名和已有别名作为兼容入口。
+4. 更新 [COMMANDS.md](user%20docs/COMMANDS.md) 和相关帮助。用户能从工作台或 AI 工具看到的命令示例也一起核对。新增工作流简称在 [workflow_store.py](bridge/workflows/workflow_store.py) 登记，文件名和已有别名作为兼容入口。
 5. 在 [qq_messages.py](bridge/qq/qq_messages.py) 保持任务回执简短。显示工作流、8 位任务短 ID、实际生效的 LoRA 和已启用的修手、修脚、修脸、修眼等功能。步数和图片尺寸留在工作台。图片回传的 `ID … · 图 N` 用于收藏定位，调整文案时一并检查引用旧图、批量回传和补发。
 
 图生图、图生视频和反推复用 [reference.py](bridge/qq/reference.py)。生成优先取本条消息的附图，再取引用图。`--image N` 从 1 开始。反推使用位置参数，收藏只取引用的图片。OneBot 补取引用消息、上传到 ComfyUI 和回传结果各走已有路径。
 
 ## 接入或修改 ComfyUI 工作流
 
-1. **保留来源。** 先复制原始画布到 `AstrBot\`，按 `<模型>_<用途>_AstrBot.json` 命名或沿用该模型既有规范。除非用户要求同时更新原画布，否则把 QQ 适配放在副本。新功能优先改画布和插件适配层。修改 ComfyUI 核心或第三方节点时，按其独立规则处理。
+每个工作流维护 original 与 AstrBot 两份画布。original 供用户自行命名和调试，开发过程中禁止修改。AstrBot 是插件适配的主要画布和实际修改目标。正式更新的顺序是修改 AstrBot 画布、导出可执行 API 至 ComfyUI 的 `api/`、同步插件 `workflows/` 对应 API 文件。本机运行图按获批范围同步并验证覆盖。
+
+1. **保留来源。** 新接入时复制原始画布到 `AstrBot\`，按 `<模型>_<用途>_AstrBot.json` 命名或沿用该模型既有规范。新功能优先改 AstrBot 画布和插件适配层。修改 ComfyUI 核心或第三方节点时，按其独立规则处理。
 2. **确定节点契约。** 先标出正向词、负向词、种子、参考图及最终输出对应的节点和字段。保留稳定的节点 ID。变更 ID 或连线时，同步核对代码映射、工作台和 API 图。模型、CLIP、VAE、自定义节点与可选分支以本机实际安装为准。遇到「节点不可用」，先用本机 `/object_info/<节点类名>` 核对节点是否注册、字段是否变化，以及下拉项是否包含所需模型。
 3. **导出 API。** 通过 ComfyUI 导出 API 格式，核对 `class_type`、`inputs` 和连线。`api\` 中的手动导出可用 `_API.json` 后缀，插件 `workflows/` 文件名主体就是工作流名称。Anima T2I 的旁路分支由 [anima_settings.py](bridge/workflows/anima_settings.py) 和 [anima_export.py](bridge/workflows/anima_export.py) 从画布导出，输出通常是 `#510`，需要用该工作流的同步逻辑保留分支与已保存的覆盖。
 4. **先试通用加载。** 自定义 API 图可以导入工作台或放到插件数据目录的 `workflows/`。[workflow.py](bridge/workflows/workflow.py) 负责识别输出及常见的提示词、种子和参考图字段，歧义用 `node_mappings` 明确。工作台由 [workflow_fields.py](bridge/workflows/workflow_fields.py) 与 [studio_settings.py](bridge/studio/studio_settings.py) 结合 `/object_info` 展示字面输入。已连线的输入由上游节点控制。字段可编辑性和可选项以本机节点定义为准。
 5. **复杂图加专用逻辑。** 多采样阶段、可选分支、多个 QQ 输入候选或逐段 LoRA，参考对应模型的现有实现。维护者在适配时明确参数语义，QQ 单次选项只暴露有明确映射的参数。普通模型导入后走通用流程。工作流的自动帮助与工作台字段自动发现分开考虑。
-6. **核对三个副本。** ComfyUI 画布、本次导出的 API 和插件实际运行的图应实现相同功能。`/comfy wf reload` 重读插件数据目录中的 API 图。随包图在初始化时补齐缺失项。更新已有运行图时，先用工作台导出备份，再按需合并图或显式导入覆盖，保留已保存的节点值、工作流前缀、分支、超时和 LoRA 设置。
+6. **核对交付与运行。** AstrBot 画布、本次导出的 API 和随包 API 应实现相同功能。随包图在初始化时补齐缺失项。`/comfy wf reload` 重读插件数据目录中的 API 图。获批更新已有运行图时，先用工作台导出备份，再按需合并图或显式导入覆盖，保留已保存的节点值、工作流前缀、分支、超时和 LoRA 设置。
 
 | 工作流 | 维护入口和容易漏掉的检查 |
 | --- | --- |
@@ -62,17 +86,17 @@
 ## 验证和交付
 
 - 按改动实际验证。指令改动覆盖正常输入、帮助和兼容别名。工作流改动至少核对输出可达、必要节点、映射、参考图和本次覆盖。新增分支同时验证启用与关闭，视频验证至少单段和非顺序多段。使用本机 ComfyUI 时，优先做轻量检查，必要时再跑实际生成。
-- 日常检查在插件根目录运行。按项目依赖使用 Python 3.10+。本机也可用 ComfyUI 环境的 `ruff.exe`。
+- 日常检查在插件根目录运行。按项目依赖使用 Python 3.10+。本机也可用 ComfyUI 环境的 `ruff.exe`。先确认当前检出是否包含 `tests/`，有对应测试时再运行测试命令。构建和运行检查可能写文件，按本轮范围选择。
 
 ```powershell
 ruff check .
 git diff --check
-python -m unittest discover -s tests -p test_bridge.py
-python build_zip.py
-python tests/check_astrbot_runtime.py --astrbot-core "<本机 AstrBot 实例的 core 路径>"
+python -m unittest discover -s tests
+python build_zip.py --output "<ZIP 路径>"
+python tests/check_astrbot_runtime.py --astrbot-core "<本机 AstrBot 实例的 core 路径>" --archive "<ZIP 路径>"
 ```
 
-- `test_bridge.py` 用本机模拟服务检查插件行为。`check_astrbot_runtime.py` 用真实 AstrBot 在隔离目录加载 ZIP。分别说明自动测试、真实 ComfyUI 生成和 QQ 实际投递验证到了哪一步。
+- 回归测试在隔离目录检查插件行为。`check_astrbot_runtime.py` 用真实 AstrBot 在隔离目录加载 ZIP。分别说明自动测试、真实 ComfyUI 生成和 QQ 实际投递验证到了哪一步。
 - 功能发布时按要求更新 `metadata.yaml` 和相关用户文档。`build_zip.py` 使用运行文件白名单，新增模块、模板或前端资源时核对是否进包。测试和本维护指南留在源码目录。
 - 用户要求更新本机时，先检查安装目录是否有独立改动，核对后再同步本次涉及的文件并验证版本。插件重载负责应用 Python 代码和配置，`/comfy wf reload` 用于重读工作流。报告本机文件已同步、插件是否已重载，以及运行图是否已更新。
 

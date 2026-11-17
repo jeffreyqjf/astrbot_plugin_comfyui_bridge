@@ -85,8 +85,14 @@ def image_loras(graph, outputs):
             for field, row in inputs.items():
                 if field.startswith("lora_") and isinstance(row, dict) and row.get("on"):
                     add(rows, row.get("lora"), row.get("strength"), row.get("strengthTwo", row.get("strength")))
-        syntax = inputs.get("lora_syntax")
-        if isinstance(syntax, str) and node.get("class_type") == "LoRA Text Loader (LoraManager)":
+        if node.get("class_type") == "LoRA Text Loader (LoraManager)":
+            syntax = inputs.get("lora_syntax")
+            if is_link(syntax) and syntax[1] == 0:
+                upstream = graph.get(str(syntax[0]), {})
+                field = Workflow.STRING_NODES.get(upstream.get("class_type"))
+                syntax = upstream.get("inputs", {}).get(field)
+            if not isinstance(syntax, str):
+                return
             for name, model, clip in re.findall(r"<lora:([^:>]+):([^:>]+)(?::([^:>]+))?>", syntax, re.I):
                 try:
                     add(rows, name, float(model), float(clip or model))
@@ -133,6 +139,7 @@ class Workflow:
 
     def __init__(self, name, data, overrides=None, *, require_prompt=True):
         self.name = name
+        self.controlnet_outputs = {}
         data, settings = profile_parts(data)
         if not isinstance(settings, dict) or not isinstance(settings.get("positive_prefix", ""), str):
             raise WorkflowError("AstrBot 工作流设置格式无效。")

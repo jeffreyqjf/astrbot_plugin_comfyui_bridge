@@ -18,6 +18,7 @@ from threading import Lock
 from PIL import Image, ImageOps
 
 from .client import image_suffix, output_refs, video_suffix
+from .controlnet_archive import ASSET_ID, CONTROL_TOKEN
 from .workflows.workflow import WorkflowError, image_loras
 from .workflows.workflow_store import atomic_write, profile_bytes
 
@@ -324,6 +325,11 @@ class ImageReviews:
         if generation is not None:
             info.update(seed=generation.get("seed"), loras=generation["loras"][index - 1])
             preset = generation.get("preset")
+            slots = generation.get("controlnets")
+            if isinstance(slots, list) and index <= len(slots):
+                links = _controlnet_links(slots[index - 1])
+                if links:
+                    info["controlnets"] = links
         else:
             preset = legacy.get("preset") if legacy else None
             if legacy:
@@ -395,9 +401,15 @@ class ImageReviews:
         }
 
     @classmethod
-    def _matches_filters(cls, item, filters):
+    def _matches_filters(cls, item, filters, lora_match):
         values = cls._filter_values(item)
-        return all(not selected or selected.intersection(values[key]) for key, selected in filters.items())
+        for key, selected in filters.items():
+            if key == "lora" and lora_match == "all":
+                if not selected.issubset(values[key]):
+                    return False
+            elif selected and not selected.intersection(values[key]):
+                return False
+        return True
 
     def _indexed_names(self, state, directory):
         relative = directory.relative_to(self.root / state)
@@ -469,7 +481,7 @@ class ImageReviews:
             raise WorkflowError("图片已更新，请刷新列表。")
         return state, path, item
 
-    def pending(self, limit, *, filters=None):
+    def pending(self, limit, *, filters=None, page=None, lora_match="any"):
         filters = filters or {}
         with self.lock:
             jobs = []
@@ -477,18 +489,23 @@ class ImageReviews:
                 legacy = self._legacy_metadata(record)
                 images = [self._item(record, index, legacy) for index, _ in self._files(record, "unevaluate")]
                 if filters:
-                    images = [item for item in images if self._matches_filters(item, filters)]
+                    images = [item for item in images if self._matches_filters(item, filters, lora_match)]
                 if images:
                     jobs.append((record["created"], record["id"], {
                         "id": record["id"][:8], "workflow": record["workflow"], "images": images,
                     }))
             for created, item, _ in self._manual_files("unevaluate"):
-                if not filters or self._matches_filters(item, filters):
+                if not filters or self._matches_filters(item, filters, lora_match):
                     jobs.append((created, item["id"], {"workflow": "手动添加", "images": [item]}))
             jobs.sort(key=lambda row: row[:2])
-            return {"jobs": [job for _, _, job in jobs[:limit]], "limit": limit}
+            start = (page - 1) * limit if page is not None else 0
+            end = start + limit
+            result = {"jobs": [job for _, _, job in jobs[start:end]], "limit": limit}
+            if page is not None:
+                result.update(total=len(jobs), page=page, page_size=limit, has_more=len(jobs) > end)
+            return result
 
-    def gallery(self, rating, page, size=24, *, state="favourite", filters=None):
+    def gallery(self, rating, page, size=24, *, state="favourite", filters=None, lora_match="any"):
         with self.lock:
             start = (page - 1) * size
             entries = []
@@ -497,11 +514,11 @@ class ImageReviews:
                 legacy = self._legacy_metadata(record) if filters else None
                 for index, _ in self._files(record, state):
                     item = self._item(record, index, legacy, include_generation=bool(filters))
-                    if not filters or self._matches_filters(item, filters):
+                    if not filters or self._matches_filters(item, filters, lora_match):
                         entries.append((record["created"], item, record))
             entries.extend(
                 (created, item, None) for created, item, _ in self._manual_files(state, rating)
-                if not filters or self._matches_filters(item, filters)
+                if not filters or self._matches_filters(item, filters, lora_match)
             )
             entries.sort(key=lambda row: (-row[0], row[1]["id"]))
             rows = []
@@ -512,7 +529,10 @@ class ImageReviews:
                         page_metadata[job_id] = self._legacy_metadata(record)
                     item = self._item(record, item["index"], page_metadata[job_id])
                 rows.append(item)
-            return {"images": rows, "has_more": len(entries) > start + size}
+            return {
+                "images": rows, "has_more": len(entries) > start + size,
+                "total": len(entries), "page": page, "page_size": size,
+            }
 
     def filter_options(self, state, rating):
         with self.lock:
@@ -744,6 +764,23 @@ class ImageReviews:
             if digest is not None and hashlib.sha256(data).hexdigest() != digest:
                 raise WorkflowError("原图内容已变更。")
             return IMAGE_TYPES[path.suffix.lower()], data
+
+
+def _controlnet_links(slot):
+    if not isinstance(slot, list):
+        return []
+    links = []
+    for link in slot:
+        if not isinstance(link, dict):
+            continue
+        if all(isinstance(link.get(key), str) and pattern.fullmatch(link[key]) for key, pattern in (
+            ("asset_id", ASSET_ID), ("branch", CONTROL_TOKEN), ("type", CONTROL_TOKEN),
+        )):
+            links.append({
+                "asset_id": link["asset_id"], "branch": link["branch"], "type": link["type"],
+                "new": link.get("new") is True,
+            })
+    return links
 
 
 def _place_file(source, destination, digest):

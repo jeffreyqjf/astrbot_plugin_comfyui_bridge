@@ -10,7 +10,7 @@ HELP = """ComfyUI 指令
 /comfy prompt           附图反推提示词，或管理个人预设
 /comfy wf               查看、切换和检查工作流
 /comfy lora             查看 LoRA 分类编号或预约
-/comfy sweep            固定 LoRA 扫预设，或固定提示词扫人物 LoRA
+/comfy sweep            固定 LoRA 扫预设，或按描述和预设扫人物 LoRA
 /comfy set              查看和修改 Anima T2I 会话参数
 /comfy job              查看队列、查询结果和取消任务
 /comfy archive          图片与视频收藏
@@ -61,7 +61,7 @@ LoRA 用法见 /comfy lora --help。""",
 Anima I2I AIO 的 LoRA 在工作台配置。批量扫图见 /comfy sweep --help。""",
     "sweep": '''批量扫图
 /comfy sweep presets --wf wai --lora "C1:0.85,S1:0.6"  固定一组 LoRA 遍历个人预设
-/comfy sweep lora --wf v40 --preset 2 雨夜街头  固定提示词遍历人物 LoRA
+/comfy sweep lora --wf v40 --preset 1,2 雨夜街头  按预设依次遍历人物 LoRA
 人物 LoRA 扫图使用对应工作流参数页选定的目录。支持具有可接入采样模型的文生图工作流。
 两种模式均可加 --help。整批共用一个种子，并需要足够的队列位置。''',
     "set": """Anima T2I 会话参数
@@ -158,10 +158,11 @@ SUBCOMMAND_HELP = {
                      '支持 wai 和 t2i。用逗号分隔多个 LoRA，强度留空时使用 LoRA 编号页的默认权重。\n'
                      '每个个人预设提交一个任务，整组 LoRA 和种子相同。省略种子时整批随机选一个。\n'
                      '整批需要足够的队列位置。用 /comfy job 查看进度。',
-    "sweep lora": '固定提示词扫人物 LoRA · /comfy sweep lora --wf v40 --preset 2 雨夜街头 --seed 42\n'
-                  '支持 v40、wai 和 t2i。可单写描述，也可使用预设并追加描述。加 --raw 保留补充描述原文。\n'
+    "sweep lora": '扫人物 LoRA · /comfy sweep lora --wf v40 --preset 1,2 雨夜街头 --seed 42\n'
+                  '支持 v40、wai 和 t2i。可单写描述、用单个预设名称或编号，也可用逗号分隔多个编号。\n'
+                  '纯数字逗号串按列表解析，撞名的预设用其编号选择。可追加描述，加 --raw 保留原文。\n'
                   '在对应工作流的「人物 LoRA 扫图目录」选择 models/loras 下的文件夹。\n'
-                  '人物组 C 的每个 LoRA 按各自默认权重生成一次，共用一个种子。省略种子时整批随机选一个。\n'
+                  '每个选中的预设都遍历人物组 C 的 LoRA，采用各自默认权重，整批共用一个种子。\n'
                   '整批需要足够的队列位置。用 /comfy job 查看进度。',
     "prompt wd14": "WD14 反推 · /comfy prompt wd14 [图片序号]\n"
                    "附图或回复图片，默认第 1 张。标签阈值来自 Anima I2I AIO 工作台。\n"

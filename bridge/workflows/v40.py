@@ -2,6 +2,13 @@
 
 from copy import copy, deepcopy
 
+from .controlnet import (
+    add_controlnet_previews,
+    configure_controlnets,
+    controlnet_switches,
+    without_controlnet_images,
+)
+from .detailer import LEGACY_FEET_LINKS
 from .workflow import (
     ADVANCED_V40_WORKFLOW,
     DETAILER_WORKFLOW,
@@ -32,9 +39,16 @@ def v40_branches(config, changes=None):
     return branches
 
 
-def v40_workflow(name, graph, settings, mapping=None, options=None):
+def v40_workflow(name, graph, settings, mapping=None, options=None, *, controlnets=None, schemas=None):
     config = settings["v40"]
     enabled = v40_branches(config, options)
+    switches = controlnet_switches(name, controlnets)
+    if switches:
+        if switches.keys() - enabled.keys():
+            raise WorkflowError("V40 工作流缺少 ControlNet 分支，请更新工作流。")
+        enabled.update(switches)
+        graph = deepcopy(graph)
+    replaced = configure_controlnets(name, graph, controlnets, schemas or {})
     disabled = {node for key, row in config["branches"].items() if not enabled[key] for node in row["nodes"]}
     output = config["output"]
     upscale = enabled.get("upscale_post", False)
@@ -132,7 +146,7 @@ def v40_workflow(name, graph, settings, mapping=None, options=None):
                 settings = {**settings, "reference_source": "auto", "node_mapping": {
                     **node_mapping, "image": [], "optional_image": [reference_field],
                 }}
-    source_mapping = {**(mapping or {}), **settings.get("node_mapping", {})}
+    source_mapping = without_controlnet_images({**(mapping or {}), **settings.get("node_mapping", {})}, replaced)
     execution_mapping = source_mapping.copy()
     if name == DETAILER_WORKFLOW:
         for role in ("positive", "negative", "seed"):
@@ -146,6 +160,7 @@ def v40_workflow(name, graph, settings, mapping=None, options=None):
     )
     workflow.mapping = source_mapping
     workflow.active.update(rendered)
+    add_controlnet_previews(workflow, controlnets)
     return workflow
 
 
@@ -200,7 +215,23 @@ def upgrade_detailer(profile, bundled):
     """Restore the original branches while carrying forward settings of the legacy export."""
     graph, settings = profile_parts(profile)
     new_graph, _ = profile_parts(bundled)
-    if "v40" in settings or not {"1", "2", "32", "57", "79", "91"} <= graph.keys():
+    if "v40" in settings:
+        if (
+            settings["v40"].get("switches", {}).get("500") != "feet"
+            or any(
+                key not in graph or graph[key]["class_type"] != new_graph[key]["class_type"]
+                or graph[key]["inputs"].get(field) != old_link
+                for (key, field), old_link in LEGACY_FEET_LINKS.items()
+            )
+        ):
+            return None
+        replacement = deepcopy(profile)
+        new_prompt = replacement["prompt"]
+        for key, field in LEGACY_FEET_LINKS:
+            new_prompt[key]["inputs"][field] = deepcopy(new_graph[key]["inputs"][field])
+        v40_workflow(DETAILER_WORKFLOW, new_prompt, settings)
+        return replacement
+    if not {"1", "2", "32", "57", "79", "91"} <= graph.keys():
         return None
     if any(key not in new_graph or node["class_type"] != new_graph[key]["class_type"] for key, node in graph.items()):
         return None
@@ -208,7 +239,8 @@ def upgrade_detailer(profile, bundled):
     legacy_links = {
         "37.image": ["106", 0], "88.any_01": ["57", 0], "88.any_02": ["57", 0],
         "99.any_01": ["112", 0], "99.any_02": ["112", 0], "106.any_01": ["99", 0],
-        "112.any_01": ["2", 0], "499.image": ["88", 0],
+        "112.any_01": ["2", 0],
+        **{f"{key}.{field}": link for (key, field), link in LEGACY_FEET_LINKS.items()},
     }
     for key, node in graph.items():
         if key in ("32", "500"):

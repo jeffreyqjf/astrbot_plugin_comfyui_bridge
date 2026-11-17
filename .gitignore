@@ -1,4 +1,10 @@
 __pycache__/
 .ruff_cache/
 *.pyc
-tests/
+tests/*
+!tests/test_image_archive_pagination.py
+!tests/check_astrbot_runtime.py
+!tests/test_controlnet_archive.py
+!tests/test_workflow_adapters.py
+!tests/test_parameter_layout.py
+!tests/test_control_submission.py

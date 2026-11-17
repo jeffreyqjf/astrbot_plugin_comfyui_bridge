@@ -2,17 +2,19 @@
 
 import json
 import zipfile
+from argparse import ArgumentParser
 from pathlib import Path
 
 
-def build():
+def build(target=None):
     root = Path(__file__).resolve().parent
-    target = root.parent / (root.name + ".zip")
+    target = Path(target).resolve() if target is not None else root.parent / (root.name + ".zip")
     files = [
         "__init__.py",
         "main.py",
         "bridge/__init__.py",
         "bridge/client.py",
+        "bridge/controlnet_archive.py",
         "bridge/image_archive.py",
         "bridge/lora_settings.py",
         "bridge/qq/__init__.py",
@@ -22,6 +24,7 @@ def build():
         "bridge/service.py",
         "bridge/video_library.py",
         "bridge/studio/__init__.py",
+        "bridge/studio/input_library.py",
         "bridge/studio/mask_image.py",
         "bridge/studio/prompt_library.py",
         "bridge/studio/remote_studio.py",
@@ -31,8 +34,10 @@ def build():
         "bridge/workflows/anima_export.py",
         "bridge/workflows/detailer.py",
         "bridge/workflows/anima_settings.py",
+        "bridge/workflows/controlnet.py",
         "bridge/workflows/illustrious.py",
         "bridge/workflows/lightning.py",
+        "bridge/workflows/parameter_layout.py",
         "bridge/workflows/svi.py",
         "bridge/workflows/v40.py",
         "bridge/workflows/workflow.py",
@@ -56,8 +61,8 @@ def build():
         "_conf_schema.json",
         "requirements.txt",
         "README.md",
-        "docs/COMMANDS.md",
-        "docs/CONFIGURATION.md",
+        "user docs/COMMANDS.md",
+        "user docs/CONFIGURATION.md",
         "LICENSE",
     ]
     json.loads((root / "_conf_schema.json").read_text(encoding="utf-8"))
@@ -77,4 +82,6 @@ def build():
 
 
 if __name__ == "__main__":
-    build()
+    parser = ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, help="Write the ZIP to this path.")
+    build(parser.parse_args().output)

@@ -57,7 +57,7 @@ def combo_options(spec):
     return spec[1].get("options") if len(spec) > 1 and isinstance(spec[1], dict) else None
 
 
-def editable_fields(graph, schemas, *, v40=False):
+def editable_fields(graph, schemas, *, v40=False, anima=True):
     fields = {}
     for key, node in graph.items():
         node_type = node["class_type"]
@@ -65,7 +65,7 @@ def editable_fields(graph, schemas, *, v40=False):
         required, optional = widget_specs(schema, node["inputs"])
         inputs = {**required, **optional}
         title = (
-            (None if v40 else NODE_LABELS.get(key))
+            (NODE_LABELS.get(key) if anima and not v40 else None)
             or node.get("_meta", {}).get("title")
             or schema.get("display_name", node_type)
         )
@@ -74,7 +74,7 @@ def editable_fields(graph, schemas, *, v40=False):
                 v40 and node_type == "CustomCombo" and name == "index"
             ):
                 continue
-            if not v40 and ((key == "504" and name == "text") or (
+            if anima and not v40 and ((key == "504" and name == "text") or (
                 node_type == "Lora Loader (LoraManager)" and name == "text"
             )):
                 continue

@@ -408,7 +408,7 @@
     },
     "178": {
       "inputs": {
-        "control_net_name": "SDXL\\control-lora-canny-rank256.safetensors"
+        "control_net_name": "control-lora-canny-rank256.safetensors"
       },
       "class_type": "ControlNetLoader",
       "_meta": {
@@ -422,7 +422,7 @@
         "detect_body": "enable",
         "detect_face": "enable",
         "resolution": 1536,
-        "scale_stick_for_xinsr_cn": "enable",
+        "scale_stick_for_xinsr_cn": "disable",
         "image": [
           "121",
           0
@@ -487,7 +487,7 @@
     },
     "172": {
       "inputs": {
-        "preprocessor": "none",
+        "preprocessor": "CannyEdgePreprocessor",
         "resolution": 1536,
         "image": [
           "123",
@@ -502,7 +502,7 @@
     },
     "171": {
       "inputs": {
-        "control_net_name": "noobaiXLControlnet_openposeModel.safetensors"
+        "control_net_name": "IL-controlnet\\openpose_noob.safetensors"
       },
       "class_type": "ControlNetLoader",
       "_meta": {

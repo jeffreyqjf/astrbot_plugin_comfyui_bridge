@@ -15,6 +15,7 @@
 | 认证令牌 | `api_token` | 空 | 填写后通过 `Authorization: Bearer …` 发给 ComfyUI 或其反向代理。普通本机服务可留空。 |
 | 默认工作流名称 | `default_workflow` | `Anima_T2I_AstrBot` | 没有显式指定、且当前用户在当前会话没有有效选择时使用。默认 Anima 无图走 T2I，有附图或引用图走 I2I AIO。名称使用 JSON 文件名主体。源码在配置键完全缺失时会回退到 `SDXL_Turbo_T2I_AstrBot`。 |
 | Anima 画布所在的 ComfyUI 目录 | `anima_workspace` | `G:\ComfyUI` | AstrBot 所在机器可访问的 ComfyUI 目录。用于读取 Anima 画布并调用该目录的 Python 导出分支，也用于扫描 Anima LoRA、检查本地反推和增强模型。此路径与上面的 API 地址分别配置。 |
+| ComfyUI input 目录 | `comfyui_input_directory` | 留空 | 同机 ComfyUI 默认使用工作目录下的 `input`。若启动时覆盖了输入目录，填写实际绝对路径。工作台用它浏览原目录、预览图片和保存 `my_input` 控制图。 |
 | 旧版归档与视频收藏文件夹路径 | `favorites_directory` | 空 | 留空使用本机 ComfyUI 的 `output/Favorites/`，本机输出目录不可用时使用插件数据目录下的 `outputs/Favorites/`。填写 AstrBot 所在电脑的完整路径可覆盖默认值，重载后生效。 |
 | 文生视频默认工作流 | `default_t2v_workflow` | `WAN22_T2V_AstrBot` | `/comfy gen --wf t2v` 没有指定工作流，且当前选择不是文生视频时使用。 |
 | 图生视频默认工作流 | `default_i2v_workflow` | `WAN22_I2V_AstrBot` | `/comfy gen --wf i2v` 没有指定工作流，且当前选择不是图生视频时使用。随包工作流需要当前消息或引用消息的图片。 |

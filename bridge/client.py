@@ -293,12 +293,15 @@ class ComfyClient:
             partial.unlink(missing_ok=True)
         return path
 
-    async def download_image(self, ref, directory):
-        data = await self.request(
+    async def image_bytes(self, ref):
+        return await self.request(
             "GET", "/view",
             params={"filename": ref["filename"], "subfolder": ref.get("subfolder", ""), "type": ref.get("type", "output")},
             binary=True,
         )
+
+    async def download_image(self, ref, directory):
+        data = await self.image_bytes(ref)
         path = directory / ("comfy_" + uuid.uuid4().hex + image_suffix(data))
         await asyncio.to_thread(path.write_bytes, data)
         return path

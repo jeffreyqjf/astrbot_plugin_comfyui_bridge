@@ -7,6 +7,7 @@
       "comfyui_url": {"description": "ComfyUI 服务地址", "type": "string", "default": "http://127.0.0.1:8188", "hint": "同机运行可保持默认。"},
       "api_token": {"description": "认证令牌（可留空）", "type": "string", "default": "", "secret": true, "hint": "ComfyUI 反向代理启用 Bearer 认证时填写。"},
       "anima_workspace": {"description": "ComfyUI 工作目录", "type": "string", "default": "G:\\ComfyUI", "hint": "用于读取 Anima 画布和扫描 LoRA。"},
+      "comfyui_input_directory": {"description": "ComfyUI input 目录", "type": "string", "default": "", "hint": "留空使用 ComfyUI 工作目录下的 input。若 ComfyUI 启动时覆盖了 input 路径，请填写实际本机绝对路径。"},
       "admin_only": {"description": "仅限 AstrBot 管理员使用", "type": "bool", "default": false}
     }
   },

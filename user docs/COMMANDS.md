@@ -146,11 +146,11 @@ Anima 和 WAI 各自在模型目录内为人物（C）、风格（S）、其他�
 /comfy sweep presets --wf wai --lora "C1: 0.85,S1:0.6" --seed 42
 /comfy sweep lora --wf t2i --preset "水彩 人像" 雨夜街头 --seed 42
 /comfy sweep lora --wf wai 雨夜街头
-/comfy sweep lora --wf v40 --preset 2 雨夜街头 --seed 42
+/comfy sweep lora --wf v40 --preset 1,2 雨夜街头 --seed 42
 ```
 
 - `sweep presets` 给每个个人预设提交一个任务。每个任务都用指定的同一组 LoRA。
-- `sweep lora` 为所选模型目录中的每个人物 LoRA（C）按各自的默认权重提交一次。可直接写描述，也可用编号或名称选预设后追加描述。追加词只参与本次生成，可加 `--raw` 保留原文。
+- `sweep lora` 使用所选模型目录中人物 LoRA（C）各自的默认权重。可直接写描述，或用编号、名称选择单一预设。也可用 `--preset 1,2` 按编号顺序为每个预设完整遍历一次，重复编号只执行首次出现的一项。名称恰好像编号列表时用其单个编号选择。追加描述只参与本次生成，可加 `--raw` 保留原文。
 - 预设扫图和人物 LoRA 扫图可使用具备可接入采样模型、已选 LoRA 目录的自定义文生图工作流。用 `/comfy lora --wf 简称 list` 查询目录、`/comfy lora --wf 简称 use C1` 预约。默认 `t2i` 使用 `anima`，`wai` 和 `v40` 使用 `illustrious`。
 - Advanced Gemma V40 开启参考图分支时，扫图整批使用同一张参考图。QQ 可附图或回复图片，并用 `--image 2` 选择第二张。工作台的「命令添加」可上传一张参考图。
 - 省略 `--wf` 时用当前工作流，省略 `--seed` 或填写 `-1` 时整批随机选一个种子。整批需要足够的队列位置，可用 `/comfy job` 查看。

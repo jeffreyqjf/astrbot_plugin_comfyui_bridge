@@ -7,6 +7,7 @@ from tempfile import NamedTemporaryFile
 
 from .detailer import add_feet_to_profile, detailer_workflow
 from .lightning import lightning_workflow
+from .parameter_layout import preserve_parameter_layout
 from .svi import svi_workflow
 from .v40 import V40_WORKFLOWS, upgrade_detailer, v40_workflow
 from .workflow import (
@@ -167,15 +168,27 @@ def initialize_workflows(directory, bundled):
                 atomic_write(target, profile_bytes(profile))
 
 
-def load_workflows(directory, mappings):
+def load_workflows(directory, mappings, *, admit_custom=False, known_workflows=()):
     workflows, errors = {}, {}
+    existing_names = {name.casefold() for name in WORKFLOW_SHORT_NAMES.keys() | set(known_workflows)}
     for source in sorted(directory.glob("*.json")):
         if source.stem in RETIRED_WORKFLOWS or source.stem in RENAMED_WORKFLOWS:
             continue
         try:
             path = workflow_path(directory, source.stem)
-            data = json.loads(read_profile(path))
-            workflows[path.stem] = workflow_from_profile(path.stem, data, mappings.get(path.stem))
+            original = read_profile(path)
+            data = json.loads(original)
+            workflow = workflow_from_profile(path.stem, data, mappings.get(path.stem))
+            if admit_custom and path.stem.casefold() not in existing_names:
+                admitted = preserve_parameter_layout(data, None, create=True)
+                if admitted is not data:
+                    raw = profile_bytes(admitted)
+                    if len(raw) > WORKFLOW_LIMIT:
+                        raise WorkflowError("工作流与参数布局合计超过 4 MB。")
+                    if read_profile(path) != original:
+                        raise WorkflowError("工作流刚刚更新，请重新读取。")
+                    atomic_write(path, raw)
+            workflows[path.stem] = workflow
         except (ValueError, OSError, KeyError, TypeError, RecursionError) as exc:
             errors[source.stem] = str(exc)[:400]
     return workflows, errors

@@ -19,6 +19,7 @@ from astrbot.api.web import error_response, json_response, request, stream_respo
 
 from .. import PACKAGE_ROOT
 from ..client import ComfyError, image_suffix
+from ..controlnet_archive import ControlNetArchive
 from ..image_archive import GALLERY_STATES, IMAGE_FILTERS, REVIEW_RATINGS
 from ..lora_settings import LORA_SETTINGS_LIMIT, LoraSettings
 from ..service import (
@@ -36,6 +37,11 @@ from ..workflows.anima_aio import (
     aio_options,
     aio_workflow,
 )
+from ..workflows.controlnet import (
+    controlnet_capabilities,
+    controlnet_node_types,
+    controlnet_switches,
+)
 from ..workflows.detailer import FEET_NODES, detailer_workflow, feet_switch
 from ..workflows.illustrious import (
     WAI_BRANCHES,
@@ -50,6 +56,11 @@ from ..workflows.lightning import (
     lightning_fields,
     lightning_options,
     lightning_workflow,
+)
+from ..workflows.parameter_layout import (
+    preserve_parameter_layout,
+    read_parameter_layout,
+    validate_parameter_layout,
 )
 from ..workflows.svi import (
     check_video_rife,
@@ -85,6 +96,7 @@ from ..workflows.workflow_archive import (
     export_archive,
     export_profile,
     install_workflows,
+    preserve_anima_layout,
     replace_workflow_files,
     validate_anima_canvas,
     validate_workflow_profile,
@@ -92,6 +104,7 @@ from ..workflows.workflow_archive import (
 )
 from ..workflows.workflow_fields import combo_options, editable_fields, parse_field, validate_graph
 from ..workflows.workflow_store import (
+    WORKFLOW_ALIASES,
     WORKFLOW_LIMIT,
     atomic_write,
     profile_bytes,
@@ -100,6 +113,7 @@ from ..workflows.workflow_store import (
     workflow_path,
     workflow_revision,
 )
+from .input_library import InputLibrary, InputUnavailable
 from .mask_image import apply_mask, reference_body_limit
 from .prompt_library import PromptLibrary
 
@@ -183,6 +197,7 @@ class StudioSettings:
     def __init__(self, service, anima):
         self.service = service
         self.anima = anima
+        self.input_library = InputLibrary(service, anima.workspace)
         self.lora_families = {
             "anima": anima,
             "illustrious": LoraSettings(service, "illustrious", "Illustrious"),
@@ -331,6 +346,24 @@ class StudioSettings:
     async def get_preset(self, account, name):
         snapshot = await self._read_presets(account)
         return self._find_preset(snapshot["presets"], name)
+
+    async def lora_sweep_presets(self, account, selector):
+        rows = await self.preset_rows(account)
+        if not re.fullmatch(r"[0-9]+(?:\s*,\s*[0-9]+)+", selector.strip()):
+            row = self._find_preset(rows, selector)
+            return [(row, self.preset_use(account, row, selector=selector))]
+
+        try:
+            indices = dict.fromkeys(int(value) for value in selector.split(","))
+        except ValueError as exc:
+            raise WorkflowError("人物 LoRA 扫图的预设编号无效。") from exc
+        selected = []
+        for index in indices:
+            if not 1 <= index <= len(rows):
+                raise WorkflowError(f"找不到提示词预设编号 {index}。可用 /comfy prompt preset 查看编号。")
+            row = rows[index - 1]
+            selected.append((row, self.preset_use(account, row, selector=str(index), index=index)))
+        return selected
 
     async def resolve_preset(self, account, name):
         row = await self.get_preset(account, name)
@@ -555,22 +588,32 @@ class StudioSettings:
                     navigation_order = await asyncio.to_thread(self._read_navigation_order)
             except OSError:
                 navigation_order = {}
+            try:
+                await asyncio.to_thread(self.input_library.root)
+                input_available = True
+            except InputUnavailable:
+                input_available = False
             return json_response(
                 {
                     "workflows": [
-                        {**workflow.describe(), "kind": "auto_image", "requires_image": False}
-                        if workflow.name == AIO_WORKFLOW else workflow.describe()
+                        {
+                            **workflow.describe(),
+                            "controlnets": controlnet_capabilities(workflow.name),
+                            **({"kind": "auto_image", "requires_image": False} if workflow.name == AIO_WORKFLOW else {}),
+                        }
                         for workflow in self.service.workflows.values()
                     ],
                     "default": self.service._match_workflow_name(str(self.service.config.get("default_workflow", ANIMA_WORKFLOW))),
                     "anima": ANIMA_WORKFLOW,
                     "anima_image": AIO_WORKFLOW,
                     "workflow_aliases": self.service.workflow_aliases,
+                    "command_workflow_aliases": WORKFLOW_ALIASES,
                     "lora_families": {key: catalog.title for key, catalog in self.lora_families.items()},
                     "lora_directories": await asyncio.to_thread(self.anima.directory_names),
                     "archive": self.service.archive.describe(),
                     "local_workflow_files": self._local_workflow_files(),
                     "navigation_order": navigation_order,
+                    "input_available": input_available,
                 }
             )
         except (OSError, ValueError) as exc:
@@ -711,6 +754,7 @@ class StudioSettings:
                 imported, skipped = await asyncio.to_thread(
                     install_workflows, self.service.workflow_dir, self.service.data_dir / "templates",
                     data, self.service.workflow_mappings(), filename=upload.filename or "", replace=replace,
+                    canvas_path=self.anima.canvas_source(),
                 )
                 self.service.workflows = dict(sorted((self.service.workflows | imported).items()))
                 for name in imported:
@@ -882,24 +926,28 @@ class StudioSettings:
                 if not isinstance(saved, dict) or saved.get("workflow") != name:
                     raise WorkflowError("配置和所选工作流不匹配。")
                 raw, canvas_raw, candidate = self._validate_config(saved)
-                graph, settings = profile_parts(saved["profile"])
+                profile = preserve_parameter_layout(saved["profile"], json.loads(current))
+                graph, settings = profile_parts(profile)
+                raw = profile_bytes(profile)
                 files = {live: raw}
                 if canvas_raw is not None:
-                    if json.loads(canvas) == saved["canvas"]:
+                    incoming = preserve_anima_layout(saved["canvas"], json.loads(canvas))
+                    if json.loads(canvas) == incoming:
                         canvas_raw = canvas
                     else:
+                        canvas_raw = profile_bytes(incoming)
                         canvas_dir = self.service.data_dir.resolve() / "templates"
                         if canvas_dir.resolve() != canvas_dir:
                             raise WorkflowError("Anima 画布目录无效。")
                         canvas_dir.mkdir(exist_ok=True)
                         files[workflow_path(canvas_dir, name)] = canvas_raw
                     described = await self.anima.describe_profile(
-                        workflow_revision(raw, canvas_raw), graph, settings, saved["canvas"], cached=True,
+                        workflow_revision(raw, canvas_raw), graph, settings, incoming, cached=True,
                     )
                 else:
                     if name == LIGHTNING_WORKFLOW:
                         add_lightning_output_nodes(graph)
-                        candidate = workflow_from_profile(name, saved["profile"], candidate.mapping)
+                        candidate = workflow_from_profile(name, profile, candidate.mapping)
                     schemas = await self._node_schemas(
                         candidate, graph if name in SEGMENTED_VIDEO_WORKFLOWS | V40_WORKFLOWS else None, cached=True,
                     )
@@ -1068,6 +1116,61 @@ class StudioSettings:
             image_suffix(image)
         return image
 
+    def _control_archive(self):
+        return ControlNetArchive(self.input_library.root(), self.service.data_dir, self.service.client.max_image_bytes)
+
+    def prepare_controls(self, name, parameters):
+        if parameters is None or parameters == {}:
+            return None, {}, None
+        capabilities = controlnet_capabilities(name)
+        if not isinstance(parameters, dict) or parameters.keys() - capabilities.keys():
+            raise WorkflowError("此工作流不支持所选 ControlNet 分支。")
+        bindings = {}
+        sources = {}
+        archive = None
+        limit = self.service.client.max_image_bytes
+        for branch, row in parameters.items():
+            if row is None:
+                bindings[branch] = None
+                continue
+            if not isinstance(row, dict) or set(row) - {"type", "mode", "asset_id", "id", "image"}:
+                raise WorkflowError("ControlNet 参数格式无效。")
+            selected = set(row) & {"asset_id", "id", "image"}
+            if len(selected) != 1:
+                raise WorkflowError("每个 ControlNet 分支只能选择一张图片。")
+            kind, = selected
+            value = row[kind]
+            if not isinstance(value, str) or not value:
+                raise WorkflowError("请选择 ControlNet 图片。")
+            binding = {"type": row.get("type"), "mode": row.get("mode"), "image": "__astrbot_control_pending__.png"}
+            controlnet_switches(name, {branch: binding})
+            bindings[branch] = binding
+            if archive is None and (kind == "asset_id" or binding["mode"] == "preprocess"):
+                archive = self._control_archive()
+            if kind == "asset_id":
+                asset = archive.lookup(value)
+                if binding["mode"] != "direct" or asset["type"] != binding["type"]:
+                    raise WorkflowError("已处理的控制图只能直用，且类型须与分支一致。")
+                _, data = archive.read(value, original=True)
+            elif kind == "id":
+                data = self.input_library.read_image(value)
+            else:
+                if len(value) > 4 * ((limit + 2) // 3):
+                    raise WorkflowError("ControlNet 图片超过单张图片大小上限。")
+                data = base64.b64decode(value, validate=True)
+            if not 0 < len(data) <= limit:
+                raise WorkflowError("ControlNet 图片超过单张图片大小上限或内容为空。")
+            with self.input_library._image(data) as image:
+                if getattr(image, "n_frames", 1) != 1:
+                    raise WorkflowError("ControlNet 请选择单帧图片。")
+            image_suffix(data)
+            sources[branch] = {
+                "data": data, "type": binding["type"], "kind": kind,
+                "label": value.rsplit("/", 1)[-1] if kind == "id" else "",
+                "asset_id": value if kind == "asset_id" else None,
+            }
+        return bindings, sources, archive
+
     async def add_jobs(self):
         if not request.username:
             return error_response("请登录 AstrBot 面板。", status_code=401)
@@ -1075,7 +1178,7 @@ class StudioSettings:
             if not self.service.config.get("enabled", True):
                 raise ComfyError("ComfyUI 插件已在面板禁用。")
             body = await request.body()
-            if len(body) > reference_body_limit(self.service.client.max_image_bytes):
+            if len(body) > reference_body_limit(self.service.client.max_image_bytes, controls=2):
                 raise WorkflowError("任务数据过大。")
             data = json.loads(body)
             if not isinstance(data, dict):
@@ -1092,6 +1195,9 @@ class StudioSettings:
                 workflow.image_required and workflow.name not in V40_WORKFLOWS | {AIO_WORKFLOW}
             ):
                 raise WorkflowError("请选择可直接生成的工作流。需要参考图时可用命令表单上传。")
+            controls, sources, control_archive = await asyncio.to_thread(
+                self.prepare_controls, workflow.name, data.get("controlnets"),
+            )
             image = None
             if workflow.name == DETAILER_WORKFLOW or (
                 workflow.name == ADVANCED_V40_WORKFLOW and workflow.image_inputs
@@ -1121,14 +1227,17 @@ class StudioSettings:
                 pending = catalog.pending_loras.get(owner) if catalog else None
                 options = {"loras": pending} if pending is not None else {}
                 if workflow.name == ANIMA_WORKFLOW:
-                    workflow = await self.anima.for_generation(workflow, options, False, {})
+                    workflow = await self.anima.for_generation(workflow, options, False, {}, controlnets=controls)
                 elif workflow.name == AIO_WORKFLOW:
                     workflow = await asyncio.to_thread(self.aio_generation, False)
                 elif workflow.name == WAI_WORKFLOW:
                     workflow = await self.illustrious_generation(options)
+                elif controls:
+                    workflow = await self.v40_generation(workflow.name, {}, controlnets=controls)
                 jobs = await self.service.start_batch(
                     owner, prompt, workflow, negative, data.get("count", 1),
                     timeout_seconds=self.service.qq_timeout_for(workflow), preset=preset_details, image_data=image,
+                    control_sources=sources, control_archive=control_archive,
                 )
                 if pending is not None and catalog.pending_loras.get(owner) is pending:
                     catalog.pending_loras.pop(owner)
@@ -1251,6 +1360,82 @@ class StudioSettings:
             return error_response("请登录 AstrBot 面板。", status_code=401)
         return json_response(await self.service.cancel_all())
 
+    async def input_entries(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        try:
+            directory = request.query.get("directory", "")
+            page = request.query.get("page", "1")
+            if not re.fullmatch(r"[1-9][0-9]{0,6}", page):
+                raise WorkflowError("input 页码须为从 1 开始的整数。")
+            data = await asyncio.to_thread(self.input_library.list, directory, int(page))
+            return json_response(data, headers={"Cache-Control": "no-store"})
+        except InputUnavailable as exc:
+            return error_response(str(exc), status_code=503)
+        except WorkflowError as exc:
+            return error_response(str(exc), status_code=400)
+
+    async def input_preview(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        try:
+            src = await asyncio.to_thread(self.input_library.preview, request.query.get("id"))
+            return json_response({"src": src}, headers={"Cache-Control": "no-store"})
+        except InputUnavailable as exc:
+            return error_response(str(exc), status_code=503)
+        except WorkflowError as exc:
+            return error_response(str(exc), status_code=400)
+
+    async def control_assets(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        try:
+            state, page = request.query.get("state", "unevaluated"), request.query.get("page", "1")
+            if not re.fullmatch(r"[1-9][0-9]{0,6}", page):
+                raise WorkflowError("控制图页码无效。")
+            def listing():
+                return self._control_archive().list(state, int(page))
+            return json_response(await asyncio.to_thread(listing))
+        except InputUnavailable as exc:
+            return error_response(str(exc), status_code=503)
+        except (OSError, ValueError) as exc:
+            return error_response(str(exc), status_code=400)
+
+    async def control_asset_preview(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        try:
+            asset_id = request.query.get("id")
+            original = request.query.get("original") == "1"
+            def preview():
+                archive = self._control_archive()
+                mime, data = archive.read(asset_id, original=original)
+                asset = archive.lookup(asset_id)
+                return {"src": f"data:{mime};base64,{base64.b64encode(data).decode('ascii')}", "asset": asset}
+            return json_response(await asyncio.to_thread(preview))
+        except InputUnavailable as exc:
+            return error_response(str(exc), status_code=503)
+        except (OSError, ValueError) as exc:
+            return error_response(str(exc), status_code=400)
+
+    async def rate_control_asset(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        try:
+            body = await request.body()
+            if len(body) > 4096:
+                raise WorkflowError("控制图请求过大。")
+            data = json.loads(body)
+            if not isinstance(data, dict) or data.keys() != {"id", "state"}:
+                raise WorkflowError("控制图评价无效。")
+            def rate():
+                return self._control_archive().rate(data["id"], data["state"])
+            return json_response({"asset": await asyncio.to_thread(rate)})
+        except InputUnavailable as exc:
+            return error_response(str(exc), status_code=503)
+        except (OSError, ValueError) as exc:
+            return error_response(str(exc), status_code=400)
+
     async def images(self):
         if not request.username:
             return error_response("请登录 AstrBot 面板。", status_code=401)
@@ -1272,7 +1457,9 @@ class StudioSettings:
                     raise WorkflowError("图片筛选条件无效。")
                 filters = {key: set(values) for key, values in selected.items() if values}
             rating = request.query.get("rating", "")
-            if state not in ("unevaluate", *GALLERY_STATES) or rating not in ("", *REVIEW_RATINGS):
+            lora_match = request.query.get("lora_match", "any")
+            if (state not in ("unevaluate", *GALLERY_STATES) or rating not in ("", *REVIEW_RATINGS)
+                    or lora_match not in ("any", "all")):
                 raise WorkflowError("图片列表参数无效。")
             if request.query.get("facets") == "1":
                 facets = await asyncio.to_thread(review.filter_options, state, rating)
@@ -1293,14 +1480,17 @@ class StudioSettings:
                     )]
                     for key, options in facets.items()
                 }})
+            page = request.query.get("page")
+            if page is not None and not re.fullmatch(r"[1-9][0-9]{0,6}", page):
+                raise WorkflowError("图片列表参数无效。")
+            page = int(page) if page is not None else None
             if state == "unevaluate":
                 limit = number(self.service.config, "review_task_limit", 5, 1, 50)
-                result = await asyncio.to_thread(review.pending, limit, filters=filters)
+                result = await asyncio.to_thread(review.pending, limit, filters=filters, page=page, lora_match=lora_match)
             else:
-                page = request.query.get("page", "1")
-                if not re.fullmatch(r"[1-9][0-9]{0,6}", page):
-                    raise WorkflowError("图片列表参数无效。")
-                result = await asyncio.to_thread(review.gallery, rating, int(page), state=state, filters=filters)
+                result = await asyncio.to_thread(
+                    review.gallery, rating, page or 1, state=state, filters=filters, lora_match=lora_match,
+                )
             items = result.get("images")
             if items is None:
                 items = [item for job in result["jobs"] for item in job["images"]]
@@ -1504,16 +1694,19 @@ class StudioSettings:
     async def detailer_generation(self, options):
         return await self.v40_generation(DETAILER_WORKFLOW, options)
 
-    async def v40_generation(self, name, options, *, allow_nsfw=True):
+    async def v40_generation(self, name, options, *, allow_nsfw=True, controlnets=None):
         _, _, graph, settings, workflow, mapping = await asyncio.to_thread(self._read, name)
         if "v40" not in settings:
+            if controlnets:
+                raise WorkflowError("请更新 V40 工作流以使用独立 ControlNet。")
             return detailer_workflow(graph, settings, mapping, options) if name == DETAILER_WORKFLOW else workflow
         allowed = REPAIR_OPTIONS | ({"img2img"} if name == ADVANCED_V40_WORKFLOW else set())
         if options.keys() - allowed:
             raise WorkflowError("V40 支持单次切换局部修复。Advanced V40 也支持 --img2img on/off。")
         if not allow_nsfw:
             options = {**options, "nsfw_repair": False}
-        return v40_workflow(name, graph, settings, mapping, options)
+        schemas = await self.service.client.node_schemas(controlnet_node_types(name)) if any((controlnets or {}).values()) else None
+        return v40_workflow(name, graph, settings, mapping, options, controlnets=controlnets, schemas=schemas)
 
     def _local_caption_models(self, schemas):
         pixai = self.anima.workspace / "models/pixai_tagger/pixai-tagger-v1.0"
@@ -1640,7 +1833,7 @@ class StudioSettings:
         }
         if workflow.name == DETAILER_WORKFLOW and feet_switch(raw_graph):
             graph = {**graph, **{key: raw_graph[key] for key in FEET_NODES if key in raw_graph}}
-        fields = editable_fields(graph, schemas)
+        fields = editable_fields(graph, schemas, anima=False)
         if workflow.name == DETAILER_WORKFLOW:
             for field in fields.values():
                 if field["node"] in FEET_NODES:
@@ -1746,6 +1939,7 @@ class StudioSettings:
     def _describe(self, revision, settings, workflow, schemas, raw_graph=None):
         data = {
             "revision": revision,
+            "parameter_layout": read_parameter_layout(settings),
             "workflow": workflow.name,
             "short_name": self.service.workflow_short_name(workflow.name),
             "kind": "auto_image" if workflow.name == AIO_WORKFLOW else workflow.kind,
@@ -1793,6 +1987,38 @@ class StudioSettings:
             )
             return json_response(self._describe(revision, settings, workflow, schemas, graph))
         except (OSError, ValueError, KeyError, ComfyError) as exc:
+            return error_response(str(exc), status_code=400)
+
+    async def save_parameter_layout(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        try:
+            body = await request.body()
+            if len(body) > 512 * 1024:
+                raise WorkflowError("参数布局过大。")
+            payload = json.loads(body)
+            if not isinstance(payload, dict) or set(payload) != {"workflow", "revision", "parameter_layout"}:
+                raise WorkflowError("参数布局格式无效。")
+            layout = validate_parameter_layout(payload["parameter_layout"])
+            await self.service.initialize()
+            async with self.service.workflow_lock:
+                name = payload["workflow"]
+                if not isinstance(name, str) or name not in self.service.workflows:
+                    raise WorkflowError("请选择可用的工作流。")
+                path = workflow_path(self.service.workflow_dir, name)
+                previous = read_profile(path)
+                canvas = read_profile(self.anima.canvas_source()) if name == ANIMA_WORKFLOW else None
+                if workflow_revision(previous, canvas) != payload["revision"]:
+                    return error_response("工作流已更新，请刷新后重新调整布局。", status_code=409)
+                profile = json.loads(previous)
+                graph, settings = profile_parts(profile)
+                envelope = {} if graph is profile else profile
+                saved = profile_bytes({**envelope, "prompt": graph, "astrbot": {**settings, "parameter_layout": layout}})
+                if len(saved) > WORKFLOW_LIMIT:
+                    raise WorkflowError("保存布局后工作流超过大小上限。")
+                atomic_write(path, saved)
+                return json_response({"revision": workflow_revision(saved, canvas), "parameter_layout": layout})
+        except (OSError, ValueError, KeyError, TypeError) as exc:
             return error_response(str(exc), status_code=400)
 
     async def save_workflow(self):

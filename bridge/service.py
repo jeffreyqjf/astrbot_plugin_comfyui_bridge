@@ -15,6 +15,7 @@ from .client import VIDEO_MIME, ComfyCancelled, ComfyClient, ComfyError, output_
 from .image_archive import DEFAULT_ARCHIVE, ImageArchive, ImageFavorites, ImageReviews, folder_name
 from .video_library import VideoLibrary
 from .workflows.anima_aio import AIO_MAPPING, AIO_WORKFLOW
+from .workflows.controlnet import CONTROL_BRANCHES
 from .workflows.workflow import (
     ANIMA_WORKFLOW,
     SDXL_WORKFLOW,
@@ -31,7 +32,9 @@ from .workflows.workflow_store import (
     initialize_workflows,
     load_workflows,
     profile_bytes,
+    read_profile,
     renamed_keys,
+    workflow_path,
 )
 
 PLUGIN_NAME = "astrbot_plugin_comfyui_bridge"
@@ -254,10 +257,27 @@ class ComfyService:
 
     async def reload(self):
         async with self.workflow_lock:
-            workflows, errors = await asyncio.to_thread(
-                load_workflows, self.workflow_dir, self.workflow_mappings()
-            )
-            self.workflows, self.errors = workflows, errors
+            self.workflows, self.errors = await asyncio.to_thread(self._reload_workflows)
+
+    def _reload_workflows(self):
+        registry = workflow_path(self.data_dir, "workflow_layout_admissions")
+        try:
+            saved = json.loads(read_profile(registry))
+            if not isinstance(saved, list) or not all(isinstance(name, str) for name in saved):
+                raise ValueError("无效的工作流布局记录")
+            known = set(saved)
+        except (FileNotFoundError, ValueError):
+            # Establish the pre-upgrade baseline without reordering existing custom files.
+            known = {path.stem for path in self.workflow_dir.glob("*.json")}
+            saved = None
+        workflows, errors = load_workflows(
+            self.workflow_dir, self.workflow_mappings(), admit_custom=True,
+            known_workflows=known | self.workflows.keys(),
+        )
+        names = sorted(known | workflows.keys())
+        if names != saved:
+            atomic_write(registry, profile_bytes(names))
+        return workflows, errors
 
     def workflow_mappings(self):
         raw = self.config.get("node_mappings", "{}") or "{}"
@@ -419,12 +439,15 @@ class ComfyService:
         timeout_seconds=None,
         preset=None,
         allow_nsfw=True,
+        control_sources=None,
+        control_archive=None,
     ):
         await self.initialize()
         wf = workflow if isinstance(workflow, Workflow) else self.resolve(owner, workflow)
         jobs = self._enqueue(
             owner, [(wf, prompt, negative, seed, image_folder, preset)], image_data,
             timeout_seconds=timeout_seconds, allow_nsfw=allow_nsfw,
+            control_sources=control_sources, control_archive=control_archive,
         )
         return jobs[0]
 
@@ -466,13 +489,19 @@ class ComfyService:
             raise WorkflowError("没有识别到达到置信度阈值的标签，请尝试另一张图片。")
         return texts[0].strip()
 
-    async def start_batch(self, owner, prompt, workflow, negative, count, *, timeout_seconds=None, preset=None, image_data=None):
+    async def start_batch(
+        self, owner, prompt, workflow, negative, count, *, timeout_seconds=None, preset=None,
+        image_data=None, control_sources=None, control_archive=None,
+    ):
         await self.initialize()
         if type(count) is not int or not 1 <= count <= self.queue_limit:
             raise WorkflowError(f"生成批次须为 1 到 {self.queue_limit} 的整数。")
         wf = workflow if isinstance(workflow, Workflow) else self.resolve(owner, workflow)
         request = (wf, prompt, negative, -1 if count > 1 else None, None, preset)
-        return self._enqueue(owner, [request] * count, image_data, timeout_seconds=timeout_seconds)
+        return self._enqueue(
+            owner, [request] * count, image_data, timeout_seconds=timeout_seconds,
+            control_sources=control_sources, control_archive=control_archive,
+        )
 
     async def start_preset_sweep(self, owner, workflow, presets, seed, *, timeout_seconds=None, allow_nsfw=True, account=""):
         await self.initialize()
@@ -489,11 +518,14 @@ class ComfyService:
         return self._enqueue(owner, requests, None, timeout_seconds=timeout_seconds, allow_nsfw=allow_nsfw)
 
     async def start_lora_sweep(
-        self, owner, workflows, prompt, negative, seed, *, preset, image_folder, timeout_seconds, allow_nsfw,
-        image_data=None,
+        self, owner, workflows, prompts, seed, *, image_folder, timeout_seconds, allow_nsfw, image_data=None,
     ):
         await self.initialize()
-        requests = [(wf, prompt, negative, seed, image_folder, preset) for wf in workflows]
+        requests = [
+            (wf, prompt, negative, seed, image_folder, preset)
+            for prompt, negative, preset in prompts
+            for wf in workflows
+        ]
         return self._enqueue(owner, requests, image_data, timeout_seconds=timeout_seconds, allow_nsfw=allow_nsfw)
 
     @property
@@ -533,7 +565,10 @@ class ComfyService:
         if len(self.jobs) + count > 256:
             raise ComfyError("近期任务较多，请稍后重试。")
 
-    def _enqueue(self, owner, requests, image_data, *, timeout_seconds=None, allow_nsfw=True):
+    def _enqueue(
+        self, owner, requests, image_data, *, timeout_seconds=None, allow_nsfw=True,
+        control_sources=None, control_archive=None,
+    ):
         # Each batch consists of variants of the same workflow.
         wf = requests[0][0]
         self.check_queue_capacity(wf.name, len(requests))
@@ -578,14 +613,18 @@ class ComfyService:
             job.task = asyncio.create_task(
                 self._run(
                     job, graph, wf.outputs, image_data, wf.image_inputs,
-                    image_folder=image_folder,
+                    image_folder=image_folder, control_sources=control_sources,
+                    control_outputs=wf.controlnet_outputs, control_archive=control_archive,
                 )
             )
             self.jobs[job.id] = job
             jobs.append(job)
         return jobs
 
-    async def _run(self, job, graph, outputs, image_data, image_fields, *, image_folder):
+    async def _run(
+        self, job, graph, outputs, image_data, image_fields, *, image_folder,
+        control_sources=None, control_outputs=None, control_archive=None,
+    ):
         acquired = False
         record = None
         trace = {
@@ -609,6 +648,9 @@ class ComfyService:
                 filename = await self.client.upload_image(image_data)
                 for target in image_fields:
                     graph[target.node]["inputs"][target.name] = filename
+            for branch, source in (control_sources or {}).items():
+                image_node = CONTROL_BRANCHES[job.workflow][branch].image
+                graph[image_node]["inputs"]["image"] = await self.client.upload_image(source["data"])
             if not video:
                 trace["image_loras"] = image_loras(graph, outputs)
             await asyncio.to_thread(self.metadata_dir.mkdir, exist_ok=True)
@@ -644,7 +686,12 @@ class ComfyService:
                         self.favorites.remember, job.id, job.owner, job.paths, refs[:len(job.paths)], video=True,
                     )
                 else:
-                    await self._archive_images(job, refs, image_folder, directory, trace["image_loras"])
+                    links = await self._control_links(
+                        job, graph, record, control_sources or {}, control_outputs or {}, control_archive,
+                    )
+                    if links:
+                        trace["controlnets"] = links
+                    await self._archive_images(job, refs, image_folder, directory, trace["image_loras"], links)
             except (OSError, ValueError, ComfyError) as exc:
                 logging.getLogger(__name__).warning("Could not archive media for %s: %s", job.short_id, exc)
             job.state = "completed"
@@ -687,7 +734,38 @@ class ComfyService:
             if time.monotonic() - self.last_cleanup > 3600:
                 await asyncio.to_thread(self._cleanup)
 
-    async def _archive_images(self, job, refs, image_folder, directory, loras):
+    async def _control_links(self, job, graph, record, sources, outputs, archive):
+        links = []
+        for branch, source in sources.items():
+            details = {"branch": branch, "type": source["type"]}
+            if source["asset_id"]:
+                links.append({**details, "asset_id": source["asset_id"], "new": False})
+            if branch not in outputs:
+                continue
+            try:
+                refs = output_refs(record, [outputs[branch]])
+                if not refs or any(ref.get("type") != "temp" for ref in refs):
+                    raise WorkflowError("ComfyUI 未返回预处理图。")
+                processor_id = CONTROL_BRANCHES[job.workflow][branch].preprocessor
+                processor = graph[processor_id]
+                metadata = {
+                    "name": processor["inputs"].get("preprocessor", processor["class_type"]),
+                    **{key: value for key, value in processor["inputs"].items() if key != "image"},
+                }
+                for slot, ref in enumerate(refs):
+                    data = await self.client.image_bytes(ref)
+                    asset = await asyncio.to_thread(
+                        archive.record, job.id, branch, slot, data, control_type=source["type"],
+                        source_kind=source["kind"], source_label=source["label"],
+                        source_sha256=hashlib.sha256(source["data"]).hexdigest(), preprocessor=metadata,
+                    )
+                    links.append({**details, "asset_id": asset["asset_id"], "new": True})
+            except (OSError, ValueError, ComfyError) as exc:
+                job.error = "已生成图片，但有控制图未能归档。"
+                logging.getLogger(__name__).warning("Could not archive control image for %s/%s: %s", job.short_id, branch, exc)
+        return links
+
+    async def _archive_images(self, job, refs, image_folder, directory, loras, controlnets=()):
         originals = await asyncio.to_thread(self.image_reviews.originals, image_folder, job.id, refs)
         caches = list(job.paths)
         for index in range(len(caches), len(refs)):
@@ -703,6 +781,7 @@ class ComfyService:
             metadata={
                 "seed": job.seed, "preset": job.preset,
                 "loras": [loras[ref["output_node"]] for ref in refs],
+                **({"controlnets": [controlnets] * len(refs)} if controlnets else {}),
             },
         )
 

@@ -1,4 +1,4 @@
-import { mountImageReviews } from "./image_review.js";
+import { controlBranchTitle, controlTypeTitle, mountImageReviews } from "./image_review.js";
 import { mountPromptLibrary } from "./prompt_library.js";
 import { mountVideos } from "./videos.js";
 
@@ -67,7 +67,13 @@ const titles = {
   top_p: "Top P", min_p: "Min P", top_k: "Top K", delimiter: "标签与描述分隔符", expand_caption: "启用 TIPO 扩写",
 };
 const priority = ["aio", "22", "40", "48", "26", "67", "74", "77", "50", "507", "510"];
-const parameterCategories = ["基础设置", "参考与构图", "局部修复", "采样与放大", "色彩与滤镜", "输出"];
+const parameterCategories = [
+  "模型", "模型与编码器", "基础设置", "LoRA", "SVI 与 Lightning LoRA", "FP8 Lightning LoRA",
+  "参考与构图", "参考图尺寸", "参考与续写", "LLLite 控制",
+  "基础采样", "采样设置", "采样与阶段切换", "局部修复", "人脸修复", "眼部修复",
+  "采样与放大", "放大与重采样", "放大与插帧", "色彩与滤镜", "提示词与输出", "输出", "视频输出",
+];
+const modelFields = /^(?:ckpt_name|unet_name|model_name(?:_\d+)?|vae_name|clip_name(?:_\d+)?|lora_name)$/;
 const aioLayout = [
   ["基础设置", [
     ["扩散模型", ["aio.loader", "1758", "1077"]],
@@ -241,6 +247,8 @@ function fieldControl(field) {
     + `#${field.node}` + (field.active ? "" : " · 旁路");
   source.hidden = !source.textContent;
   label.dataset.active = String(field.active);
+  label.dataset.layoutField = `${field.node}.${field.name}`;
+  label.dataset.layoutTitle = name;
   label.dataset.search = [field.category, name, field.title, field.name, `#${field.node}`]
     .join(" ").toLowerCase();
   if (field.editor === "svi-loras") return sviLoraEditor(field, label);
@@ -292,7 +300,8 @@ function fieldControl(field) {
 function parameterGroup(fields, title = "", branchId) {
   const group = document.createElement("div");
   group.className = title ? "parameter-group repair-group" : "parameter-group";
-  group.dataset.search = (title ?? "").toLowerCase();
+  group.dataset.search = title.toLowerCase();
+  group.dataset.layoutTitle = title || fields[0]?.title || "参数";
   if (title) {
     const heading = document.createElement("div");
     heading.className = "repair-heading";
@@ -336,7 +345,22 @@ function parameterGroup(fields, title = "", branchId) {
   return group;
 }
 
-function renderFields(fields, repairBranches, order, retainOpen, isAio) {
+function parameterCategory(field) {
+  const type = field.class_type ?? "";
+  if (field.category === "提示词与输出" && modelFields.test(field.name)) return "模型";
+  if (field.category) return field.category;
+  if (/LoraLoader/i.test(type)) return "LoRA";
+  if (/controlnet|^LoadImage/i.test(type)) return "参考与构图";
+  if (/checkpointloader|unetloader|cliploader|vaeloader/i.test(type) || modelFields.test(field.name)) return "模型";
+  if (/FaceDetailer|DetailerFor/i.test(type)) return "局部修复";
+  if (/upscal/i.test(type)) return "采样与放大";
+  if (/sampler|scheduler/i.test(type)) return "基础采样";
+  if (/saveimage|savevideo|videocombine/i.test(type)) return "输出";
+  if (/textencode|conditioning|^Empty.*Latent/i.test(type)) return "参考与构图";
+  return "全部参数";
+}
+
+function renderFields(fields, repairBranches, order, retainOpen, isAio, layout) {
   const container = get("nodes");
   const expanded = retainOpen ? new Map([...container.children].map((card) => [
     card.dataset.category, card.dataset.openBeforeSearch ?? String(card.open),
@@ -344,11 +368,12 @@ function renderFields(fields, repairBranches, order, retainOpen, isAio) {
   const aioGroups = isAio ? aioParameterGroups(fields) : null;
   const categories = new Map();
   const rank = new Map(order.map((node, index) => [node, index]));
-  const sorted = [...fields].sort((a, b) => (rank.get(a.node) ?? order.length) - (rank.get(b.node) ?? order.length));
+  const defaultRank = (field) => (rank.get(field.node) ?? order.length) - Number(modelFields.test(field.name)) * (order.length + 1);
+  const sorted = [...fields].sort((a, b) => defaultRank(a) - defaultRank(b));
   for (const field of sorted) {
-    const name = field.category || "全部参数";
+    const name = parameterCategory(field);
     if (!categories.has(name)) categories.set(name, []);
-    categories.get(name).push(field);
+    categories.get(name).push({ ...field, category: name });
   }
   if (repairBranches.length && !categories.has("局部修复")) categories.set("局部修复", []);
   container.replaceChildren();
@@ -396,7 +421,135 @@ function renderFields(fields, repairBranches, order, retainOpen, isAio) {
     }
     container.append(card);
   }
+  if (layout) {
+    applyParameterLayout(layout);
+    if (!retainOpen) {
+      for (const [index, card] of [...container.children].entries()) card.open = index === 0;
+    }
+  }
+  get("parameter-layout-open").hidden = !fields.length;
 }
+
+function applyParameterLayout({ categories, fields }) {
+  const container = get("nodes");
+  const categoryRanks = new Map(categories.map((category, index) => [category, index]));
+  const fieldRanks = new Map(fields.map((id, index) => [id, index]));
+  const rankField = (field) => fieldRanks.get(field.dataset.layoutField) ?? fields.length;
+  const rankGroup = (group) => Math.min(fields.length, ...[...group.querySelector(".parameter-grid").children].map(rankField));
+  const rankCategory = (card) => categoryRanks.get(card.dataset.category)
+    ?? categories.length + Math.min(fields.length, ...[...card.querySelectorAll("[data-layout-field]")].map(rankField));
+  const cards = [...container.children].sort((a, b) => rankCategory(a) - rankCategory(b));
+  for (const card of cards) {
+    const groups = [...card.querySelectorAll(".parameter-group")].sort((a, b) => rankGroup(a) - rankGroup(b));
+    for (const group of groups) {
+      const grid = group.querySelector(".parameter-grid");
+      grid.append(...[...grid.children].sort((a, b) => rankField(a) - rankField(b)));
+    }
+    card.append(...groups);
+  }
+  container.append(...cards);
+}
+
+const layoutDialog = get("parameter-layout-dialog");
+const saveLayout = get("parameter-layout-save");
+let layoutDraft;
+let layoutCategory;
+let layoutGroup;
+
+function currentParameterLayout() {
+  return [...get("nodes").children].map((card) => ({
+    id: card.dataset.category,
+    title: card.dataset.category,
+    groups: [...card.querySelectorAll(".parameter-group")].map((group, index) => ({
+      id: String(index),
+      title: group.dataset.layoutTitle,
+      fields: [...group.querySelector(".parameter-grid").children].map((field) => ({
+        id: field.dataset.layoutField,
+        title: field.dataset.layoutTitle,
+        detail: field.dataset.layoutField,
+      })),
+    })).filter(({ fields }) => fields.length),
+  }));
+}
+
+function renderLayoutEditor() {
+  const groups = layoutCategory?.groups ?? [];
+  const lists = [
+    ["categories", layoutDraft, layoutCategory, (row) => {
+      layoutCategory = row;
+      layoutGroup = row.groups[0];
+    }],
+    ["groups", groups, layoutGroup, (row) => { layoutGroup = row; }],
+    ["fields", layoutGroup?.fields ?? [], null, null],
+  ];
+  for (const [id, items, selectedRow, select] of lists) {
+    const list = get(`parameter-layout-${id}`);
+    renderOrderList(list, items, {
+      locked: false, pointer: true, empty: "没有可调整的项目。",
+      selectedIndex: items.indexOf(selectedRow),
+      onSelect: select && ((index) => {
+        select(items[index]);
+        renderLayoutEditor();
+        list.children[index]?.querySelector(".order-name").focus();
+      }),
+      onMove: (from, to) => {
+        const [row] = items.splice(from, 1);
+        items.splice(to, 0, row);
+        renderLayoutEditor();
+        const actions = list.children[to].querySelectorAll(".order-actions button");
+        const movedForward = from < to;
+        const preferred = actions[Number(movedForward)];
+        (preferred.disabled ? actions[Number(!movedForward)] : preferred).focus();
+        saveLayout.disabled = false;
+        get("parameter-layout-status").textContent = "布局有未保存的改动。";
+      },
+    });
+  }
+}
+
+get("parameter-layout-open").addEventListener("click", () => {
+  if (loading || get("save").disabled) return;
+  layoutDraft = currentParameterLayout();
+  layoutCategory = layoutDraft[0];
+  layoutGroup = layoutCategory?.groups[0];
+  saveLayout.disabled = true;
+  get("parameter-layout-status").textContent = "";
+  renderLayoutEditor();
+  layoutDialog.showModal();
+});
+
+layoutDialog.addEventListener("cancel", (event) => {
+  if (get("parameter-layout-close").disabled) event.preventDefault();
+});
+saveLayout.addEventListener("click", async () => {
+  const close = get("parameter-layout-close");
+  const status = get("parameter-layout-status");
+  const layout = {
+    version: 1,
+    categories: layoutDraft.map(({ id }) => id),
+    fields: layoutDraft.flatMap(({ groups }) => groups.flatMap(({ fields }) => fields.map(({ id }) => id))),
+  };
+  const lists = [...layoutDialog.querySelectorAll("ol")];
+  for (const list of lists) list.inert = true;
+  loading = close.disabled = saveLayout.disabled = true;
+  status.textContent = "正在保存布局…";
+  try {
+    const result = await bridge.apiPost("studio/workflow/layout", {
+      workflow: current.workflow, revision: current.revision, parameter_layout: layout,
+    });
+    current.revision = result.revision;
+    current.parameter_layout = result.parameter_layout;
+    applyParameterLayout(result.parameter_layout);
+    layoutDialog.close();
+    notify("参数布局已保存。");
+  } catch (error) {
+    status.textContent = error.message;
+    saveLayout.disabled = false;
+  } finally {
+    loading = close.disabled = false;
+    for (const list of lists) list.inert = false;
+  }
+});
 
 function updateBranchSummary() {
   const entries = [...switches.values()];
@@ -501,7 +654,7 @@ function render(data, workflow = selected) {
   renderFields(
     data.fields.map((field) => field.editor === "svi-loras" ? { ...field, choices: data.svi_lora_files } : field),
     data.branches.filter((branch) => branch.category === "局部修复"),
-    order, sameWorkflow, data.workflow === studio.anima_image,
+    order, sameWorkflow, data.workflow === studio.anima_image, data.parameter_layout,
   );
   filterFields();
   current = data;
@@ -760,7 +913,7 @@ function activate(tab) {
 
 function showPanel(id, tab) {
   activate(tab);
-  for (const panel of ["settings", "archive", "persona", "lora-order", "presets", "queue", "exports", "image-review", "image-gallery", "videos"]) get(panel).hidden = panel !== id;
+  for (const panel of ["settings", "archive", "persona", "lora-order", "presets", "queue", "create-task", "exports", "image-review", "image-gallery", "control-gallery", "videos"]) get(panel).hidden = panel !== id;
   if (remote) get("remote-workflow").value = id === "settings" ? selected.name : "";
 }
 
@@ -846,7 +999,7 @@ function bindOrderDrag(rows, onMove, handle) {
   }
 }
 
-function renderOrderList(list, items, { locked, onMove, onSelect, selectedIndex, empty }) {
+function renderOrderList(list, items, { locked, onMove, onSelect, selectedIndex, empty, pointer = false }) {
   list.replaceChildren();
   if (!items.length) {
     const row = document.createElement("li");
@@ -863,9 +1016,19 @@ function renderOrderList(list, items, { locked, onMove, onSelect, selectedIndex,
     const grip = document.createElement("span");
     grip.className = "order-grip";
     grip.textContent = "⠿";
-    grip.title = "拖动调整编号";
+    grip.title = pointer ? "拖动调整顺序" : "拖动调整编号";
     grip.setAttribute("aria-hidden", "true");
-    grip.draggable = !locked && items.length > 1;
+    grip.draggable = !pointer && !locked && items.length > 1;
+    if (pointer && !locked && items.length > 1) {
+      grip.classList.add("pointer-grip");
+      bindNavigationDrag(list, row, null, (source, target, after) => {
+        const rows = [...list.children];
+        const from = rows.indexOf(source);
+        const insertion = rows.indexOf(target) + Number(after);
+        const to = insertion > from ? insertion - 1 : insertion;
+        if (from !== to) onMove(from, to);
+      }, { selector: ".order-row", handle: grip, touch: true });
+    }
     const number = document.createElement("span");
     number.className = "order-number";
     number.textContent = code ?? String(index + 1);
@@ -909,7 +1072,7 @@ function renderOrderList(list, items, { locked, onMove, onSelect, selectedIndex,
     row.append(grip, number, label, actions);
     list.append(row);
   });
-  bindOrderDrag([...list.children], onMove, (row) => row.firstElementChild);
+  if (!pointer) bindOrderDrag([...list.children], onMove, (row) => row.firstElementChild);
 }
 
 function loraOrderQuery() {
@@ -1255,6 +1418,7 @@ async function editWorkflowConfig(action) {
 function clearQueueWorkflowOptions() {
   get("queue-workflow").replaceChildren();
   get("queue-qq-workflow").replaceChildren();
+  taskControlWorkflow = null;
   savedQQTimeout = undefined;
   queueSnapshot = "";
 }
@@ -1730,6 +1894,10 @@ function queueMessage(text, error = false) {
   setStatus("queue-status", text, error);
 }
 
+function createTaskMessage(text, error = false) {
+  setStatus("create-task-status", text, error);
+}
+
 function renderQueueJobs(id, jobs, empty) {
   const list = get(id);
   list.replaceChildren();
@@ -1805,21 +1973,26 @@ async function refreshQueue(reportError = false) {
   }
 }
 
-async function changeQueue(endpoint, data, button, successMessage) {
+async function changeQueue(endpoint, data, button, successMessage, { create = false, opensQueue = () => false } = {}) {
   if (queueWriting) {
     notify("正在处理上一项操作。");
     return;
   }
   queueWriting = button.disabled = true;
-  queueMessage("正在处理…");
+  const report = create ? createTaskMessage : queueMessage;
+  report("正在处理…");
   notify("正在处理…");
   try {
     const result = await bridge.apiPost(endpoint, typeof data === "function" ? await data() : data);
     const text = successMessage(result);
-    queueMessage(text);
+    report(text);
+    if (create && !get("create-task").hidden && opensQueue(result)) {
+      openQueue();
+      queueMessage(text);
+    }
     notify(text);
   } catch (error) {
-    queueMessage(error.message, true);
+    report(error.message, true);
   } finally {
     queueWriting = button.disabled = false;
     await refreshQueue();
@@ -1839,7 +2012,7 @@ async function loadQueuePresets(keep = false) {
     for (const [index, row] of data.presets.entries()) select.add(new Option(`${index + 1}. ${row.name}`, row.name));
     if (data.presets.some((row) => row.name === selectedPreset)) select.value = selectedPreset;
   } catch (error) {
-    if (!get("queue").hidden && scope.value === account) queueMessage(error.message, true);
+    if (!get("create-task").hidden && scope.value === account) createTaskMessage(error.message, true);
   }
 }
 
@@ -1851,6 +2024,7 @@ const builtinQueueCommands = [
   ["生成图片", "/comfy gen --wf wai watercolor landscape"],
   ["Detailer V40 局部修复", "/comfy gen --wf detailer detailed face"],
   ["Advanced Gemma V40", "/comfy gen --wf v40 --feet on 1girl, full body --raw"],
+  ["按多个预设遍历人物 LoRA", "/comfy sweep lora --wf v40 --preset 1,2 --seed 42"],
 ];
 const commandTemplateSelect = get("queue-command-template");
 const commandTemplateSave = get("queue-command-template-save");
@@ -1879,7 +2053,7 @@ async function refreshCommandTemplates() {
     const { templates } = await bridge.apiGet("studio/queue/templates");
     renderCommandTemplates(templates);
   } catch (error) {
-    if (!get("queue").hidden) queueMessage(error.message, true);
+    if (!get("create-task").hidden) createTaskMessage(error.message, true);
   } finally {
     commandTemplateSave.disabled = false;
     commandTemplateDelete.disabled = !commandTemplateSelect.value.startsWith("saved:");
@@ -1894,10 +2068,10 @@ async function changeCommandTemplate(name, command) {
     renderCommandTemplates(templates, command === null ? "" : `saved:${name.trim()}`);
     if (command === null) get("queue-command-template-name").value = "";
     const text = command === null ? "已删除常用命令。" : "已保存常用命令。";
-    queueMessage(text);
+    createTaskMessage(text);
     notify(text);
   } catch (error) {
-    queueMessage(error.message, true);
+    createTaskMessage(error.message, true);
   } finally {
     commandTemplateSave.disabled = false;
     commandTemplateDelete.disabled = !commandTemplateSelect.value.startsWith("saved:");
@@ -1913,6 +2087,7 @@ commandTemplateSelect.addEventListener("change", () => {
   const name = saved ? value.slice(6) : "";
   get("queue-command-template-name").value = name;
   get("queue-command-text").value = saved ? savedQueueCommands.get(name) : builtinQueueCommands[Number(value.slice(8))][1];
+  renderTaskControlnets();
 });
 commandTemplateSave.addEventListener("click", () =>
   changeCommandTemplate(get("queue-command-template-name").value, get("queue-command-text").value));
@@ -1921,6 +2096,29 @@ commandTemplateDelete.addEventListener("click", () =>
 
 const queueMode = get("queue-create-mode");
 const queueWorkflow = get("queue-workflow");
+const taskControlnets = new Map();
+let taskControlWorkflow;
+
+function commandWorkflow() {
+  const command = get("queue-command-text").value.trim().replace(/^\/?(?:comfy|绘图)(?:\s+|$)/i, "");
+  const tokens = command.match(/(?:[^\s"']+=)?(?:"[^"]*"|'[^']*')|\S+/g) ?? [];
+  if (tokens.includes("--help")) return undefined;
+  const [verb, ...args] = tokens;
+  const lower = verb?.toLowerCase();
+  const action = { "生成": "gen", "文生图": "t2i" }[lower] ?? lower;
+  const custom = Object.entries(studio.workflow_aliases ?? {}).find(([, alias]) => alias === action)?.[0];
+  if (!custom && !["gen", "t2i", "i2i", "illustrious"].includes(action)) return undefined;
+  const index = args.findLastIndex((token) => token === "--wf" || token.startsWith("--wf="));
+  const option = index < 0 ? undefined : args[index] === "--wf" ? args[index + 1] : args[index].slice(5);
+  const value = (option?.replace(/^(['"])(.*)\1$/, "$2") ?? custom ?? (action === "gen" ? "" : action)).toLowerCase();
+  if (!value) return undefined;
+  return studio.command_workflow_aliases?.[value]
+    ?? Object.entries(studio.workflow_aliases ?? {}).find(([, alias]) => alias === value)?.[0]
+    ?? studio.workflows.find(({ name }) => name.toLowerCase() === value)?.name
+    ?? (/^[1-9]\d*$/.test(value) ? studio.workflows[Number(value) - 1]?.name : undefined);
+}
+
+get("queue-command-text").addEventListener("input", renderTaskControlnets);
 function queueUsesReference(name) {
   return name === detailerWorkflow
     || (name === advancedV40 && studio?.workflows.find((workflow) => workflow.name === name)?.image_inputs?.length);
@@ -1935,12 +2133,100 @@ function showQueueReference() {
     form.querySelector("footer").before(reference);
   }
 }
-queueWorkflow.addEventListener("change", showQueueReference);
-queueMode.addEventListener("change", async () => {
+
+function renderTaskControlnets() {
+  const isCommand = queueMode.value === "command";
+  const form = get(isCommand ? "remote-command-form" : "queue-form");
+  const controls = get("queue-controlnets");
+  const reference = get("queue-reference");
+  const position = form.contains(reference) && !reference.hidden ? reference : form.querySelector("footer");
+  if (controls.nextElementSibling !== position) position.before(controls);
+  const selectedName = isCommand ? commandWorkflow() : queueWorkflow.value;
+  if (selectedName === taskControlWorkflow) return;
+  taskControlWorkflow = selectedName;
+  const workflow = studio.workflows.find(({ name }) => name === selectedName);
+  const branches = get("queue-controlnet-branches");
+  branches.replaceChildren();
+  taskControlnets.clear();
+  for (const [branch, { types, modes }] of Object.entries(workflow?.controlnets ?? {})) {
+    const row = get("queue-controlnet-branch").content.firstElementChild.cloneNode(true);
+    row.querySelector("legend").textContent = controlBranchTitle(branch);
+    const enabled = row.querySelector("[data-control-enabled]");
+    const fields = row.querySelector("[data-control-fields]");
+    const type = row.querySelector("[data-control-type]");
+    const mode = row.querySelector("[data-control-mode]");
+    const browse = row.querySelector("[data-control-input]");
+    const chooseAsset = row.querySelector("[data-control-asset]");
+    const upload = row.querySelector("[data-control-upload]");
+    const clear = row.querySelector("[data-control-clear]");
+    const file = row.querySelector("input");
+    const status = row.querySelector("[data-control-source]");
+    const settings = { enabled, type, mode, source: null };
+    taskControlnets.set(branch, settings);
+    for (const value of types) type.add(new Option(controlTypeTitle(value), value));
+    for (const value of modes) {
+      if (value === "preprocess" && !studio.input_available) continue;
+      mode.add(new Option(value === "direct" ? "直接使用已处理图片" : "预处理原图", value));
+    }
+    enabled.querySelector('option[value="on"]').disabled = !mode.options.length;
+    browse.disabled = chooseAsset.disabled = !studio.input_available;
+    chooseAsset.hidden = mode.value !== "direct";
+
+    function setSource(source) {
+      settings.source = source;
+      file.value = "";
+      clear.hidden = !source;
+      status.textContent = source?.label ?? (browse.disabled ? "当前无法浏览 ComfyUI input。" : "");
+    }
+    setSource(null);
+    enabled.addEventListener("change", () => { fields.hidden = enabled.value !== "on"; });
+    type.addEventListener("change", () => setSource(null));
+    mode.addEventListener("change", () => {
+      chooseAsset.hidden = mode.value !== "direct";
+      setSource(null);
+    });
+    browse.addEventListener("click", () => imageReviews.pickResource("input", (entry) => {
+      setSource({ id: entry.id, label: entry.id });
+    }));
+    chooseAsset.addEventListener("click", () => imageReviews.pickResource("asset", (entry) => {
+      setSource({ asset_id: entry.asset_id ?? entry.id, label: entry.source_label || controlTypeTitle(entry.type) });
+    }, type.value));
+    upload.addEventListener("click", () => file.click());
+    file.addEventListener("change", () => {
+      const image = file.files[0];
+      if (image) setSource({ file: image, label: image.name });
+    });
+    clear.addEventListener("click", () => setSource(null));
+    branches.append(row);
+  }
+  controls.hidden = !taskControlnets.size;
+}
+
+async function queueControlnetPayload() {
+  const entries = [...taskControlnets].filter(([, { enabled }]) => enabled.value);
+  if (!entries.length) return {};
+  const controlnets = await Promise.all(entries.map(async ([branch, { enabled, type, mode, source }]) => {
+    if (enabled.value === "off") return [branch, null];
+    if (!source) throw new Error(`请为 ${controlBranchTitle(branch)} 选择控制图。`);
+    const binding = { type: type.value, mode: mode.value };
+    if (source.file) binding.image = await encodeReference(source.file);
+    else if (source.asset_id) binding.asset_id = source.asset_id;
+    else binding.id = source.id;
+    return [branch, binding];
+  }));
+  return { controlnets: Object.fromEntries(controlnets) };
+}
+
+queueWorkflow.addEventListener("change", () => {
+  showQueueReference();
+  renderTaskControlnets();
+});
+async function showCreateMode() {
   const mode = queueMode.value;
   get("remote-command-form").hidden = mode !== "command";
   get("queue-form").hidden = mode !== "simple";
   showQueueReference();
+  renderTaskControlnets();
   if (!mode) return;
   if (mode === "command") refreshCommandTemplates();
   const accounts = get(mode === "command" ? "remote-command-account" : "queue-preset-account");
@@ -1950,29 +2236,34 @@ queueMode.addEventListener("change", async () => {
     await loadPresetAccounts(accounts, "不使用预设", accounts.value);
     if (mode === "simple") await loadQueuePresets(true);
   } catch (error) {
-    if (!get("queue").hidden && queueMode.value === mode) queueMessage(error.message, true);
+    if (!get("create-task").hidden && queueMode.value === mode) createTaskMessage(error.message, true);
   } finally {
     accounts.disabled = false;
   }
-});
+}
+queueMode.addEventListener("change", showCreateMode);
 
-get("open-queue").addEventListener("click", () => {
+function openCreateTask() {
+  if (!studio || loading || get("save").disabled || !get("create-task").hidden) return;
+  showPanel("create-task", get("open-create-task"));
+  message("");
+  createTaskMessage("");
+  if (!queueWorkflow.options.length) {
+    for (const workflow of studio.workflows.filter((item) => !item.requires_image || item.name === detailerWorkflow || item.name === advancedV40)) {
+      queueWorkflow.add(new Option(workflowTitle(workflow.name), workflow.name));
+    }
+    if ([...queueWorkflow.options].some((item) => item.value === studio.default)) queueWorkflow.value = studio.default;
+    get("queue-add").disabled = !queueWorkflow.options.length || queueWriting;
+    renderTaskControlnets();
+  }
+  showCreateMode();
+}
+
+function openQueue() {
   if (!studio || loading || get("save").disabled || !get("queue").hidden) return;
   showPanel("queue", get("open-queue"));
   message("");
   queueMessage("");
-  get("queue-create").open = false;
-  queueMode.value = "";
-  get("remote-command-form").hidden = get("queue-form").hidden = true;
-  showQueueReference();
-  const workflows = queueWorkflow;
-  if (!workflows.options.length) {
-    for (const workflow of studio.workflows.filter((item) => !item.requires_image || item.name === detailerWorkflow || item.name === advancedV40)) {
-      workflows.add(new Option(workflowTitle(workflow.name), workflow.name));
-    }
-    if ([...workflows.options].some((item) => item.value === studio.default)) workflows.value = studio.default;
-    get("queue-add").disabled = !workflows.options.length;
-  }
   const qqWorkflows = get("queue-qq-workflow");
   if (!qqWorkflows.options.length) {
     for (const workflow of studio.workflows.filter((item) => item.output_type !== "text")) {
@@ -1981,7 +2272,11 @@ get("open-queue").addEventListener("click", () => {
     if ([...qqWorkflows.options].some((item) => item.value === studio.default)) qqWorkflows.value = studio.default;
   }
   refreshQueue();
-});
+}
+get("open-create-task").addEventListener("click", openCreateTask);
+get("queue-open-create").addEventListener("click", openCreateTask);
+get("open-queue").addEventListener("click", openQueue);
+get("create-open-queue").addEventListener("click", openQueue);
 get("queue-preset-account").addEventListener("change", () => loadQueuePresets());
 get("queue-refresh").addEventListener("click", () => refreshQueue(true));
 const cancelQueueDialog = get("queue-cancel-dialog");
@@ -2018,24 +2313,28 @@ get("queue-form").addEventListener("submit", (event) => {
   const positive = get("queue-positive").value.trim();
   const workflow = queueWorkflow.value;
   if (!preset && !positive && workflow !== advancedV40 && workflow !== detailerWorkflow) {
-    queueMessage("请填写正向提示词或选择预设。", true);
+    createTaskMessage("请填写正向提示词或选择预设。", true);
     return;
   }
   const requiresImage = studio.workflows.find((item) => item.name === workflow)?.requires_image;
   if (queueUsesReference(workflow) && requiresImage
       && !get("queue-reference-id").value && !get("queue-reference-file").files.length) {
-    queueMessage("请先选择一张参考图。", true);
+    createTaskMessage("请先选择一张参考图。", true);
     return;
   }
-  changeQueue("studio/queue", async () => ({
-    workflow,
-    preset,
+  const data = {
+    workflow, preset, positive,
     preset_account: get("queue-preset-account").value,
-    positive,
     negative: get("queue-negative").value,
     count: get("queue-count").valueAsNumber,
-    ...(queueUsesReference(workflow) ? await queueReferencePayload() : {}),
-  }), get("queue-add"), (result) => `已加入 ${result.jobs.length} 项生成任务。`);
+  };
+  changeQueue("studio/queue", async () => {
+    const [reference, controlnets] = await Promise.all([
+      queueUsesReference(workflow) ? queueReferencePayload() : {},
+      queueControlnetPayload(),
+    ]);
+    return { ...data, ...reference, ...controlnets };
+  }, get("queue-add"), (result) => `已加入 ${result.jobs.length} 项生成任务。`, { create: true, opensQueue: () => true });
 });
 setInterval(refreshQueue, 2500);
 
@@ -2075,16 +2374,17 @@ get("remote-command-form").addEventListener("submit", (event) => {
   const button = get("remote-command-send");
   const form = new FormData(event.target);
   const file = get("queue-reference-file").files[0];
-  if (remote && file?.size && !queueMask()) {
+  const options = { create: true, opensQueue: ({ queued }) => queued === true };
+  const hasControls = [...taskControlnets.values()].some(({ enabled }) => enabled.value);
+  if (remote && file?.size && !queueMask() && !hasControls) {
     form.set("image", file);
-    changeQueue("command", form, button, (result) => result.message);
+    changeQueue("command", form, button, (result) => result.message, options);
     return;
   }
-  changeQueue("studio/queue/command", async () => ({
-    command: form.get("command"),
-    account: form.get("account") ?? "",
-    ...await queueReferencePayload(),
-  }), button, (result) => result.message);
+  changeQueue("studio/queue/command", async () => {
+    const [reference, controlnets] = await Promise.all([queueReferencePayload(), queueControlnetPayload()]);
+    return { command: form.get("command"), account: form.get("account") ?? "", ...reference, ...controlnets };
+  }, button, (result) => result.message, options);
 });
 
 function workflowEdited(event) {
@@ -2115,7 +2415,7 @@ function syncRemoteWorkflowList() {
   select.value = [...select.options].some((option) => option.value === value) ? value : "";
 }
 
-function bindNavigationDrag(list, tab, anchor, onDrop) {
+function bindNavigationDrag(list, tab, anchor, onDrop, { selector = ".nav-sortable", handle = tab, touch = false } = {}) {
   let press;
   let marker;
   let suppressClick = false;
@@ -2129,9 +2429,9 @@ function bindNavigationDrag(list, tab, anchor, onDrop) {
     clearMarker();
     const hit = document.elementFromPoint(event.clientX, event.clientY);
     if (!hit || !list.contains(hit) || (anchor && anchor.contains(hit))) return;
-    let target = hit.closest(".nav-sortable");
+    let target = hit.closest(selector);
     if (!target) {
-      const visible = [...list.querySelectorAll(".nav-sortable")].filter((item) => item.getClientRects().length);
+      const visible = [...list.querySelectorAll(selector)].filter((item) => item.getClientRects().length);
       target = visible.find((item) => event.clientY < item.getBoundingClientRect().bottom) ?? visible.at(-1);
     }
     if (!target) return;
@@ -2164,20 +2464,20 @@ function bindNavigationDrag(list, tab, anchor, onDrop) {
     if (target) onDrop(tab, target.tab, target.after);
   }
 
-  tab.addEventListener("pointerdown", (event) => {
+  handle.addEventListener("pointerdown", (event) => {
     if (press || event.button !== 0 || !event.isPrimary) return;
     suppressClick = false;
-    if (event.pointerType === "touch") return;
+    if (!touch && event.pointerType === "touch") return;
     const listeners = new AbortController();
     press = { id: event.pointerId, x: event.clientX, y: event.clientY, listeners };
     const options = { signal: listeners.signal };
-    tab.setPointerCapture(event.pointerId);
+    handle.setPointerCapture(event.pointerId);
     document.addEventListener("pointermove", move, options);
     document.addEventListener("pointerup", drop, options);
     document.addEventListener("pointercancel", (event) => {
       if (event.pointerId === press?.id) reset();
     }, options);
-    tab.addEventListener("lostpointercapture", reset, options);
+    handle.addEventListener("lostpointercapture", reset, options);
     window.addEventListener("blur", reset, options);
   });
   tab.addEventListener("click", (event) => {
@@ -2236,6 +2536,9 @@ function mountNavigationOrder(list, section, key, anchor = null) {
 }
 
 function renderWorkflowTabs() {
+  const controlGallery = get("open-control-gallery");
+  controlGallery.disabled = !studio.input_available;
+  controlGallery.title = studio.input_available ? "" : "当前无法访问 ComfyUI input。";
   const list = get("workflow-list");
   list.replaceChildren();
   let first;

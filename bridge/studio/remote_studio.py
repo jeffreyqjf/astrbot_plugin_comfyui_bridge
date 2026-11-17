@@ -20,7 +20,8 @@ from .studio_settings import COMMAND_IMPORT_LIMIT
 ASSETS = ("style.css", "app.js", "image_review.js", "remote.js", "prompt_library.js", "mask_editor.js", "videos.js")
 VIEW = PACKAGE_ROOT / "views" / "anima"
 API_PATHS = frozenset({
-    "studio", "studio/navigation-order", "studio/workflow", "studio/presets", "studio/presets/accounts",
+    "studio", "studio/navigation-order", "studio/workflow", "studio/workflow/layout",
+    "studio/presets", "studio/presets/accounts",
     "studio/workflow/alias",
     "studio/workflow/export", "studio/workflows/export", "studio/workflows/import", "studio/workflows/replace",
     "studio/workflow/configs", "studio/workflow/configs/import", "studio/workflow/configs/export",
@@ -28,6 +29,7 @@ API_PATHS = frozenset({
     "studio/presets/import", "studio/queue", "studio/queue/command", "studio/queue/templates", "studio/queue/cancel",
     "studio/queue/qq-timeout",
     "studio/queue/cancel-all", "studio/images", "studio/images/file", "studio/images/thumbnails", "studio/images/delete",
+    "studio/input", "studio/input/preview", "studio/control-assets", "studio/control-assets/preview",
     "studio/prompt-tags", "studio/prompt-tags/preview",
     "studio/videos", "studio/videos/play", "studio/videos/delete",
     "anima/settings", "anima/branches",
@@ -71,7 +73,7 @@ class RemoteStudio:
         ipaddress.ip_address(host)
         self.token = token
         app = web.Application(middlewares=[self.authorize], client_max_size=max(
-            reference_body_limit(self.plugin.service.client.max_image_bytes), WORKFLOW_UPLOAD_LIMIT,
+            reference_body_limit(self.plugin.service.client.max_image_bytes, controls=2), WORKFLOW_UPLOAD_LIMIT,
         ))
         app.on_response_prepare.append(self._headers)
         app.router.add_get("/", self._index)
@@ -193,7 +195,7 @@ class RemoteStudio:
         limit = 2 * 1024 * 1024
         if request.method == "POST":
             if route in {"studio/queue", "studio/queue/command"}:
-                limit = reference_body_limit(self.plugin.service.client.max_image_bytes)
+                limit = reference_body_limit(self.plugin.service.client.max_image_bytes, controls=2)
             elif route in {"studio/workflows/import", "studio/workflows/replace", "studio/workflow/configs/import"}:
                 limit = WORKFLOW_UPLOAD_LIMIT
             elif route == "studio/queue/templates/import":

@@ -41,7 +41,9 @@
           <button type="button" id="open-image-review" class="workflow-tab" aria-controls="image-review">待评价图片</button>
           <button type="button" id="open-image-gallery" class="workflow-tab" aria-controls="image-gallery">收藏图集</button>
           <button type="button" id="open-pass-gallery" class="workflow-tab" aria-controls="image-gallery">Pass 图集</button>
+          <button type="button" id="open-control-gallery" class="workflow-tab" aria-controls="control-gallery">控制图集</button>
           <button type="button" id="open-videos" class="workflow-tab" aria-controls="videos">生成视频</button>
+          <button type="button" id="open-create-task" class="workflow-tab" aria-controls="create-task">新建任务</button>
           <button type="button" id="open-queue" class="workflow-tab" aria-controls="queue">任务队列</button>
           <button type="button" id="remote-logout" class="workflow-tab" hidden>退出远程工作台</button>
         </nav>
@@ -128,6 +130,7 @@
         <label class="field parameter-search">查找参数
           <input type="search" id="filter" placeholder="例如：宽度、CFG、节点编号">
         </label>
+        <button type="button" id="parameter-layout-open">调整参数布局</button>
         <div id="nodes"></div>
         <p id="parameter-empty" hidden>没有匹配的参数。</p>
       </section>
@@ -400,7 +403,8 @@
                   <label class="field">搜索筛选项 <input type="search" id="image-filter-search" autocomplete="off"></label>
                   <button type="button" id="image-filter-clear" disabled>清除筛选</button>
                 </div>
-                <small>同类任选，跨类同时匹配。</small>
+                <small>跨类同时匹配，同类默认任选。</small>
+                <label class="image-lora-match"><input type="checkbox" id="image-lora-match"> 匹配全部所选 LoRA</label>
                 <p id="image-filter-status" role="status" hidden></p>
                 <div id="image-filter-options"></div>
               </div>
@@ -408,6 +412,7 @@
           </div>
           <p id="image-review-empty" hidden>暂无待评价图片。</p>
           <div id="image-review-jobs"></div>
+          <nav id="image-review-pages" class="image-pages" aria-label="待评价任务分页" hidden></nav>
         </div>
         <div id="videos" hidden>
           <div class="panel-heading">
@@ -440,23 +445,62 @@
           <p id="image-gallery-thumbnail-status" role="status"></p>
           <div id="image-gallery-grid" class="review-grid"></div>
           <p id="image-gallery-empty" hidden>暂无收藏图片。</p>
-          <footer>
-            <button type="button" id="image-gallery-prev" disabled>上一页</button>
-            <small id="image-gallery-page"></small>
-            <button type="button" id="image-gallery-next" disabled>下一页</button>
-          </footer>
+          <nav id="image-gallery-pages" class="image-pages" aria-label="图集分页" hidden></nav>
         </div>
+        <template id="image-page-controls">
+          <button type="button" data-page-step="-1" disabled>上一页</button>
+          <div class="image-page-numbers" data-page-numbers></div>
+          <button type="button" data-page-step="1" disabled>下一页</button>
+          <form class="image-page-jump">
+            <label>页码 <input type="number" min="1" step="1" inputmode="numeric" required></label>
+            <button type="submit">跳转</button>
+          </form>
+        </template>
+        <div id="control-gallery" hidden>
+          <div class="panel-heading">
+            <h2>控制图集</h2>
+            <button type="button" id="control-gallery-refresh">刷新</button>
+          </div>
+          <label class="field queue-mode">状态
+            <select id="control-gallery-state">
+              <option value="unevaluated">待评价</option><option value="favourite">收藏</option><option value="pass">Pass</option>
+            </select>
+          </label>
+          <p id="control-gallery-status" role="status"></p>
+          <div id="control-gallery-grid" class="review-grid"></div>
+          <nav id="control-gallery-pages" class="image-pages" aria-label="控制图集分页" hidden></nav>
+        </div>
+        <dialog id="control-preview" class="image-resource-dialog" aria-labelledby="control-preview-title">
+          <div class="panel-heading">
+            <h2 id="control-preview-title">控制图预览</h2>
+            <form method="dialog"><button autofocus>关闭</button></form>
+          </div>
+          <div id="control-preview-asset"></div>
+        </dialog>
         <dialog id="image-original" aria-labelledby="image-original-title">
           <div class="panel-heading">
             <h2 id="image-original-title">原图</h2>
             <div class="row-actions">
+              <button type="button" id="image-original-favourite" class="primary" hidden>收藏</button>
+              <button type="button" id="image-original-pass" hidden>跳过</button>
               <button type="button" id="image-original-move" hidden></button>
-              <form method="dialog"><button>关闭</button></form>
+              <form method="dialog"><button autofocus>关闭</button></form>
             </div>
+          </div>
+          <div id="image-original-navigation" hidden>
+            <div class="image-page-numbers">
+              <button type="button" id="image-original-prev" aria-label="上一张">← 上一张</button>
+              <small id="image-original-position" role="status"></small>
+              <button type="button" id="image-original-next" aria-label="下一张">下一张 →</button>
+            </div>
+            <nav id="image-original-pages" class="image-pages" aria-label="预览分页" hidden></nav>
           </div>
           <p id="image-original-status" role="status"></p>
           <dl id="image-generation-info" class="image-generation-info" hidden></dl>
-          <img id="image-original-file" alt="" hidden>
+          <div class="image-original-pair">
+            <div class="image-original-result"><img id="image-original-file" alt="" hidden></div>
+            <div id="image-original-controls" hidden></div>
+          </div>
         </dialog>
         <dialog id="image-delete-dialog" aria-labelledby="image-delete-title">
           <h2 id="image-delete-title">删除图片</h2>
@@ -468,22 +512,17 @@
             <button type="button" id="image-delete-confirm" class="primary">确认删除</button>
           </footer>
         </dialog>
-        <div id="queue" hidden>
+        <div id="create-task" hidden>
           <div class="panel-heading">
-            <div><span class="pill">生成管理</span><h2>任务队列</h2></div>
-            <div class="row-actions">
-              <button type="button" id="queue-refresh">刷新队列</button>
-              <button type="button" id="queue-cancel-all" disabled>取消全部任务</button>
-            </div>
+            <h2>新建任务</h2>
+            <button type="button" id="create-open-queue">任务队列</button>
           </div>
-          <p id="queue-status" role="status" aria-live="polite"></p>
-          <details id="queue-create" class="compact-disclosure">
-            <summary><strong>＋ 创建任务</strong></summary>
+          <p id="create-task-status" role="status" aria-live="polite"></p>
+          <section>
             <label class="field queue-mode">添加方式
               <select id="queue-create-mode">
-                <option value="">无</option>
-                <option value="command">命令添加</option>
                 <option value="simple">简易添加</option>
+                <option value="command">命令添加</option>
               </select>
             </label>
             <form id="remote-command-form" hidden>
@@ -502,7 +541,7 @@
                 </label>
                 <label class="field">预设所属用户<select id="remote-command-account" name="account"></select></label>
               </div>
-              <small class="section-note">选择模板后可先编辑再发送。支持 gen、lora、sweep 和 --help，描述按原文提交。</small>
+              <small class="section-note">选择模板后可先编辑再发送。支持 gen、lora、sweep 和 --help，描述按原文提交。用 --wf 指定支持 ControlNet 的工作流后可设置本次控制图。</small>
               <footer><button type="submit" class="primary" id="remote-command-send">提交命令</button></footer>
             </form>
             <form id="queue-form" hidden>
@@ -520,6 +559,34 @@
                   <input type="number" id="queue-count" value="1" min="1" step="1" required>
                 </label>
               </div>
+              <div id="queue-controlnets" hidden>
+                <h3>ControlNet</h3>
+                <div id="queue-controlnet-branches"></div>
+              </div>
+              <template id="queue-controlnet-branch">
+                <fieldset class="queue-controlnet-branch">
+                  <legend></legend>
+                  <label class="field queue-mode">分支设置
+                    <select data-control-enabled>
+                      <option value="">沿用工作流</option><option value="on">本次启用</option><option value="off">本次关闭</option>
+                    </select>
+                  </label>
+                  <div data-control-fields hidden>
+                    <div class="grid">
+                      <label class="field">控制类型 <select data-control-type></select></label>
+                      <label class="field">处理方式 <select data-control-mode></select></label>
+                    </div>
+                    <div class="row-actions">
+                      <button type="button" data-control-input>浏览 ComfyUI input</button>
+                      <button type="button" data-control-asset>从控制图集选择</button>
+                      <button type="button" data-control-upload>上传本地图片</button>
+                      <button type="button" data-control-clear hidden>清除图片</button>
+                      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+                    </div>
+                    <small data-control-source role="status"></small>
+                  </div>
+                </fieldset>
+              </template>
               <small class="section-note">多批次会分别入队，每项使用随机种子，可单独取消。提示词按原文提交。超时从 ComfyUI 接收任务后计时，包含 ComfyUI 内的排队和执行。</small>
               <footer><button type="submit" class="primary" id="queue-add">加入队列</button></footer>
             </form>
@@ -535,7 +602,18 @@
               <input id="queue-reference-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
               <small id="queue-reference-status" role="status"></small>
             </div>
-          </details>
+          </section>
+        </div>
+        <div id="queue" hidden>
+          <div class="panel-heading">
+            <h2>任务队列</h2>
+            <div class="row-actions">
+              <button type="button" id="queue-open-create" class="primary">新建任务</button>
+              <button type="button" id="queue-refresh">刷新队列</button>
+              <button type="button" id="queue-cancel-all" disabled>取消全部任务</button>
+            </div>
+          </div>
+          <p id="queue-status" role="status" aria-live="polite"></p>
           <section>
             <h2 id="queue-summary">当前队列</h2>
             <div id="queue-active"></div>
@@ -576,6 +654,29 @@
               <button type="button" id="queue-reference-next" disabled>下一页</button>
             </footer>
           </dialog>
+          <dialog id="task-resource-picker" class="image-resource-dialog" aria-labelledby="task-resource-title">
+            <div class="panel-heading">
+              <h2 id="task-resource-title"></h2>
+              <form method="dialog"><button autofocus>关闭</button></form>
+            </div>
+            <nav id="task-resource-path" class="row-actions" aria-label="当前目录"></nav>
+            <label class="field queue-mode" id="task-resource-state-field" hidden>状态
+              <select id="task-resource-state">
+                <option value="unevaluated">待评价</option><option value="favourite" selected>收藏</option><option value="pass">Pass</option>
+              </select>
+            </label>
+            <p id="task-resource-status" role="status"></p>
+            <div id="task-resource-preview" hidden>
+              <img id="task-resource-image" alt="">
+              <p id="task-resource-preview-status" role="status"></p>
+              <div class="row-actions">
+                <button type="button" id="task-resource-back">返回列表</button>
+                <button type="button" id="task-resource-choose" class="primary" disabled>使用此图</button>
+              </div>
+            </div>
+            <div id="task-resource-items" class="review-grid"></div>
+            <nav id="task-resource-pages" class="image-pages" aria-label="参考素材分页" hidden></nav>
+          </dialog>
           <dialog id="queue-cancel-dialog" aria-labelledby="queue-cancel-title">
             <h2 id="queue-cancel-title">取消全部任务？</h2>
             <p>将取消当前队列中等待和处理中的任务。</p>
@@ -604,6 +705,21 @@
       <button type="button" id="video-delete-cancel" autofocus>取消</button>
       <button type="button" id="video-delete-confirm" class="primary">确认删除</button>
     </footer>
+  </dialog>
+  <dialog id="parameter-layout-dialog" class="image-resource-dialog" aria-labelledby="parameter-layout-title">
+    <div class="panel-heading">
+      <h2 id="parameter-layout-title">调整参数布局</h2>
+      <form method="dialog"><button id="parameter-layout-close" autofocus>关闭</button></form>
+    </div>
+    <p>拖动把手或使用箭头调整顺序。选择分类和分组可调整其中的参数。</p>
+    <h3>分类</h3>
+    <ol id="parameter-layout-categories" class="order-list"></ol>
+    <h3>分组</h3>
+    <ol id="parameter-layout-groups" class="order-list"></ol>
+    <h3>参数</h3>
+    <ol id="parameter-layout-fields" class="order-list"></ol>
+    <p id="parameter-layout-status" role="status"></p>
+    <footer><button type="button" id="parameter-layout-save" class="primary" disabled>保存布局</button></footer>
   </dialog>
   <dialog id="workflow-config-dialog">
     <form method="dialog">

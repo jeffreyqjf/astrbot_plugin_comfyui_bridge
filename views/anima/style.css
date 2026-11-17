@@ -209,6 +209,7 @@ body:has(#error-notice:not([hidden]) #unsaved-actions:not([hidden])) main {
 .filter-icon i:nth-child(3) { width: 36%; }
 .image-filter-panel { width: 100%; min-width: min(78vw, 360px); padding: 12px; margin-top: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .image-filter-panel > .row-actions { align-items: end; justify-content: space-between; margin-bottom: 7px; }
+.image-lora-match { display: flex; align-items: center; gap: 5px; margin-top: 6px; }
 .image-filter-panel fieldset { margin: 8px 0 0; padding: 0; border: 0; min-width: 0; }
 .image-filter-panel legend { font-weight: 650; margin-bottom: 2px; }
 .image-filter-values { display: flex; flex-wrap: wrap; gap: 1px 9px; max-height: 10rem; overflow: auto; }
@@ -236,7 +237,7 @@ body:has(#error-notice:not([hidden]) #unsaved-actions:not([hidden])) main {
 }
 .order-row.selected { border-color: var(--accent); background: var(--tint); }
 .order-grip { color: var(--muted); font-size: 20px; line-height: 1; padding: 5px 3px; user-select: none; }
-.order-grip[draggable="true"] { cursor: grab; touch-action: none; }
+.order-grip[draggable="true"], .pointer-grip { cursor: grab; touch-action: none; }
 :is(.order-row, .workflow-tab).dragging { opacity: .48; }
 :is(.order-row, .workflow-tab).drop-before::before, :is(.order-row, .workflow-tab).drop-after::after {
   content: ""; position: absolute; left: 0; right: 0; height: 3px; border-radius: 3px; background: var(--accent);
@@ -326,6 +327,39 @@ button.order-name { border-color: transparent; background: transparent; text-ali
 .review-card-footer small { overflow-wrap: anywhere; }
 .review-card-footer button { padding: 5px 8px; }
 #image-gallery-thumbnail-status:empty { margin: 0 0 12px; }
+.image-pages, .image-page-numbers, .image-page-jump, .image-page-jump label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.image-pages { margin-top: 10px; }
+.image-pages[aria-busy=true] { opacity: .8; }
+.image-page-numbers button[aria-current=page] { opacity: 1; color: var(--accent); background: var(--tint); }
+.image-page-jump input { width: 7ch; }
 #image-original { width: min(96vw, 72rem); max-width: none; padding: 12px; }
+#image-original-navigation { margin: 8px 0 12px; }
+#image-original-navigation button { min-height: 44px; }
 #image-original-status:empty { display: none; }
 #image-original-file { display: block; max-width: 100%; max-height: 78vh; margin: auto; object-fit: contain; }
+#parameter-layout-dialog .order-row { grid-template-columns: auto auto minmax(0, 1fr) auto; }
+#parameter-layout-dialog .order-name { min-width: 0; overflow-wrap: anywhere; }
+#parameter-layout-dialog .pointer-grip { padding: 12px 8px; }
+.queue-controlnet-branch, .control-preview-card {
+  min-width: 0; margin: 8px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px;
+}
+.queue-controlnet-branch legend, .control-preview-card h3 { color: var(--accent); font-weight: 650; }
+.queue-controlnet-branch [data-control-source] { overflow-wrap: anywhere; }
+.image-resource-dialog {
+  width: min(94vw, 48rem); max-height: 90dvh; overflow: auto; padding: 12px;
+  border: 1px solid var(--line); border-radius: 12px; color: inherit; background: var(--surface);
+}
+.image-resource-dialog::backdrop, #image-original::backdrop { background: #181a2a99; }
+.resource-entry { min-width: 0; overflow-wrap: anywhere; text-align: left; padding: 8px; }
+#task-resource-path [aria-current] { color: var(--accent); background: var(--tint); }
+#task-resource-preview img, .control-preview-card img {
+  display: block; max-width: 100%; max-height: 65dvh; margin: 0 auto 8px; object-fit: contain;
+}
+.control-preview-card h3 { margin: 0 0 4px; }
+.control-preview-card p:empty { display: none; }
+.control-preview-card [aria-pressed=true] { opacity: 1; color: var(--accent); background: var(--tint); }
+.has-control-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+@media (max-width: 710px) {
+  .has-control-pair { grid-template-columns: minmax(0, 1fr); }
+  .image-resource-dialog button, #image-original button { min-height: 44px; }
+}
