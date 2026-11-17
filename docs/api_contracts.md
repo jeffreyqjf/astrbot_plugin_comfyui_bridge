@@ -10,7 +10,7 @@
 | `GET studio/queue/loras` | 按 `workflow` 读取该工作流目录下可选 LoRA 的 ID、编号、名称和默认强度 |
 | `GET studio/input`、`GET studio/input/preview` | 用 `directory`、`page` 浏览受限的本机 ComfyUI input，`id` 指定要预览的图片 |
 | `POST studio/input/pick` | 登录后发送空对象，在 Windows 主机的 ComfyUI input 中打开文件选择窗口。选图返回 `id`（input 相对路径），取消返回 `cancelled: true`。已有文件窗口返回 409，超时返回 408，窗口或目录不可用返回 503 |
-| `GET/POST studio/control-assets`、`GET studio/control-assets/preview` | 按控制图状态分页，按稳定 ID 预览或设置独立评价状态，预览返回 `src` 和 `asset` |
+| `GET/POST studio/control-assets`、`GET studio/control-assets/preview` | 按控制图状态分页，查询可传 `type` 在分页前限定控制类型。按稳定 ID 预览或设置独立评价状态，预览返回 `src` 和 `asset` |
 | `POST studio/queue/cancel`、`POST studio/queue/cancel-all` | 取消指定插件任务或插件任务队列，区分已提交和本地排队 |
 | `GET studio/images` | `state` 默认 `unevaluate`，图库用 `favourite` 或 `pass`。可传 `rating`、JSON `filters`、`facets=1` 或 `lora_match=all`。页码 `page` 从 1 开始，待评按任务计数，图库按图片计数 |
 | `POST studio/images`、`POST studio/images/delete` | JSON 提供 `id` 和 `state`。评价的可选 `source` 默认 `unevaluate` |
@@ -24,7 +24,7 @@
 
 待评省略 `page` 时仍返回 `jobs` 和 `limit`。传入页码后附加 `page`、`page_size`、筛选后的 `total` 和 `has_more`。图库一直返回分页信息。LoRA 默认任一命中，`lora_match=all` 要求同一张图片含所有已选 LoRA，其他筛选维度继续取交集。
 
-工作台初始化返回各工作流的 `controlnets` 分支、类型和处理模式。提交任务时同名字段按分支填 `null` 以关闭，或指定 `type`、`mode`（`direct` 或 `preprocess`）以及 `id`、`asset_id`、Base64 `image` 中的一项。重绘参考图和遮罩独立传递。预处理输出按专用预览节点取回。它有独立归档和评价状态。
+工作台初始化返回各工作流的 `controlnets` 分支、类型和处理模式。提交任务时同名字段按分支填 `null` 以关闭，或指定 `type`、`mode`（`direct` 或 `preprocess`）以及 `id`、`asset_id`、Base64 `image`、`gallery: {id, state}` 中的一项。生成图的 `state` 可为 `favourite`、`pass` 或 `unevaluate`，提交时按指定图集读取原图。重绘参考图和遮罩独立传递。预处理输出按专用预览节点取回。它有独立归档和评价状态。
 
 命令提交的 `controlnets` 可用于普通生成，以及 `sweep lora`、`sweep presets` 的整批任务。实际目标工作流在提交时重新解析，并校验该工作流支持请求中的分支。
 

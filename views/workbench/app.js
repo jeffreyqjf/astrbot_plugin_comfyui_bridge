@@ -1,4 +1,4 @@
-import { controlBranchTitle, controlTypeTitle, mountImageReviews } from "./image_review.js";
+import { controlBranchTitle, controlTypeTitle, mountImageReviews, setTaskImagePreview } from "./image_review.js";
 import { mountPromptLibrary } from "./prompt_library.js";
 import { mountVideos } from "./videos.js";
 
@@ -2310,6 +2310,7 @@ function renderTaskControlnets(selectedName = queueWorkflow.value) {
   taskControlWorkflow = selectedName;
   const workflow = studio.workflows.find(({ name }) => name === selectedName);
   const branches = get("queue-controlnet-branches");
+  for (const { thumbnail } of taskControlnets.values()) setTaskImagePreview(thumbnail, null);
   branches.replaceChildren();
   taskControlnets.clear();
   for (const [branch, { types, modes }] of Object.entries(workflow?.controlnets ?? {})) {
@@ -2321,12 +2322,13 @@ function renderTaskControlnets(selectedName = queueWorkflow.value) {
     const mode = row.querySelector("[data-control-mode]");
     const browse = row.querySelector("[data-control-input]");
     const browseWeb = row.querySelector("[data-control-input-web]");
-    const chooseAsset = row.querySelector("[data-control-asset]");
+    const chooseGallery = row.querySelector("[data-control-gallery]");
     const upload = row.querySelector("[data-control-upload]");
     const clear = row.querySelector("[data-control-clear]");
     const file = row.querySelector("input");
     const status = row.querySelector("[data-control-source]");
-    const settings = { enabled, type, mode, source: null };
+    const thumbnail = row.querySelector("[data-control-thumbnail]");
+    const settings = { enabled, type, mode, thumbnail, source: null };
     let sourceVersion = 0;
     taskControlnets.set(branch, settings);
     for (const value of types) type.add(new Option(controlTypeTitle(value), value));
@@ -2335,16 +2337,21 @@ function renderTaskControlnets(selectedName = queueWorkflow.value) {
       mode.add(new Option(value === "direct" ? "直接使用已处理图片" : "预处理原图", value));
     }
     enabled.querySelector('option[value="on"]').disabled = !mode.options.length;
-    browse.disabled = chooseAsset.disabled = !studio.input_available;
+    browse.disabled = !studio.input_available;
     browseWeb.hidden = !studio.input_file_dialog;
-    chooseAsset.hidden = mode.value !== "direct";
 
-    function setSource(source) {
+    function setSource(source, preview) {
       sourceVersion++;
       settings.source = source;
       file.value = "";
       clear.hidden = !source;
-      status.textContent = source?.label ?? (browse.disabled ? "当前无法浏览 ComfyUI input。" : "");
+      status.textContent = source?.label ?? (!studio.input_available ? "当前无法浏览 ComfyUI input。" : "");
+      setTaskImagePreview(thumbnail, preview || source?.file);
+      if (source?.id && !preview) {
+        bridge.apiGet("studio/input/preview", { id: source.id }).then(({ src }) => {
+          if (row.isConnected && settings.source === source) setTaskImagePreview(thumbnail, src);
+        }).catch(() => {});
+      }
     }
     setSource(null);
     enabled.addEventListener("change", () => {
@@ -2352,14 +2359,10 @@ function renderTaskControlnets(selectedName = queueWorkflow.value) {
       fields.hidden = enabled.value !== "on";
     });
     type.addEventListener("change", () => setSource(null));
-    mode.addEventListener("change", () => {
-      chooseAsset.hidden = mode.value !== "direct";
-      setSource(null);
+    mode.addEventListener("change", () => setSource(null));
+    const pickInputOnWeb = () => imageReviews.pickResource("input", ({ entry, src }) => {
+      setSource({ id: entry.id, label: entry.id }, src);
     });
-    const selectInput = (entry) => {
-      setSource({ id: entry.id, label: entry.id });
-    };
-    const pickInputOnWeb = () => imageReviews.pickResource("input", selectInput);
     browseWeb.addEventListener("click", pickInputOnWeb);
     browse.addEventListener("click", async () => {
       if (!studio.input_file_dialog) {
@@ -2371,7 +2374,7 @@ function renderTaskControlnets(selectedName = queueWorkflow.value) {
       status.textContent = "请在运行 AstrBot 的 Windows 电脑上选择图片。";
       try {
         const result = await bridge.apiPost("studio/input/pick", {});
-        if (row.isConnected && version === sourceVersion && !result.cancelled) selectInput(result);
+        if (row.isConnected && version === sourceVersion && !result.cancelled) setSource({ id: result.id, label: result.id });
         else status.textContent = settings.source?.label ?? "";
       } catch (error) {
         status.textContent = settings.source?.label ?? "";
@@ -2380,9 +2383,10 @@ function renderTaskControlnets(selectedName = queueWorkflow.value) {
         browse.disabled = browseWeb.disabled = false;
       }
     });
-    chooseAsset.addEventListener("click", () => imageReviews.pickResource("asset", (entry) => {
-      setSource({ asset_id: entry.asset_id ?? entry.id, label: entry.source_label || controlTypeTitle(entry.type) });
-    }, type.value));
+    chooseGallery.addEventListener("click", () => imageReviews.pickResource("gallery", ({ entry, kind, state, src, label }) => {
+      const source = kind === "controls" ? { asset_id: entry.asset_id ?? entry.id } : { gallery: { id: entry.id, state } };
+      setSource({ ...source, label }, src);
+    }, { type: type.value, useControls: studio.input_available && mode.value === "direct" }));
     upload.addEventListener("click", () => file.click());
     file.addEventListener("change", () => {
       const image = file.files[0];
@@ -2403,6 +2407,7 @@ async function queueControlnetPayload() {
     const binding = { type: type.value, mode: mode.value };
     if (source.file) binding.image = await encodeReference(source.file);
     else if (source.asset_id) binding.asset_id = source.asset_id;
+    else if (source.gallery) binding.gallery = source.gallery;
     else binding.id = source.id;
     return [branch, binding];
   }));

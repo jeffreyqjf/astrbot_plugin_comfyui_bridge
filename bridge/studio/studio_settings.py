@@ -22,7 +22,7 @@ from astrbot.api.web import error_response, json_response, request, stream_respo
 from .. import PACKAGE_ROOT
 from ..client import ComfyError, image_suffix
 from ..controlnet_archive import ControlNetArchive
-from ..image_archive import GALLERY_STATES, IMAGE_FILTERS, REVIEW_RATINGS
+from ..image_archive import GALLERY_STATES, IMAGE_FILTERS, REVIEW_RATINGS, REVIEW_STATES
 from ..lora_settings import LORA_SETTINGS_LIMIT, LoraSettings
 from ..service import (
     ANIMA_WORKFLOW,
@@ -1155,15 +1155,16 @@ class StudioSettings:
             if row is None:
                 bindings[branch] = None
                 continue
-            if not isinstance(row, dict) or set(row) - {"type", "mode", "asset_id", "id", "image"}:
+            if not isinstance(row, dict) or set(row) - {"type", "mode", "asset_id", "id", "image", "gallery"}:
                 raise WorkflowError("ControlNet 参数格式无效。")
-            selected = set(row) & {"asset_id", "id", "image"}
+            selected = set(row) & {"asset_id", "id", "image", "gallery"}
             if len(selected) != 1:
                 raise WorkflowError("每个 ControlNet 分支只能选择一张图片。")
             kind, = selected
             value = row[kind]
-            if not isinstance(value, str) or not value:
+            if kind != "gallery" and (not isinstance(value, str) or not value):
                 raise WorkflowError("请选择 ControlNet 图片。")
+            label = ""
             binding = {"type": row.get("type"), "mode": row.get("mode"), "image": "__astrbot_control_pending__.png"}
             controlnet_switches(name, {branch: binding})
             bindings[branch] = binding
@@ -1176,6 +1177,14 @@ class StudioSettings:
                 _, data = archive.read(value, original=True)
             elif kind == "id":
                 data = self.input_library.read_image(value)
+                label = value.rsplit("/", 1)[-1]
+            elif kind == "gallery":
+                if (not isinstance(value, dict) or value.keys() != {"id", "state"}
+                        or not isinstance(value["id"], str) or not value["id"] or value["state"] not in REVIEW_STATES):
+                    raise WorkflowError("请选择有效的图集图片。")
+                identity = value["id"]
+                _, data = self.service.image_reviews.read(identity, True, limit, state=value["state"])
+                label = identity.split(":", 4)[-1].rsplit("/", 1)[-1] if identity.startswith("manual:") else f"图 {identity}"
             else:
                 if len(value) > 4 * ((limit + 2) // 3):
                     raise WorkflowError("ControlNet 图片超过单张图片大小上限。")
@@ -1188,7 +1197,7 @@ class StudioSettings:
             image_suffix(data)
             sources[branch] = {
                 "data": data, "type": binding["type"], "kind": kind,
-                "label": value.rsplit("/", 1)[-1] if kind == "id" else "",
+                "label": label,
                 "asset_id": value if kind == "asset_id" else None,
             }
         return bindings, sources, archive
@@ -1511,10 +1520,11 @@ class StudioSettings:
             return error_response("请登录 AstrBot 面板。", status_code=401)
         try:
             state, page = request.query.get("state", "unevaluated"), request.query.get("page", "1")
+            control_type = request.query.get("type")
             if not re.fullmatch(r"[1-9][0-9]{0,6}", page):
                 raise WorkflowError("控制图页码无效。")
             def listing():
-                return self._control_archive().list(state, int(page))
+                return self._control_archive().list(state, int(page), control_type=control_type)
             return json_response(await asyncio.to_thread(listing))
         except InputUnavailable as exc:
             return error_response(str(exc), status_code=503)

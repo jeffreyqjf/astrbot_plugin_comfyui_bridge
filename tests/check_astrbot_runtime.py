@@ -235,6 +235,27 @@ async def check_gallery_export(instance, root):
     assert (await export("images", "favourite", username=None)).status_code == 401
     assert (await export("images", "..")).status_code == 400
     assert (await export("invalid", "favourite")).status_code == 400
+    workflow = instance.service.resolve("test", "v40").name
+    for state in ("favourite", "pass", "unevaluate"):
+        manual = reviews.root / state / "NSFW" / "自定义" / "原图.png"
+        identity = reviews._manual_item(state, manual.relative_to(reviews.root / state), manual.stat())["id"]
+        for mode in ("direct", "preprocess"):
+            binding = {"type": "canny", "mode": mode, "gallery": {"id": identity, "state": state}}
+            bindings, sources, archive = instance.studio.prepare_controls(workflow, {"any": binding})
+            assert bindings["any"]["mode"] == mode
+            assert sources["any"]["data"] == pixels and sources["any"]["label"] == "原图.png"
+            assert sources["any"]["kind"] == "gallery" and (archive is not None) == (mode == "preprocess")
+    binding["gallery"]["state"] = "pass"
+    try:
+        instance.studio.prepare_controls(workflow, {"any": binding})
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("ControlNet accepted an image from a different gallery")
+    control_archive.record(job, "lllite", 0, pixels, control_type="depth")
+    for control_type in ("canny", "depth"):
+        page = control_archive.list("unevaluated", 1, 1, control_type=control_type)
+        assert page["total"] == 1 and page["assets"][0]["type"] == control_type
     (reviews.root / "pass" / "NSFW" / "自定义" / "原图.png").unlink()
     assert (await export("images", "pass")).status_code == 400
 

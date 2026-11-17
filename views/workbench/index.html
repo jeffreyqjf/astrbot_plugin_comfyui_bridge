@@ -626,12 +626,15 @@
                     <div class="row-actions control-source-actions">
                       <button type="button" data-control-input>浏览 ComfyUI input</button>
                       <button type="button" data-control-input-web hidden>网页预览</button>
-                      <button type="button" data-control-asset>从控制图集选择</button>
+                      <button type="button" data-control-gallery>从图集选图</button>
                       <button type="button" data-control-upload>上传本地图片</button>
                       <button type="button" data-control-clear hidden>清除图片</button>
                       <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
                     </div>
-                    <small data-control-source role="status"></small>
+                    <div class="task-image-selection">
+                      <img data-control-thumbnail alt="已选控制图" hidden>
+                      <small data-control-source role="status"></small>
+                    </div>
                   </div>
                 </fieldset>
               </template>
@@ -648,7 +651,10 @@
               </div>
               <input type="hidden" id="queue-reference-id">
               <input id="queue-reference-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
-              <small id="queue-reference-status" role="status"></small>
+              <div class="task-image-selection">
+                <img id="queue-reference-thumbnail" alt="已选参考图" hidden>
+                <small id="queue-reference-status" role="status"></small>
+              </div>
             </div>
           </section>
         </div>
@@ -708,9 +714,18 @@
               <form method="dialog"><button autofocus>关闭</button></form>
             </div>
             <nav id="task-resource-path" class="row-actions" aria-label="当前目录"></nav>
-            <label class="field queue-mode" id="task-resource-state-field" hidden>状态
-              <select id="task-resource-state">
-                <option value="unevaluated">待评价</option><option value="favourite" selected>收藏</option><option value="pass">Pass</option>
+            <label class="field queue-mode" id="task-resource-gallery-field" hidden>图集
+              <select id="task-resource-gallery">
+                <optgroup label="生成图">
+                  <option value="images/favourite">收藏图集</option>
+                  <option value="images/pass">Pass 图集</option>
+                  <option value="images/unevaluate">待评价图片</option>
+                </optgroup>
+                <optgroup label="控制图 · 直接使用" id="task-resource-control-galleries">
+                  <option value="controls/favourite">收藏控制图</option>
+                  <option value="controls/pass">Pass 控制图</option>
+                  <option value="controls/unevaluated">待评价控制图</option>
+                </optgroup>
               </select>
             </label>
             <p id="task-resource-status" role="status"></p>

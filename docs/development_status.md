@@ -73,3 +73,9 @@
 
 - 页面资源移至 `views/workbench/`，同步更新远程工作台路径、打包清单和文档。隔离 AstrBot 发现 `workbench` 内嵌页面，远程工作台的全部资源已核对。
 - Git Commit Message 为 `fix: rename the plugin view to workbench`。
+
+## v2.30.0 · 新建任务选图预览
+
+- 普通参考图和各 ControlNet 分支在选图后显示按比例缩放的小预览。ControlNet 可浏览收藏、Pass、待评价生成图，直用模式还可浏览对应类型的控制图集。选图窗口同时提供目录缩略图和确认预览。
+- 29 项回归测试通过。隔离 AstrBot 加载 11 条工作流和 62 条路由，验证三种生成图状态的原图读取、来源状态校验及控制图分页前按类型过滤。Chromium 在 360px 和 1100px 宽度下检查了选图、预览、清除和提交数据。实际生成、系统文件窗口及运行实例更新待验证。
+- Git Commit Message 为 `feat: preview task images and select ControlNet sources from galleries`。

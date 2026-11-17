@@ -289,11 +289,13 @@ class ControlNetArchive:
                 preview.save(output, "WEBP", quality=78)
                 return "image/webp", output.getvalue()
 
-    def list(self, state, page=1, size=24):
+    def list(self, state, page=1, size=24, *, control_type=None):
         if state not in STATES or type(page) is not int or page < 1 or type(size) is not int or not 1 <= size <= 100:
             raise WorkflowError("控制图状态或页码无效。")
+        if control_type is not None and not _token(control_type):
+            raise WorkflowError("控制图类型无效。")
         with self.lock:
-            rows = list(self._gallery_rows(state))
+            rows = [row for row in self._gallery_rows(state) if control_type is None or row["type"] == control_type]
             rows.sort(key=lambda row: (-row["created"], row["asset_id"]))
             start = (page - 1) * size
             end = start + size

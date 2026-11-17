@@ -6,6 +6,14 @@ export const controlTypeTitle = (name) => controlTypes[name] ?? name;
 const controlAssetId = (asset) => asset.asset_id ?? asset.id;
 const controlAssetTitle = (asset) => `${controlBranchTitle(asset.branch)} · ${controlTypeTitle(asset.type)}`;
 
+export function setTaskImagePreview(image, source) {
+  const previous = image.getAttribute("src");
+  if (previous?.startsWith("blob:")) URL.revokeObjectURL(previous);
+  if (source) image.src = typeof source === "string" ? source : URL.createObjectURL(source);
+  else image.removeAttribute("src");
+  image.hidden = !source;
+}
+
 export function mountImageReviews({
   get, bridge, showPanel, message, notify, canOpen, workflowTitle, openPreset, onReferenceChange,
 }) {
@@ -29,6 +37,7 @@ export function mountImageReviews({
   const resourceList = get("task-resource-items");
   const resourcePreview = get("task-resource-preview");
   const resourceImage = get("task-resource-image");
+  const resourceGallery = get("task-resource-gallery");
   const resourceChoose = get("task-resource-choose");
   const deleteDialog = get("image-delete-dialog");
   const deleteStatus = get("image-delete-status");
@@ -38,6 +47,7 @@ export function mountImageReviews({
   const referenceGrid = get("queue-reference-grid");
   const referenceFile = get("queue-reference-file");
   const referenceId = get("queue-reference-id");
+  const referenceThumbnail = get("queue-reference-thumbnail");
   const editReference = get("queue-reference-edit");
   const removeMask = get("queue-reference-remove-mask");
   const referencePrev = get("queue-reference-prev");
@@ -241,14 +251,20 @@ export function mountImageReviews({
     removeMask.hidden = !mask;
   }
 
-  function updateReference(label) {
-    sourceVersion++;
+  function updateReference(label, preview) {
+    const version = ++sourceVersion;
     referenceLabel = label;
     mask = null;
     editReference.textContent = "编辑遮罩";
     editReference.disabled = !label;
     get("queue-reference-clear").hidden = !label;
     renderReferenceStatus();
+    setTaskImagePreview(referenceThumbnail, preview || referenceFile.files[0]);
+    if (!preview && referenceId.value) {
+      bridge.apiGet("studio/images/file", { id: referenceId.value, state: "favourite" }).then(({ src }) => {
+        if (version === sourceVersion) setTaskImagePreview(referenceThumbnail, src);
+      }).catch(() => {});
+    }
     onReferenceChange?.();
     if (label) notify(label);
   }
@@ -278,7 +294,7 @@ export function mountImageReviews({
         button.append(image);
         button.addEventListener("click", () => {
           referencePicker.close();
-          chooseFavourite(item);
+          chooseFavourite(item, image.getAttribute("src"));
         });
         referenceGrid.append(button);
         previews.observe(image);
@@ -304,10 +320,10 @@ export function mountImageReviews({
   }
 
   get("queue-reference-open").addEventListener("click", () => {
-    pickFavourite("从收藏选择参考图", (item) => {
+    pickFavourite("从收藏选择参考图", (item, preview) => {
       referenceId.value = item.id;
       referenceFile.value = "";
-      updateReference(`已选择收藏图片 · ${imageLabel(item)}`);
+      updateReference(`已选择收藏图片 · ${imageLabel(item)}`, preview);
     });
   });
   get("queue-reference-close").addEventListener("click", () => referencePicker.close());
@@ -448,7 +464,7 @@ export function mountImageReviews({
     const request = resourceRequest;
     const isInput = request.source === "input";
     const status = get("task-resource-status");
-    const state = get("task-resource-state").value;
+    const [kind, state] = isInput ? ["input"] : resourceGallery.value.split("/");
     request.entry = null;
     clearResourcePreview();
     drawResourcePath();
@@ -458,9 +474,11 @@ export function mountImageReviews({
     try {
       const data = isInput
         ? await bridge.apiGet("studio/input", { directory: request.path.at(-1).id, page })
-        : await bridge.apiGet("studio/control-assets", { state, page });
+        : await bridge.apiGet(kind === "controls" ? "studio/control-assets" : "studio/images", {
+          state, page, ...(kind === "controls" ? { type: request.type } : {}),
+        });
       if (version !== resourceVersion || !resourcePicker.open) return;
-      const entries = isInput ? data.entries : data.assets.filter((item) => item.type === request.type);
+      const entries = data.entries ?? data.assets ?? data.images ?? data.jobs.flatMap((job) => job.images);
       const thumbnails = [];
       for (const entry of entries) {
         if (isInput && entry.kind === "file") {
@@ -473,31 +491,33 @@ export function mountImageReviews({
         const button = document.createElement("button");
         button.type = "button";
         button.className = "resource-entry";
-        button.textContent = isInput ? entry.name : (entry.source_label || controlAssetTitle(entry));
+        button.textContent = resourceLabel(entry, kind);
         if (isInput && entry.kind === "directory") button.textContent = `目录 · ${entry.name}`;
         button.addEventListener("click", () => {
           if (isInput && entry.kind === "directory") {
             request.path.push(entry);
             loadResources(1);
-          } else previewResource(entry);
+          } else previewResource(entry, kind, state);
         });
         resourceList.append(button);
-        if (isInput && entry.kind === "image") {
+        if (!isInput || entry.kind === "image") {
           const thumbnail = document.createElement("img");
           thumbnail.className = "resource-entry-thumbnail";
           thumbnail.alt = "";
           thumbnail.hidden = true;
           button.prepend(thumbnail);
-          thumbnails.push({ id: entry.id, thumbnail });
+          thumbnails.push({ entry, thumbnail });
         }
       }
-      status.textContent = entries.length ? "" : (isInput ? "此目录没有素材。" : "此页没有匹配控制类型的图片。");
+      status.textContent = entries.length ? "" : {
+        input: "此目录没有素材。", controls: "此图集没有匹配控制类型的图片。", images: "此图集暂无图片。",
+      }[kind];
       request.page = data.page;
       request.last = Math.max(1, Math.ceil(data.total / data.page_size));
       resourcePager(request.page, request.last, false);
       for (let start = 0; start < thumbnails.length && version === resourceVersion && resourcePicker.open; start += 4) {
-        await Promise.allSettled(thumbnails.slice(start, start + 4).map(async ({ id, thumbnail }) => {
-          const { src } = await bridge.apiGet("studio/input/preview", { id });
+        await Promise.allSettled(thumbnails.slice(start, start + 4).map(async ({ entry, thumbnail }) => {
+          const { src } = await readResourcePreview(entry, kind, state);
           if (version !== resourceVersion || !resourcePicker.open) return;
           thumbnail.src = src;
           thumbnail.hidden = false;
@@ -508,25 +528,34 @@ export function mountImageReviews({
     }
   }
 
-  async function previewResource(entry) {
+  function resourceLabel(entry, kind) {
+    if (kind === "input") return entry.name;
+    return kind === "controls" ? entry.source_label || controlAssetTitle(entry) : imageLabel(entry);
+  }
+
+  function readResourcePreview(entry, kind, state) {
+    if (kind === "input") return bridge.apiGet("studio/input/preview", { id: entry.id });
+    if (kind === "controls") return bridge.apiGet("studio/control-assets/preview", { id: controlAssetId(entry) });
+    return bridge.apiGet("studio/images/file", { id: entry.id, state });
+  }
+
+  async function previewResource(entry, kind, state) {
     const version = ++resourceVersion;
     const request = resourceRequest;
-    const isInput = request.source === "input";
     const status = get("task-resource-preview-status");
     resourceList.hidden = true;
     resourcePreview.hidden = false;
     resourceChoose.disabled = true;
     resourceImage.hidden = true;
-    resourceImage.alt = isInput ? entry.name : (entry.source_label || controlAssetTitle(entry));
+    resourceImage.alt = resourceLabel(entry, kind);
     status.textContent = "正在读取预览…";
     resourcePager(1, 0, false);
     try {
-      const { src } = await bridge.apiGet(isInput ? "studio/input/preview" : "studio/control-assets/preview",
-        { id: isInput ? entry.id : controlAssetId(entry) });
+      const { src } = await readResourcePreview(entry, kind, state);
       if (version !== resourceVersion || !resourcePicker.open) return;
       resourceImage.src = src;
       resourceImage.hidden = false;
-      request.entry = entry;
+      request.entry = { entry, kind, state, src, label: resourceImage.alt };
       resourceChoose.disabled = false;
       status.textContent = resourceImage.alt;
     } catch (error) {
@@ -534,15 +563,17 @@ export function mountImageReviews({
     }
   }
 
-  function pickResource(source, select, type) {
+  function pickResource(source, select, { type, useControls = false } = {}) {
     resourceRequest = { source, select, type, path: [{ name: "ComfyUI input", id: "" }] };
-    get("task-resource-title").textContent = source === "input" ? "浏览 ComfyUI input" : "选择控制图";
-    get("task-resource-state-field").hidden = source === "input";
+    get("task-resource-title").textContent = source === "input" ? "浏览 ComfyUI input" : "从图集选择控制图";
+    get("task-resource-gallery-field").hidden = source === "input";
+    get("task-resource-control-galleries").disabled = !useControls;
+    resourceGallery.value = useControls ? "controls/favourite" : "images/favourite";
     resourcePicker.showModal();
     loadResources(1);
   }
 
-  get("task-resource-state").addEventListener("change", () => loadResources(1));
+  resourceGallery.addEventListener("change", () => loadResources(1));
   get("task-resource-back").addEventListener("click", () => loadResources(resourceRequest.page));
   resourceChoose.addEventListener("click", () => {
     if (!resourceRequest?.entry) return;
