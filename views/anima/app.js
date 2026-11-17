@@ -2156,12 +2156,14 @@ function renderTaskControlnets() {
     const type = row.querySelector("[data-control-type]");
     const mode = row.querySelector("[data-control-mode]");
     const browse = row.querySelector("[data-control-input]");
+    const browseWeb = row.querySelector("[data-control-input-web]");
     const chooseAsset = row.querySelector("[data-control-asset]");
     const upload = row.querySelector("[data-control-upload]");
     const clear = row.querySelector("[data-control-clear]");
     const file = row.querySelector("input");
     const status = row.querySelector("[data-control-source]");
     const settings = { enabled, type, mode, source: null };
+    let sourceVersion = 0;
     taskControlnets.set(branch, settings);
     for (const value of types) type.add(new Option(controlTypeTitle(value), value));
     for (const value of modes) {
@@ -2170,24 +2172,50 @@ function renderTaskControlnets() {
     }
     enabled.querySelector('option[value="on"]').disabled = !mode.options.length;
     browse.disabled = chooseAsset.disabled = !studio.input_available;
+    browseWeb.hidden = !studio.input_file_dialog;
     chooseAsset.hidden = mode.value !== "direct";
 
     function setSource(source) {
+      sourceVersion++;
       settings.source = source;
       file.value = "";
       clear.hidden = !source;
       status.textContent = source?.label ?? (browse.disabled ? "当前无法浏览 ComfyUI input。" : "");
     }
     setSource(null);
-    enabled.addEventListener("change", () => { fields.hidden = enabled.value !== "on"; });
+    enabled.addEventListener("change", () => {
+      sourceVersion++;
+      fields.hidden = enabled.value !== "on";
+    });
     type.addEventListener("change", () => setSource(null));
     mode.addEventListener("change", () => {
       chooseAsset.hidden = mode.value !== "direct";
       setSource(null);
     });
-    browse.addEventListener("click", () => imageReviews.pickResource("input", (entry) => {
+    const selectInput = (entry) => {
       setSource({ id: entry.id, label: entry.id });
-    }));
+    };
+    const pickInputOnWeb = () => imageReviews.pickResource("input", selectInput);
+    browseWeb.addEventListener("click", pickInputOnWeb);
+    browse.addEventListener("click", async () => {
+      if (!studio.input_file_dialog) {
+        pickInputOnWeb();
+        return;
+      }
+      const version = sourceVersion;
+      browse.disabled = browseWeb.disabled = true;
+      status.textContent = "请在运行 AstrBot 的 Windows 电脑上选择图片。";
+      try {
+        const result = await bridge.apiPost("studio/input/pick", {});
+        if (row.isConnected && version === sourceVersion && !result.cancelled) selectInput(result);
+        else status.textContent = settings.source?.label ?? "";
+      } catch (error) {
+        status.textContent = settings.source?.label ?? "";
+        notify(error.message, true);
+      } finally {
+        browse.disabled = browseWeb.disabled = false;
+      }
+    });
     chooseAsset.addEventListener("click", () => imageReviews.pickResource("asset", (entry) => {
       setSource({ asset_id: entry.asset_id ?? entry.id, label: entry.source_label || controlTypeTitle(entry.type) });
     }, type.value));

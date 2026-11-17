@@ -29,7 +29,7 @@ API_PATHS = frozenset({
     "studio/presets/import", "studio/queue", "studio/queue/command", "studio/queue/templates", "studio/queue/cancel",
     "studio/queue/qq-timeout",
     "studio/queue/cancel-all", "studio/images", "studio/images/file", "studio/images/thumbnails", "studio/images/delete",
-    "studio/input", "studio/input/preview", "studio/control-assets", "studio/control-assets/preview",
+    "studio/input", "studio/input/preview", "studio/input/pick", "studio/control-assets", "studio/control-assets/preview",
     "studio/prompt-tags", "studio/prompt-tags/preview",
     "studio/videos", "studio/videos/play", "studio/videos/delete",
     "anima/settings", "anima/branches",

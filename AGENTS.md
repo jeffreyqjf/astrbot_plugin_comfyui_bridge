@@ -2,25 +2,16 @@
 
 本项目是连接 AstrBot 与 ComfyUI 的插件，提供 QQ 绘图、图像反推、视频生成与回传，以及网页创作工作台、图片归档和评价。本文件适用于维护插件和配套工作流的协作者。按任务查阅 [README](README.md)、[QQ 指令集](user%20docs/COMMANDS.md) 和 [模型与参数说明](user%20docs/CONFIGURATION.md)。用户本轮明确提出的要求优先。修改 ComfyUI 文件时，另读 `G:\ComfyUI\AGENTS.md` 和目标目录下适用的说明。
 
-## Agent 职责与文件边界
+## 单 Agent 开发
 
-项目启用 `workflow`、`backend`、`frontend`、`data`、`reviewer` 五个专业角色，主会话担任 Architect。同时运行最多四个子 Agent。下表是分派依据，具体写入范围以每轮批准和派工清单为准。
+项目使用单一 Agent，由当前会话负责调查、架构设计、实现、审查、测试和交付。禁止启动或派发子 Agent。模块路径见 [项目地图](docs/project_map.md)。
 
-| 角色 | 职责与默认责任文件 |
-| --- | --- |
-| Architect | 总体架构、拆分需求、分派子 Agent、协调接口、解决冲突、集成验证并向用户汇报等待批准。维护 `AGENTS.md`、`.codex/`、`docs/`、项目打包与版本文件。 |
-| Workflow | 分析执行依赖、模型加载、ControlNet、LoRA 和自动读取的节点参数。维护 `bridge/workflows/`、`workflows/`、工作流类 `templates/` 与获批的 ComfyUI AstrBot 画布及 API 导出。 |
-| Backend | Python 后端、QQ 接入、ComfyUI API、队列、输入文件、图片预处理与服务端接口。负责 `main.py`、`bridge/client.py`、`bridge/service.py`、`bridge/qq/`、`bridge/studio/`、`bridge/video_library.py`、`_conf_schema.json` 和 `templates/drawing_persona.txt`。 |
-| Frontend | 工作台桌面与手机界面、新建任务、参考图和文件交互、图库分页与评价。负责 `views/anima/`，与 Backend 对齐接口并和 Data 对齐图片标识与状态。 |
-| Data | 持久结构、图片元数据、多 LoRA、ControlNet 来源关系、评价状态、迁移。负责 `bridge/image_archive.py`、`bridge/lora_settings.py` 和今后获批的持久层 schema 与迁移文件。 |
-| Reviewer | 只读检查代码质量、工作流、API 契约、数据一致性、安全和回归风险。给出路径、行号及验证依据，由负责该文件的 Agent 修复。 |
+## 变更、审批与 Git
 
-## 派工、审批与 Git
-
-1. Architect 先读取实际入口和现有改动，按需要并行派出只读调查。向每个子 Agent 说明目标、可读范围、是否可写、文件清单、接口和验收项。同一时刻每个文件只指定一位写入者，其他 Agent 可以阅读。跨层文件（如 `service.py` 或 `studio_settings.py`）先约定接口，再由 Architect 明确唯一写入者。根据复杂度、技术难度和风险为每项派工选择 Low、Medium、High 或 XHigh，发现新依赖或风险时重新评估。
-2. 若用户尚未批准具体业务变更，Architect 先简述对需求的理解，提交范围、文件、契约或迁移影响和验证方案，澄清影响实施的歧义并等待批准。用户已经批准的范围直接执行。对生产数据迁移、安装或运行副本同步、重载、提交、合并和发布，按用户批准的范围操作。
-3. 只读调查用当前工作区。需要写入的多条独立开发线使用 `codex/<任务>` 分支和独立 Git worktree，注明基线提交与负责人。若任务依赖未提交内容，先确认如何纳入基线。各分支只改获批文件，由 Architect 依次集成。保留用户已有改动。提交、推送及删除工作树按用户授权执行。
-4. 各子 Agent 回报修改或建议、契约影响、检查结果和未验证项。Architect 汇总相关分析文档和 [开发状态](docs/development_status.md)，安排 Reviewer 对集成差异做独立审查。修复后复测，并向用户说明测试、实际生成和 QQ 投递各自的验证范围。细则见 [开发规则](docs/development_rules.md)。
+1. 先读取实际入口和现有改动，明确变更范围、涉及文件、接口和验收条件。跨模块修改先核对接口与数据兼容性。
+2. 若用户尚未批准具体业务变更，先简述对需求的理解、范围、契约或迁移影响与验证方案，澄清影响实施的歧义并等待批准。已批准的范围直接执行。生产数据迁移、安装或运行副本同步、重载、提交、合并及发布按用户批准的范围操作。
+3. 只读调查用当前工作区。需要隔离写入时使用 `codex/<任务>` 分支和独立 Git worktree，注明基线提交。保留用户已有改动。提交、推送及删除工作树按用户授权执行。
+4. 实现后由当前 Agent 检查完整差异，复核工作流、API 契约、数据一致性和回归风险。按改动复测并更新 [开发状态](docs/development_status.md)。报告自动测试、实际生成和 QQ 投递各自的验证范围。细则见 [开发规则](docs/development_rules.md)。
 5. 版本采用 Major.Minor.Patch。Major 用于重大不兼容变化，Minor 用于新增功能，Patch 用于 Bug 修复和小型优化。正式版本更新时校对 `metadata.yaml` 和用户文档，并输出一行 Git Commit Message。详见 [版本规则](docs/version_rules.md)。
 
 ## 开始前核对

@@ -457,6 +457,7 @@ export function mountImageReviews({ get, bridge, showPanel, message, notify, can
         : await bridge.apiGet("studio/control-assets", { state, page });
       if (version !== resourceVersion || !resourcePicker.open) return;
       const entries = isInput ? data.entries : data.assets.filter((item) => item.type === request.type);
+      const thumbnails = [];
       for (const entry of entries) {
         if (isInput && entry.kind === "file") {
           const label = document.createElement("small");
@@ -477,11 +478,27 @@ export function mountImageReviews({ get, bridge, showPanel, message, notify, can
           } else previewResource(entry);
         });
         resourceList.append(button);
+        if (isInput && entry.kind === "image") {
+          const thumbnail = document.createElement("img");
+          thumbnail.className = "resource-entry-thumbnail";
+          thumbnail.alt = "";
+          thumbnail.hidden = true;
+          button.prepend(thumbnail);
+          thumbnails.push({ id: entry.id, thumbnail });
+        }
       }
       status.textContent = entries.length ? "" : (isInput ? "此目录没有素材。" : "此页没有匹配控制类型的图片。");
       request.page = data.page;
       request.last = Math.max(1, Math.ceil(data.total / data.page_size));
       resourcePager(request.page, request.last, false);
+      for (let start = 0; start < thumbnails.length && version === resourceVersion && resourcePicker.open; start += 4) {
+        await Promise.allSettled(thumbnails.slice(start, start + 4).map(async ({ id, thumbnail }) => {
+          const { src } = await bridge.apiGet("studio/input/preview", { id });
+          if (version !== resourceVersion || !resourcePicker.open) return;
+          thumbnail.src = src;
+          thumbnail.hidden = false;
+        }));
+      }
     } catch (error) {
       if (version === resourceVersion && resourcePicker.open) status.textContent = error.message;
     }

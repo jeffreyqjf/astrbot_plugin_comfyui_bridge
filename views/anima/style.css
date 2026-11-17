@@ -345,6 +345,8 @@ button.order-name { border-color: transparent; background: transparent; text-ali
 }
 .queue-controlnet-branch legend, .control-preview-card h3 { color: var(--accent); font-weight: 650; }
 .queue-controlnet-branch [data-control-source] { overflow-wrap: anywhere; }
+.control-source-actions { margin-top: 10px; }
+.resource-entry-thumbnail { display: block; width: 100%; height: 76px; object-fit: contain; margin-bottom: 5px; }
 .image-resource-dialog {
   width: min(94vw, 48rem); max-height: 90dvh; overflow: auto; padding: 12px;
   border: 1px solid var(--line); border-radius: 12px; color: inherit; background: var(--surface);

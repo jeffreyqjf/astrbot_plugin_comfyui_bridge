@@ -192,6 +192,22 @@ finally:
     root.destroy()
 """
 
+INPUT_FILE_DIALOG = """
+import sys
+from tkinter import Tk, filedialog
+
+root = Tk()
+root.withdraw()
+root.attributes("-topmost", True)
+try:
+    print(filedialog.askopenfilename(
+        parent=root, title="选择 ComfyUI input 图片", initialdir=sys.argv[1],
+        filetypes=[("图片", ("*.png", "*.jpg", "*.jpeg", "*.webp", "*.gif"))],
+    ))
+finally:
+    root.destroy()
+"""
+
 
 class StudioSettings:
     def __init__(self, service, anima):
@@ -211,7 +227,7 @@ class StudioSettings:
         self.prompt_library = PromptLibrary(
             service.data_dir, service.config.get("prompt_library_directory", ""),
         )
-        self.workflow_save_lock = asyncio.Lock()
+        self.file_dialog_lock = asyncio.Lock()
         self.video_links = {}
 
     async def lora_catalog_for(self, family):
@@ -614,6 +630,7 @@ class StudioSettings:
                     "local_workflow_files": self._local_workflow_files(),
                     "navigation_order": navigation_order,
                     "input_available": input_available,
+                    "input_file_dialog": input_available and sys.platform == "win32",
                 }
             )
         except (OSError, ValueError) as exc:
@@ -679,9 +696,9 @@ class StudioSettings:
     async def save_workflows(self):
         if not self._local_workflow_files():
             return error_response("请在运行 AstrBot 的 Windows 电脑上通过本机地址打开面板。", status_code=403)
-        if self.workflow_save_lock.locked():
-            return error_response("请先完成已打开的工作流导出窗口。", status_code=409)
-        async with self.workflow_save_lock:
+        if self.file_dialog_lock.locked():
+            return error_response("请先完成已打开的 Windows 文件窗口。", status_code=409)
+        async with self.file_dialog_lock:
             try:
                 data = await self._workflow_zip()
                 result = await asyncio.to_thread(
@@ -1374,6 +1391,38 @@ class StudioSettings:
             return error_response(str(exc), status_code=503)
         except WorkflowError as exc:
             return error_response(str(exc), status_code=400)
+
+    async def pick_input_file(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        if sys.platform != "win32":
+            return error_response("Windows 文件选择仅在 Windows 主机可用。", status_code=503)
+        if self.file_dialog_lock.locked():
+            return error_response("请先完成已打开的 Windows 文件窗口。", status_code=409)
+        async with self.file_dialog_lock:
+            try:
+                root = await asyncio.to_thread(self.input_library.root)
+                result = await asyncio.to_thread(
+                    subprocess.run,
+                    [sys.executable, "-I", "-X", "utf8", "-c", INPUT_FILE_DIALOG, str(root)],
+                    capture_output=True, encoding="utf-8", check=True, timeout=120,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                )
+                selected = result.stdout.rstrip("\r\n")
+                if not selected:
+                    return json_response({"cancelled": True})
+                path = Path(selected)
+                if not path.is_relative_to(root):
+                    raise WorkflowError("请在 ComfyUI input 目录内选择图片。")
+                identity = path.relative_to(root).as_posix()
+                await asyncio.to_thread(self.input_library.read_image, identity)
+                return json_response({"id": identity})
+            except subprocess.TimeoutExpired:
+                return error_response("Windows 文件选择超时，请重新打开。", status_code=408)
+            except (InputUnavailable, OSError, subprocess.CalledProcessError):
+                return error_response("Windows 文件窗口不可用，请使用网页预览选图。", status_code=503)
+            except WorkflowError as exc:
+                return error_response(str(exc), status_code=400)
 
     async def input_preview(self):
         if not request.username:

@@ -6,7 +6,7 @@
 - 基线已有从 `docs/` 到 `user docs/` 的用户文档迁移差异。保留迁移原状，新的 `docs/` 存放项目分析。ComfyUI 检出为 detached HEAD，已有 `run.bat` 与 `script_examples/wan22_astrbot_client.py` 未跟踪。
 - 新增 `workflow`、`backend`、`frontend`、`data`、`reviewer` 五个项目角色。Architect 由主会话承担，同时最多四个子 Agent。Reviewer 仅做只读检查。
 - 六个 TOML 文件通过语法检查。本机 Codex 严格配置读取确认项目可信且项目层启用 Agents，并发上限为 4。
-- 本机 Codex 分两批实际启动五个项目角色，全部依据各自收到的源码片段返回了正确结果。独立命令行进程的 Windows 文件读取组件报错，因此本次运行验证覆盖角色加载、派工和回传，桌面会话中的直接读文件可按 [开发规则](development_rules.md) 复验。
+- 当时本机 Codex 分两批实际启动五个项目角色，全部依据各自收到的源码片段返回了正确结果。独立命令行进程的 Windows 文件读取组件报错，当时的运行验证覆盖角色加载、派工和回传。
 - 当前检出未见 README 所述的 `tests/`。本轮只写入 Agent 配置、维护指南和项目分析文档。业务测试、ComfyUI 生成、QQ 投递、运行图同步及发布留待获批任务。
 
 ## 2026-11-16 需求调查与开发计划
@@ -28,3 +28,13 @@
 - 阶段 3 完成桌面与手机共用的「新建任务」、V40 与 Anima T2I 独立单次 ControlNet 输入，以及控制图集和配对独立评分。隔离 ComfyUI 完成 V40 固定种子的无控制/Canny 对照，另用插件队列真实生成双 LoRA 图，验证全部匹配与控制图独立评价。OpenPose、LLLite 和 Detailer 分支完成自动构图检查，未做各自实际生成。
 - 阶段 4 支持网页分类、分组与字段布局，首次导入生成依赖顺序，已保存布局保留。Chromium 桌面鼠标和手机尺寸模拟触摸拖拽通过，参数输入的未保存值保留。发布候选使用 Minor v2.25.0，Git Commit Message 为 `feat: add ControlNet task creation and configurable workflow layouts`。当前生产安装、真实手机与 QQ 投递待验证。
 - 最终 29 项回归测试全部通过。发布 ZIP 在真实 AstrBot 4.29.4 的隔离目录加载了 11 条工作流和 58 条 Web 路由。Ruff、JavaScript 语法和 Git 差异检查通过。两个仓库的提交指针保持原值。
+
+## 切换为单 Agent
+
+- 应用户要求，项目关闭子 Agent。当前会话负责调查、实现、审查和交付，历史角色配置和开发记录保留供查阅。
+
+## v2.25.1 · ControlNet 选图
+
+- 增加 ControlNet 选框和操作按钮之间的间距。「浏览 ComfyUI input」在 Windows 主机打开文件选择窗口，初始目录为已配置的 ComfyUI input。手机发起该操作时由 Windows 主机完成选图。当前设备可用「网页预览」查看目录内缩略图，也可用「上传本地图片」打开本机文件选择器。
+- 29 项回归测试通过。安装包在隔离 AstrBot 实例加载了 11 条工作流和 59 条 Web 路由。选图接口使用模拟 Windows 窗口结果验证了登录限制、目录限制、选中和取消。Chromium 在 1100px 和 360px 宽度下验证了间距、两种选择入口和目录内缩略图。实际 Windows 选图操作、真机手机和运行实例更新待验证。
+- Git Commit Message 为 `fix: use Windows file picker for ControlNet inputs`。

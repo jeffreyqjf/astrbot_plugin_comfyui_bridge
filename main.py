@@ -286,6 +286,7 @@ class ComfyUIBridge(Star):
             ("studio/queue/cancel-all", self.studio.cancel_all, "POST"),
             ("studio/input", self.studio.input_entries, "GET"),
             ("studio/input/preview", self.studio.input_preview, "GET"),
+            ("studio/input/pick", self.studio.pick_input_file, "POST"),
             ("studio/control-assets", self.studio.control_assets, "GET"),
             ("studio/control-assets", self.studio.rate_control_asset, "POST"),
             ("studio/control-assets/preview", self.studio.control_asset_preview, "GET"),
