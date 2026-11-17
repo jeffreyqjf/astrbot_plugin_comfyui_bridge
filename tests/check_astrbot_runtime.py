@@ -11,6 +11,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from subprocess import CompletedProcess
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 from unittest.mock import patch
 from zipfile import ZipFile
 
@@ -248,6 +249,14 @@ async def check(root, archive, core):
     module = importlib.import_module(f"data.plugins.{PLUGIN}.main")
     plugin = plugins / PLUGIN
     assert Path(module.__file__).is_relative_to(plugin)
+    from astrbot.dashboard.services.plugin_page_service import PluginPageService
+
+    page_service = PluginPageService(SimpleNamespace(plugin_store_path=plugins))
+    pages = await page_service.discover_plugin_pages(SimpleNamespace(root_dir_name=PLUGIN, reserved=False))
+    assert [page.name for page in pages] == ["workbench"]
+    remote_studio = importlib.import_module(f"data.plugins.{PLUGIN}.bridge.studio.remote_studio")
+    assert remote_studio.VIEW == plugin / "views" / "workbench"
+    assert all((remote_studio.VIEW / asset).is_file() for asset in remote_studio.ASSETS)
     schema = json.loads((plugin / "_conf_schema.json").read_text(encoding="utf-8"))
     config = module.AstrBotConfig(config_path=str(root / "plugin-config.json"), schema=schema)
     for key, value in {"anima_workspace": str(root), "remote_studio_enabled": False}.items():

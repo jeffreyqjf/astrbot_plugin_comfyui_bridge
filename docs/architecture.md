@@ -5,7 +5,7 @@ AstrBot ComfyUI Bridge 将 QQ 和网页创作工作台的请求转换成 ComfyUI
 | 层 | 入口 | 职责 |
 | --- | --- | --- |
 | QQ 与 AstrBot 工具 | `main.py`、`bridge/qq/` | 指令、权限、会话选择、引用图和结果投递 |
-| 工作台 | `views/anima/`、`bridge/studio/` | 内嵌与远程工作台、任务表单、参数保存、媒体和预设 |
+| 工作台 | `views/workbench/`、`bridge/studio/` | 内嵌与远程工作台、任务表单、参数保存、媒体和预设 |
 | 任务服务 | `bridge/service.py` | 准备工作流、并发、超时、状态、取消、输出与追溯 |
 | 工作流适配 | `bridge/workflows/`、`workflows/` | 选择图、节点映射、分支、参数覆盖、API 图与配置 |
 | ComfyUI 客户端 | `bridge/client.py` | 节点 schema、上传、提交、轮询、取消和下载 |

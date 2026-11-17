@@ -38,7 +38,7 @@
 | 3 · 新建任务与双图评价 | BE-02 → FE-02；BE-02、BE-04 → FE-03 | 桌面和手机候选通过直用、预处理与独立评分 |
 | 4 · 布局与发布 | WF-03 → BE-03 → FE-04；FE-05 人工整理；REL-01 | 布局防覆写、安装包和发布验证。REL-01 的审查与测试贯穿各阶段 |
 
-Backend 唯一写入 main.py、bridge/service.py、bridge/client.py、bridge/qq、bridge/studio。Workflow 唯一写入 bridge/workflows、工作流模板、随包 API 和获批的 AstrBot 画布及导出。Data 负责 image_archive.py 及管理索引。Frontend 负责 views/anima。Architect 负责治理、打包、版本、接口和文档协调。Reviewer 只读独立审查。不同任务触及同一文件时由该角色串行集成。获批后记录 worktree 基线和文件清单，独立写入线用 codex/任务 分支。当前未提交的用户文档迁移和 Agent 配置需保留。
+Backend 唯一写入 main.py、bridge/service.py、bridge/client.py、bridge/qq、bridge/studio。Workflow 唯一写入 bridge/workflows、工作流模板、随包 API 和获批的 AstrBot 画布及导出。Data 负责 image_archive.py 及管理索引。Frontend 负责 views/workbench。Architect 负责治理、打包、版本、接口和文档协调。Reviewer 只读独立审查。不同任务触及同一文件时由该角色串行集成。获批后记录 worktree 基线和文件清单，独立写入线用 codex/任务 分支。当前未提交的用户文档迁移和 Agent 配置需保留。
 
 ## 开发任务
 
@@ -57,7 +57,7 @@ Backend 唯一写入 main.py、bridge/service.py、bridge/client.py、bridge/qq�
 ### FE-01 · 评价预览箭头与页码
 
 - **来源、阶段与负责人** · 图片评价导航。阶段 1，Frontend；Data 提供统计，Backend 暴露字段。
-- **文件与方案** · views/anima/image_review.js、index.html、style.css，bridge/image_archive.py、bridge/studio/studio_settings.py。待评和图库的预览都添前后箭头、当前与附近页、页码直达。图库回传总量和页大小，待评按任务分页。旧接口请求省略页码时保留原待评列表行为。
+- **文件与方案** · views/workbench/image_review.js、index.html、style.css，bridge/image_archive.py、bridge/studio/studio_settings.py。待评和图库的预览都添前后箭头、当前与附近页、页码直达。图库回传总量和页大小，待评按任务分页。旧接口请求省略页码时保留原待评列表行为。
 - **依赖、风险与验收** · 依赖现有图库 ID 和排序。处理刷新、跨页、快速切页、评价后条目移除及尾页回退。桌面、手机和键盘可达，预设只读预览继续工作。
 
 ### DATA-01 · 多 LoRA 端到端核对
@@ -105,7 +105,7 @@ Backend 唯一写入 main.py、bridge/service.py、bridge/client.py、bridge/qq�
 ### FE-02 · 独立创建页及 input 选图
 
 - **来源、阶段与负责人** · 手机和桌面独立新建任务。阶段 3，Frontend。
-- **文件与方案** · views/anima/index.html、app.js、style.css、image_review.js、remote.js。保留结构化和命令表单、账号、预设、模板、上传、收藏及遮罩，拆开队列轮询与创建状态。复用树浏览、面包屑和预览。依据后端 capability 展示分支开关、类型和已处理/预处理，切换工作流清除旧参数。
+- **文件与方案** · views/workbench/index.html、app.js、style.css、image_review.js、remote.js。保留结构化和命令表单、账号、预设、模板、上传、收藏及遮罩，拆开队列轮询与创建状态。复用树浏览、面包屑和预览。依据后端 capability 展示分支开关、类型和已处理/预处理，切换工作流清除旧参数。
 - **依赖、风险与验收** · 依赖 BE-01、BE-02。兼容现有手机命令 multipart 和 JSON，遮罩可见性与数量上限不回归。桌面和手机验证选择、错误、触摸布局、提交后回队列。手机远程实例需要获准启用或另用隔离环境。
 
 ### BE-04 · 控制图列表、预览和评价接口
@@ -117,7 +117,7 @@ Backend 唯一写入 main.py、bridge/service.py、bridge/client.py、bridge/qq�
 ### FE-03 · 控制图图集与配对评价
 
 - **来源、阶段与负责人** · 新图标识、配对预览和控制图状态管理。阶段 3，Frontend；Backend 提供路由，Data 提供状态。
-- **文件与方案** · views/anima/image_review.js、index.html、app.js、style.css。新产物在待评图卡标识。生成图与对应控制图同一弹窗，桌面并排、手机上下，独立状态与评价，每分支独立呈现。my_input 的三个状态可浏览、预览、切换和用于后续任务。
+- **文件与方案** · views/workbench/image_review.js、index.html、app.js、style.css。新产物在待评图卡标识。生成图与对应控制图同一弹窗，桌面并排、手机上下，独立状态与评价，每分支独立呈现。my_input 的三个状态可浏览、预览、切换和用于后续任务。
 - **依赖、风险与验收** · 依赖 FE-01、DATA-02、BE-02、BE-04。旧控制图复用不亮新标。评分一方不能级联另一方，共用资产状态一致，预览缺一方保留另一方。验证分页、刷新、重复评价和手机交互。
 
 ### WF-03 · 首次布局的字段发现与依赖排序
@@ -135,13 +135,13 @@ Backend 唯一写入 main.py、bridge/service.py、bridge/client.py、bridge/qq�
 ### FE-04 · 展示新工作流布局
 
 - **来源、阶段与负责人** · 自动发现后的可编辑展示。阶段 4，Frontend。
-- **文件与方案** · views/anima/app.js、index.html、style.css。复用字段控件、搜索和旁路显隐，按持久顺序渲染。首发按维护配置手调。若批准网页拖拽，则增加有版本检查的显式保存。
+- **文件与方案** · views/workbench/app.js、index.html、style.css。复用字段控件、搜索和旁路显隐，按持久顺序渲染。首发按维护配置手调。若批准网页拖拽，则增加有版本检查的显式保存。
 - **依赖、风险与验收** · 依赖 WF-03、BE-03。验证专用优先表不会重排新布局，失效字段可忽略，保存错误可见，手机无溢出。人工微调后刷新、重启、重导均保留。
 
 ### FE-05 · 人工整理已有工作流参数
 
 - **来源、阶段与负责人** · 插件优化。阶段 4，Frontend，Backend 负责服务端专用分组。
-- **文件与方案** · views/anima/app.js、style.css、bridge/studio/studio_settings.py。现有工作流按模型、文本/参考、采样、局部修复、放大/滤镜及输出人工微调。范围为网页参数布局。Anima 画布分支成员依赖坐标与组边界，若以后调整画布位置需另校验组成员及 API。
+- **文件与方案** · views/workbench/app.js、style.css、bridge/studio/studio_settings.py。现有工作流按模型、文本/参考、采样、局部修复、放大/滤镜及输出人工微调。范围为网页参数布局。Anima 画布分支成员依赖坐标与组边界，若以后调整画布位置需另校验组成员及 API。
 - **依赖、风险与验收** · 不依赖自动生成旧布局，与 FE-04 串行集成共享文件。逐工作流验收参数值、搜索、开关、模型候选和执行图，手机分组可读。
 
 ### REL-01 · 集成、测试和发布

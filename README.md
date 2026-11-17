@@ -1,6 +1,6 @@
 # ComfyUI 工作台
 
-AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、图像反推、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v2.29.0。
+AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、图像反推、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v2.29.1。
 
 ## 安装和上手
 
@@ -157,7 +157,7 @@ QQ 可附图或回复图片并发送 `/comfy gen --wf detailer detailed face --r
 
 ## 开发与验证
 
-插件入口为 `main.py`。内部代码在 [bridge/](bridge/)，其中 `workflows/` 管理工作流，`qq/` 处理 QQ 指令和消息，`studio/` 提供网页工作台。使用文档在 [user docs/](user%20docs/)，页面资源在 [views/](views/)。
+插件入口为 `main.py`。内部代码在 [bridge/](bridge/)，其中 `workflows/` 管理工作流，`qq/` 处理 QQ 指令和消息，`studio/` 提供网页工作台。使用文档在 [user docs/](user%20docs/)，页面资源在 [views/workbench/](views/workbench/)。
 
 - 生成安装 ZIP：`python build_zip.py`。
 - 回归测试使用 `python -m unittest discover -s tests`。

@@ -338,7 +338,7 @@ WAI 默认线稿型 Union ControlNet 的输入先做 Canny 边缘检测。选中
 
 工作流、归档、绘图人格、LoRA 和提示词预设的保存内容位于插件数据目录。对应文件是 `workflows/*.json`、`image_archive.json`、`drawing_persona.txt`、`lora_order.json`、`prompt_presets/`。QQ 工作流选择和 Anima 会话覆盖分别保存在 `selections.json` 和 `anima_state.json`。近期任务与待用 LoRA 保存在内存里，重载后会重新开始。保存或校验失败时，工作台会在页面浮出错误提示。
 
-[工作台表单](../views/anima/index.html) · [工作台代码](../views/anima/app.js) · [设置存取](../bridge/studio/studio_settings.py)
+[工作台表单](../views/workbench/index.html) · [工作台代码](../views/workbench/app.js) · [设置存取](../bridge/studio/studio_settings.py)
 
 生成任务的完整提交图和执行追溯记录保存在插件数据目录的 `generation_metadata/<完整任务ID>.json`，包含实际提示词、种子、模型、LoRA、参考图校验值和 ComfyUI 输出信息。支持嵌入的输出格式还会写入任务信息。QQ 转发压缩可能剥离内嵌字段，本机 JSON 可继续追溯。
 

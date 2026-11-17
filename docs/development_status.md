@@ -68,3 +68,8 @@
 - 生成图和控制图的原图预览提供小型下载按钮。「导入导出」可分别打包生成图和控制图的收藏、Pass、待评价状态，ZIP 包含全部原图，生成图保留其目录结构。
 - 29 项回归测试通过。隔离 AstrBot 加载 11 条工作流和 62 条路由，并核对六类 ZIP 的文件清单、原图字节、权限和空图集响应。Chromium 在 360px 和 1100px 宽度下通过下载按钮与导出请求检查。运行实例待更新。
 - Git Commit Message 为 `feat: add original image downloads and gallery ZIP exports`。
+
+## v2.29.1 · 工作台目录更名
+
+- 页面资源移至 `views/workbench/`，同步更新远程工作台路径、打包清单和文档。隔离 AstrBot 发现 `workbench` 内嵌页面，远程工作台的全部资源已核对。
+- Git Commit Message 为 `fix: rename the plugin view to workbench`。

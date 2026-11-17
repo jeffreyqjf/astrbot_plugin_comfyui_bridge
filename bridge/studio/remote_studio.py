@@ -18,7 +18,7 @@ from .mask_image import reference_body_limit
 from .studio_settings import COMMAND_IMPORT_LIMIT
 
 ASSETS = ("style.css", "app.js", "image_review.js", "remote.js", "prompt_library.js", "mask_editor.js", "videos.js")
-VIEW = PACKAGE_ROOT / "views" / "anima"
+VIEW = PACKAGE_ROOT / "views" / "workbench"
 API_PATHS = frozenset({
     "studio", "studio/navigation-order", "studio/workflow", "studio/workflow/layout",
     "studio/presets", "studio/presets/accounts",
