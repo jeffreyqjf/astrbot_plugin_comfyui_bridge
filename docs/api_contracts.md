@@ -15,6 +15,7 @@
 | `GET studio/images` | `state` 默认 `unevaluate`，图库用 `favourite` 或 `pass`。可传 `rating`、JSON `filters`、`facets=1` 或 `lora_match=all`。页码 `page` 从 1 开始，待评按任务计数，图库按图片计数 |
 | `POST studio/images`、`POST studio/images/delete` | JSON 提供 `id` 和 `state`。评价的可选 `source` 默认 `unevaluate` |
 | `GET studio/images/file` | 通过 `id` 和可选 `state` 读取图片，`original=1` 取原图。响应数据含 `src` |
+| `GET studio/images/export` | 登录后选择 `kind=images`（生成及手动归档图）或 `kind=controls`，并传 `state=favourite`、`pass` 或对应的待评价状态（`unevaluate`／`unevaluated`）。以附件返回该状态全部原图 ZIP，空图集返回 400 |
 | `POST studio/images/thumbnails` | 补齐图库缩略图 |
 | `GET/POST studio/workflow` | 查询和保存工作流参数 |
 | `POST studio/workflow/layout` | 传工作流名、当前 `revision` 和版本化 `parameter_layout`，成功后返回更新的版本和布局 |

@@ -62,3 +62,9 @@
 
 - 缩短页码下拉框，上一页、页码和下一页保持在同一行。Chromium 在 320、360、760 和 1100 像素宽度下通过布局检查。
 - Git Commit Message 为 `fix: keep prompt preset pagination on one line`。
+
+## v2.29.0 · 图集下载与导出
+
+- 生成图和控制图的原图预览提供小型下载按钮。「导入导出」可分别打包生成图和控制图的收藏、Pass、待评价状态，ZIP 包含全部原图，生成图保留其目录结构。
+- 29 项回归测试通过。隔离 AstrBot 加载 11 条工作流和 62 条路由，并核对六类 ZIP 的文件清单、原图字节、权限和空图集响应。Chromium 在 360px 和 1100px 宽度下通过下载按钮与导出请求检查。运行实例待更新。
+- Git Commit Message 为 `feat: add original image downloads and gallery ZIP exports`。

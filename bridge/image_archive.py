@@ -733,6 +733,24 @@ class ImageReviews:
                     counts["failed"] += 1
         return counts
 
+    def write_gallery_zip(self, state, archive):
+        if state not in REVIEW_STATES:
+            raise WorkflowError("请选择有效的图片图集。")
+        with self.lock:
+            paths = {
+                path
+                for record in self._records(state) for _, path in self._files(record, state)
+            }
+            paths.update(path for _, _, path in self._manual_files(state))
+        root = self._path(state)
+        for path in sorted(paths):
+            relative = path.relative_to(root).as_posix()
+            with self.lock:
+                source = self._path(f"{state}/{relative}")
+                if source.suffix.lower() not in IMAGE_TYPES or UNSAFE_MANUAL_PATH.search(relative) or not source.is_file():
+                    raise WorkflowError("图集文件已变动或不可读取，请刷新后重新导出。")
+                archive.write(source, relative)
+
     def read(self, image_id, original, limit, *, state=None):
         with self.lock:
             digest = None

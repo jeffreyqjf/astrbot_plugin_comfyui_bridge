@@ -375,6 +375,8 @@ button.order-name { border-color: transparent; background: transparent; text-ali
   display: block; max-width: 100%; max-height: 65dvh; margin: 0 auto 8px; object-fit: contain;
 }
 .control-preview-card h3 { margin: 0 0 4px; }
+.control-preview-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+button.image-download { min-width: 36px; padding: 4px 8px; font-size: 16px; line-height: 1.4; }
 .control-preview-card p:empty { display: none; }
 .control-preview-card [aria-pressed=true] { opacity: 1; color: var(--accent); background: var(--tint); }
 .has-control-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }

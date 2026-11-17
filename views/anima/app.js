@@ -2940,6 +2940,22 @@ get("export-workflows").addEventListener("click", async () => {
   }
 });
 
+get("export-gallery").addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  const selection = get("export-gallery-selection");
+  const [kind, state] = selection.value.split("/");
+  button.disabled = selection.disabled = true;
+  message("正在打包图集原图…");
+  try {
+    await bridge.download("studio/images/export", { kind, state }, `astrbot-${kind}-${state}.zip`);
+    completed("已交给浏览器下载图集 ZIP。");
+  } catch (error) {
+    message(error.message, true);
+  } finally {
+    button.disabled = selection.disabled = false;
+  }
+});
+
 get("open-workflow-directory").addEventListener("click", async () => {
   const button = get("open-workflow-directory");
   button.disabled = true;

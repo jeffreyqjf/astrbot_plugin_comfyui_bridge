@@ -401,6 +401,24 @@
             <small class="section-note">按模型文件的 SHA-256 合并，同一哈希以导入词为准。缺少对应模型的记录也会保留。</small>
             <input type="file" id="lora-tags-file" accept=".json,application/json" hidden>
           </section>
+          <section>
+            <h2>图集</h2>
+            <label class="field">要导出的图集
+              <select id="export-gallery-selection">
+                <optgroup label="生成图">
+                  <option value="images/favourite">收藏图集</option>
+                  <option value="images/pass">Pass 图集</option>
+                  <option value="images/unevaluate">待评价图片</option>
+                </optgroup>
+                <optgroup label="控制图">
+                  <option value="controls/favourite">收藏控制图</option>
+                  <option value="controls/pass">Pass 控制图</option>
+                  <option value="controls/unevaluated">待评价控制图</option>
+                </optgroup>
+              </select>
+            </label>
+            <footer><button type="button" id="export-gallery">导出原图 ZIP</button></footer>
+          </section>
         </div>
         <div id="image-review" hidden>
           <div class="panel-heading">
@@ -496,6 +514,7 @@
           <div class="panel-heading">
             <h2 id="image-original-title">原图</h2>
             <div class="row-actions">
+              <button type="button" id="image-original-download" class="image-download" aria-label="下载原图" title="下载原图" hidden>↓</button>
               <button type="button" id="image-original-favourite" class="primary" hidden>收藏</button>
               <button type="button" id="image-original-pass" hidden>跳过</button>
               <button type="button" id="image-original-move" hidden></button>

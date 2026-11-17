@@ -12,8 +12,10 @@ import sys
 import uuid
 from contextlib import nullcontext
 from pathlib import Path
+from tempfile import TemporaryFile
 from time import monotonic
 from urllib.parse import urlsplit
+from zipfile import ZipFile
 
 from astrbot.api.web import error_response, json_response, request, stream_response
 
@@ -1701,6 +1703,44 @@ class StudioSettings:
             return json_response(result)
         except (OSError, ValueError) as exc:
             return error_response(str(exc), status_code=400)
+
+    def _gallery_zip(self, kind, state):
+        source = self.service.image_reviews if kind == "images" else self._control_archive()
+        output = TemporaryFile()
+        try:
+            with ZipFile(output, "w") as archive:
+                source.write_gallery_zip(state, archive)
+                if not archive.filelist:
+                    raise WorkflowError("所选图集暂无图片。")
+            size = output.tell()
+            output.seek(0)
+            return output, size
+        except BaseException:
+            output.close()
+            raise
+
+    async def export_gallery(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        kind, state = request.query.get("kind"), request.query.get("state")
+        if kind not in {"images", "controls"}:
+            return error_response("请选择要导出的图集。", status_code=400)
+        try:
+            output, size = await asyncio.to_thread(self._gallery_zip, kind, state)
+        except InputUnavailable as exc:
+            return error_response(str(exc), status_code=503)
+        except (OSError, ValueError) as exc:
+            return error_response(str(exc), status_code=400)
+
+        def chunks():
+            with output:
+                yield from iter(lambda: output.read(1024 * 1024), b"")
+
+        return stream_response(chunks(), content_type="application/zip", headers={
+            "Content-Disposition": f'attachment; filename="astrbot-{kind}-{state}.zip"',
+            "Content-Length": str(size),
+            "Cache-Control": "no-store",
+        })
 
     async def image_file(self):
         if not request.username:

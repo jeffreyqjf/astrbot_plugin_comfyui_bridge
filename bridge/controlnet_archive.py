@@ -293,29 +293,44 @@ class ControlNetArchive:
         if state not in STATES or type(page) is not int or page < 1 or type(size) is not int or not 1 <= size <= 100:
             raise WorkflowError("控制图状态或页码无效。")
         with self.lock:
-            rows = []
-            try:
-                info = _direct_stat(self.index)
-            except FileNotFoundError:
-                info = None
-            if info is not None:
-                if not stat.S_ISDIR(info.st_mode):
-                    raise WorkflowError("控制图归档位置不是目录。")
-                for path in self.index.iterdir():
-                    if path.suffix != ".json" or not ASSET_ID.fullmatch(path.stem):
-                        continue
-                    try:
-                        row = self._record(path.stem)
-                        if row is not None and row["state"] == state:
-                            _file_stat(self._media(row))
-                            rows.append(row)
-                    except (OSError, WorkflowError):
-                        continue
+            rows = list(self._gallery_rows(state))
             rows.sort(key=lambda row: (-row["created"], row["asset_id"]))
             start = (page - 1) * size
             end = start + size
             return {"assets": [_public(row) for row in rows[start:end]], "total": len(rows),
                     "page": page, "page_size": size, "has_more": len(rows) > end}
+
+    def _gallery_rows(self, state):
+        try:
+            info = _direct_stat(self.index)
+        except FileNotFoundError:
+            return
+        if not stat.S_ISDIR(info.st_mode):
+            raise WorkflowError("控制图归档位置不是目录。")
+        for path in self.index.iterdir():
+            if path.suffix != ".json" or not ASSET_ID.fullmatch(path.stem):
+                continue
+            try:
+                row = self._record(path.stem)
+                if row is not None and row["state"] == state:
+                    _file_stat(self._media(row))
+                    yield row
+            except (OSError, WorkflowError):
+                continue
+
+    def write_gallery_zip(self, state, archive):
+        if state not in STATES:
+            raise WorkflowError("请选择有效的控制图状态。")
+        with self.lock:
+            rows = list(self._gallery_rows(state))
+        for row in rows:
+            with self.lock:
+                current = self._lookup(row["asset_id"])
+                if current["state"] != state:
+                    raise WorkflowError("控制图集已有变动，请刷新后重新导出。")
+                path = self._media(current)
+                data, _ = self._read_media(current, path)
+            archive.writestr(path.name, data)
 
     def _write_record(self, row):
         _publish(self._index_path(row["asset_id"]), profile_bytes(row), replace=True)

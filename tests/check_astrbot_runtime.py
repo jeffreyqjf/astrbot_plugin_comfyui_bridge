@@ -182,6 +182,62 @@ async def check_command_controls(instance, root, name, call, run):
         run.assert_not_called()
 
 
+async def check_gallery_export(instance, root):
+    from astrbot.api.web import PluginRequest, bind_request_context
+    from PIL import Image
+    from starlette.requests import Request
+
+    result = io.BytesIO()
+    Image.new("RGB", (2, 2)).save(result, "PNG")
+    pixels = result.getvalue()
+    reviews = instance.service.image_reviews
+    for state in ("favourite", "pass", "unevaluate"):
+        file = reviews.root / state / "NSFW" / "自定义" / "原图.png"
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_bytes(pixels)
+    source = root / "original.png"
+    source.write_bytes(pixels)
+    job = "a" * 32
+    reviews.remember(job, "test", "test", "SFW", [source], [None])
+    reviews.rate(f"{job}:1", "favourite")
+    control_archive = instance.studio._control_archive()
+    control_files = {}
+    for index, state in enumerate(("favourite", "pass", "unevaluated")):
+        control = control_archive.record(job, "any", index, pixels, control_type="canny")
+        asset_id = control["asset_id"]
+        if state != "unevaluated":
+            control_archive.rate(asset_id, state)
+        control_files[state] = f"{asset_id}.png"
+
+    async def export(kind, state, username="test"):
+        route = "studio/images/export"
+        incoming = Request({
+            "type": "http", "method": "GET", "path": f"/api/{route}", "headers": [],
+            "query_string": f"kind={kind}&state={state}".encode(),
+        })
+        with bind_request_context(PluginRequest(incoming, username=username)):
+            return await instance.remote_studio.routes["GET", route]()
+
+    for kind, states in (("images", ("favourite", "pass", "unevaluate")), ("controls", control_files)):
+        for state in states:
+            response = await export(kind, state)
+            assert response.status_code == 200, getattr(response, "body", "")
+            payload = b"".join([chunk async for chunk in response.body_iterator])
+            assert len(payload) == int(response.headers["content-length"])
+            assert response.headers["content-disposition"] == f'attachment; filename="astrbot-{kind}-{state}.zip"'
+            expected = {control_files[state]} if kind == "controls" else {"NSFW/自定义/原图.png"}
+            if kind == "images" and state == "favourite":
+                expected.add(f"SFW/{job}/0001.png")
+            with ZipFile(io.BytesIO(payload)) as archive:
+                assert set(archive.namelist()) == expected
+                assert all(archive.read(name) == pixels for name in expected)
+    assert (await export("images", "favourite", username=None)).status_code == 401
+    assert (await export("images", "..")).status_code == 400
+    assert (await export("invalid", "favourite")).status_code == 400
+    (reviews.root / "pass" / "NSFW" / "自定义" / "原图.png").unlink()
+    assert (await export("images", "pass")).status_code == 400
+
+
 async def check(root, archive, core):
     os.environ["ASTRBOT_ROOT"] = str(root)
     plugins = root / "data" / "plugins"
@@ -214,6 +270,8 @@ async def check(root, archive, core):
         await check_input_picker(instance, root)
         assert ("GET", f"/{PLUGIN}/studio/queue/loras") in context.routes
         await check_queue_loras(instance, root, module.ADVANCED_V40_WORKFLOW)
+        assert ("GET", f"/{PLUGIN}/studio/images/export") in context.routes
+        await check_gallery_export(instance, root)
         print(f"Loaded {len(service.workflows)} workflows and {len(context.routes)} web routes.")
     finally:
         await instance.terminate()

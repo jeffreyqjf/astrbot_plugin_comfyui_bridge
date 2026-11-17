@@ -15,6 +15,7 @@ export function mountImageReviews({
   const original = get("image-original-file");
   const originalStatus = get("image-original-status");
   const moveOriginal = get("image-original-move");
+  const downloadOriginal = get("image-original-download");
   const favouriteOriginal = get("image-original-favourite");
   const passOriginal = get("image-original-pass");
   const originalNav = get("image-original-navigation");
@@ -607,12 +608,29 @@ export function mountImageReviews({
     }
   }
 
+  function downloadImage(src, name, button) {
+    const format = /^data:image\/(png|jpeg|webp|gif);base64,/.exec(src)?.[1];
+    if (!format) return;
+    const extension = format === "jpeg" ? "jpg" : format;
+    const filename = name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_");
+    const stem = filename.replace(/\.(?:png|jpe?g|webp|gif)$/i, "").slice(0, 160);
+    const link = document.createElement("a");
+    link.href = src;
+    link.download = `${stem || "image"}.${extension}`;
+    button.closest("dialog").append(link);
+    link.click();
+    link.remove();
+  }
+
   async function showControlAsset(link, container, isCurrent) {
     const id = controlAssetId(link);
     const frame = document.createElement("article");
     frame.className = "control-preview-card";
     const title = document.createElement("h3");
     title.textContent = controlAssetTitle(link);
+    const heading = document.createElement("div");
+    heading.className = "control-preview-heading";
+    heading.append(title);
     const image = document.createElement("img");
     image.hidden = true;
     image.alt = title.textContent;
@@ -622,7 +640,7 @@ export function mountImageReviews({
     status.textContent = "正在读取控制图…";
     const actions = document.createElement("div");
     actions.className = "row-actions";
-    frame.append(title, state, status, image, actions);
+    frame.append(heading, state, status, image, actions);
     container.append(frame);
     const visible = () => isCurrent() && container.contains(frame);
 
@@ -640,6 +658,14 @@ export function mountImageReviews({
       if (!visible()) return;
       image.src = src;
       image.hidden = false;
+      const download = document.createElement("button");
+      download.type = "button";
+      download.className = "image-download";
+      download.textContent = "↓";
+      download.title = "下载控制图原图";
+      download.setAttribute("aria-label", download.title);
+      download.addEventListener("click", () => downloadImage(src, `control-${id}`, download));
+      heading.append(download);
       status.textContent = "";
       for (const [target, label] of Object.entries(controlStates)) {
         const button = document.createElement("button");
@@ -683,6 +709,7 @@ export function mountImageReviews({
   function renderOriginalControls() {
     if (!openedImage) return;
     const { item, state, list, loading, reviewing, readOnly } = openedImage;
+    downloadOriginal.hidden = loading || original.hidden;
     moveOriginal.hidden = readOnly || state === "unevaluate";
     favouriteOriginal.hidden = passOriginal.hidden = readOnly || state !== "unevaluate";
     const busy = reviewing || Boolean(list?.navigating);
@@ -1081,6 +1108,12 @@ export function mountImageReviews({
   favouriteOriginal.addEventListener("click", () => reviewOriginal("favourite"));
   passOriginal.addEventListener("click", () => reviewOriginal("pass"));
   moveOriginal.addEventListener("click", () => reviewOriginal(openedImage?.state === "pass" ? "favourite" : "pass"));
+  downloadOriginal.addEventListener("click", () => {
+    if (openedImage && !original.hidden) {
+      const { item } = openedImage;
+      downloadImage(original.src, item.name || item.id, downloadOriginal);
+    }
+  });
   originalPrev.addEventListener("click", () => stepOriginal(-1));
   originalNext.addEventListener("click", () => stepOriginal(1));
   dialog.addEventListener("keydown", (event) => {
