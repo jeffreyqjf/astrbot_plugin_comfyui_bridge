@@ -1,10 +1,19 @@
 import { controlBranchTitle, controlTypeTitle, mountImageReviews, setTaskImagePreview } from "./image_review.js";
 import { mountPromptLibrary } from "./prompt_library.js";
 import { mountVideos } from "./videos.js";
+import { mountH3Media } from "./h3_media.js";
 
 const remote = !window.AstrBotPluginView;
 const bridge = window.AstrBotPluginView || (await import("./remote.js")).bridge;
 const get = (id) => document.getElementById(id);
+const h3Media = mountH3Media({
+  bridge, host: get("queue-h3-media"),
+  status: (text, error = false) => {
+    const target = get("h3-media-status");
+    target.textContent = text;
+    target.classList.toggle("error", error);
+  },
+});
 const kinds = { auto_image: "文生图 / 图生图", text_to_image: "文生图", image_to_image: "图生图", text_to_video: "文生视频", image_to_video: "图生视频", image_to_text: "图片反推" };
 const loraCategories = { C: "人物", S: "风格", O: "其他" };
 const waiWorkflow = "WAI-Illustrious_T2I_AstrBot";
@@ -12,6 +21,7 @@ const detailerWorkflow = "Detailer_V40_AstrBot";
 const advancedV40 = "Advanced_Gemma_V40_AstrBot";
 const sviWorkflow = "WAN22_SVI_I2V_AstrBot";
 const lightningWorkflow = "WAN22_Lightning_Long_I2V_AstrBot";
+const h3FullWorkflow = "MiniMax_H3_Seed_Hunter_V3_AstrBot";
 const names = {
   Anima_T2I_AstrBot: "Anima T2I",
   [waiWorkflow]: "WAI-Illustrious T2I",
@@ -2314,6 +2324,7 @@ function scheduleCommandControls() {
 
 queueCommand.addEventListener("input", scheduleCommandControls);
 function queueUsesReference(name) {
+  if (name === h3FullWorkflow) return false;
   return name === detailerWorkflow
     || studio?.workflows.find((workflow) => workflow.name === name)?.supports_reference
     || (name === advancedV40 && studio?.workflows.find((workflow) => workflow.name === name)?.image_inputs?.length);
@@ -2335,6 +2346,9 @@ function renderTaskControlnets(selectedName = queueWorkflow.value) {
   const controls = get("queue-controlnets");
   const reference = get("queue-reference");
   const position = form.contains(reference) && !reference.hidden ? reference : form.querySelector("footer");
+  position.before(get("queue-h3-media"));
+  h3Media.show(selectedName);
+  if (selectedName === h3FullWorkflow) reference.hidden = true;
   if (controls.nextElementSibling !== position) position.before(controls);
   if (selectedName === taskControlWorkflow) return;
   taskControlWorkflow = selectedName;
@@ -2729,11 +2743,12 @@ get("queue-form").addEventListener("submit", (event) => {
     if (queueLoraMode.value === "sweep") data.lora_sweep = true;
   }
   changeQueue("studio/queue", async () => {
-    const [reference, controlnets] = await Promise.all([
+    const [reference, controlnets, media] = await Promise.all([
       queueUsesReference(workflow) ? queueReferencePayload() : {},
       queueControlnetPayload(),
+      h3Media.payload(),
     ]);
-    return { ...data, ...reference, ...controlnets };
+    return { ...data, ...reference, ...controlnets, ...media };
   }, get("queue-add"), (result) => `已加入 ${result.jobs.length} 项生成任务。`, { create: true, opensQueue: () => true });
 });
 setInterval(refreshQueue, 2500);
@@ -2783,14 +2798,16 @@ get("remote-command-form").addEventListener("submit", async (event) => {
   const file = get("queue-reference-file").files[0];
   const options = { create: true, opensQueue: ({ queued }) => queued === true };
   const hasControls = [...taskControlnets.values()].some(({ enabled }) => enabled.value);
-  if (remote && file?.size && !queueMask() && !hasControls) {
+  if (remote && file?.size && !queueMask() && !hasControls && taskControlWorkflow !== h3FullWorkflow) {
     form.set("image", file);
     changeQueue("command", form, button, (result) => result.message, options);
     return;
   }
   changeQueue("studio/queue/command", async () => {
-    const [reference, controlnets] = await Promise.all([queueReferencePayload(), queueControlnetPayload()]);
-    return { command: form.get("command"), account: form.get("account") ?? "", ...reference, ...controlnets };
+    const [reference, controlnets, media] = await Promise.all([
+      taskControlWorkflow === h3FullWorkflow ? {} : queueReferencePayload(), queueControlnetPayload(), h3Media.payload(),
+    ]);
+    return { command: form.get("command"), account: form.get("account") ?? "", ...reference, ...controlnets, ...media };
   }, button, (result) => result.message, options);
 });
 

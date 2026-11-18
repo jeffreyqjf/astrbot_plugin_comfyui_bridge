@@ -138,6 +138,26 @@ def h3_lora_files(schemas):
     return combo_options(spec) or []
 
 
+def h3_with_media(workflow, items):
+    if workflow.name != H3_SEED_FULL or workflow.graph.get("416", {}).get("class_type") != "MiniMaxH3MediaLoader":
+        raise WorkflowError("当前工作流没有 Fantastic H3 媒体加载器。")
+    if not isinstance(items, list) or len(items) > 32 or any(
+        not isinstance(row, dict) or row.get("kind") not in {"picture", "video", "audio"}
+        or not isinstance(row.get("file"), str) or not row["file"] for row in items
+    ):
+        raise WorkflowError("H3 素材列表无效。")
+    state = json.dumps(items, ensure_ascii=False, allow_nan=False)
+    if len(state.encode("utf-8")) > 512 * 1024:
+        raise WorkflowError("H3 素材设置过大。")
+    node = workflow.graph["416"]
+    graph = {**workflow.graph, "416": {**node, "inputs": {**node["inputs"], "media_state": state}}}
+    return Workflow(workflow.name, {"prompt": graph, "astrbot": {
+        "positive_prefix": workflow.positive_prefix,
+        "use_canvas_seed": workflow.default_seed != -1,
+        "node_mapping": workflow.mapping,
+    }})
+
+
 def save_h3_v3_field(graph, settings, field, value, schemas):
     key, name = field["node"], field["name"]
     config = settings["h3_v3"]

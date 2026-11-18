@@ -59,11 +59,12 @@ class ComfyClient:
         form=None,
         output_path=None,
         max_bytes=None,
+        headers=None,
     ):
         if self.session is None or self.session.closed:
-            headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
+            default_headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
             self.session = aiohttp.ClientSession(
-                headers=headers,
+                headers=default_headers,
                 timeout=aiohttp.ClientTimeout(total=self.timeout),
                 trust_env=False,
             )
@@ -77,6 +78,7 @@ class ComfyClient:
                 data=form,
                 params=params,
                 allow_redirects=False,
+                headers=headers,
             ) as response:
                 if response.content_length is not None and response.content_length > limit:
                     raise ComfyError("ComfyUI 返回的内容超过大小限制。")

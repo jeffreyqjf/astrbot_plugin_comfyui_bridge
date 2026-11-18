@@ -105,6 +105,60 @@ small, #count { font-weight: 400; font-size: 12px; }
 .svi-lora-rows { display: grid; gap: 6px; }
 .svi-lora-row { display: grid; grid-template-columns: 6rem minmax(0, 1fr) 5rem auto; gap: 6px; }
 .h3-lora-row { grid-template-columns: auto minmax(0, 1fr) 5rem 5rem auto; align-items: center; }
+.h3-media-editor { border: 1px solid var(--line); border-radius: 14px; min-width: 0; margin-block: 16px; background: var(--surface); container-type: inline-size; }
+.h3-media-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px; }
+.h3-media-header h3 { margin: 0 0 4px; font-size: 16px; }
+.h3-media-header small { color: var(--muted); }
+.h3-media-editor > .section-note, #h3-media-status { display: block; margin: 12px 16px; }
+.h3-media-editor [data-h3-panel] { min-width: 0; }
+.h3-media-editor .mml-panel { border: 0; border-radius: 0; height: 570px; min-height: 570px; padding: 14px; gap: 10px; }
+.h3-media-editor .mml-cols { gap: 16px; }
+.h3-media-editor .mml-col { gap: 8px; }
+.h3-media-editor .mml-slot { border-radius: 9px; }
+.h3-media-editor .mml-top { flex-wrap: wrap; gap: 8px; }
+.h3-media-editor .mml-btn, .mml-tmover .mml-btn { min-height: 30px; }
+.h3-media-editor .mml-power, .h3-media-editor .mml-x, .h3-media-editor .mml-trimbtn { padding: 5px; cursor: pointer; }
+.h3-media-editor .mml-pics { gap: 7px; }
+.h3-media-editor .mml-presetrow { flex-wrap: wrap; }
+.h3-media-editor .mml-presetwrap { min-width: 120px; }
+.h3-media-reorder { display: none; position: absolute; top: 4px; left: 4px; gap: 3px; z-index: 3; }
+.h3-media-reorder button { background: #202837dc; border: 1px solid #536073; color: #fff; border-radius: 5px; min-height: 28px; padding: 2px 6px; }
+.h3-media-editor .mml-slot.filled { position: relative; }
+.h3-media-editor .mml-slot.filled:hover > .h3-media-reorder,
+.h3-media-editor .mml-slot.filled:focus-within > .h3-media-reorder { display: flex; }
+@container (max-width: 760px) {
+  .h3-media-editor .mml-cols { grid-template-columns: 1fr; flex: none; }
+  .h3-media-editor .mml-panel { height: auto !important; min-height: 0; overflow: visible; }
+  .h3-media-editor .mml-pics { grid-template-rows: repeat(3, 150px); flex: none; }
+  .h3-media-editor .mml-vids, .h3-media-editor .mml-auds { grid-auto-rows: minmax(64px, auto); flex: none; }
+}
+@media (max-width: 1000px) {
+  .h3-media-editor .mml-cols { grid-template-columns: 1fr; flex: none; }
+  .h3-media-editor .mml-panel { height: auto !important; min-height: 0; overflow: visible; }
+  .h3-media-editor .mml-pics { grid-template-rows: repeat(3, minmax(100px, 1fr)); min-height: 320px; flex: none; }
+  .h3-media-editor .mml-vids, .h3-media-editor .mml-auds { grid-auto-rows: minmax(60px, auto); flex: none; }
+}
+@media (max-width: 540px) {
+  .h3-media-header { padding: 12px; }
+  .h3-media-editor .mml-panel { padding: 10px; font-size: 12px; }
+  .h3-media-editor .mml-pics { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: 150px; gap: 7px; }
+  .h3-media-editor .mml-picbar { flex-wrap: wrap; padding-block: 3px; }
+  .h3-media-editor .mml-picbar .mml-tag { flex: 1 0 100%; font-size: 11px; }
+  .h3-media-editor .mml-power, .h3-media-editor .mml-x, .h3-media-editor .mml-trimbtn { padding: 6px; font-size: 14px; }
+  .h3-media-editor .h3-media-reorder { display: flex; }
+  .h3-media-editor .mml-col .mml-slot:not(.filled) ~ .mml-slot:not(.filled) { display: none; }
+  .h3-media-editor .mml-topspace { display: none; }
+  .h3-media-editor .mml-btn { min-height: 36px; padding-inline: 8px; }
+  .h3-media-editor .mml-row { flex-wrap: wrap; gap: 5px; }
+  .h3-media-editor .mml-vids, .h3-media-editor .mml-auds { grid-template-rows: none; grid-auto-rows: minmax(70px, auto); min-height: 0; }
+  .h3-media-editor .mml-vids .mml-meta { min-width: 110px; }
+  .h3-media-editor .mml-tag, .h3-media-editor .mml-name { font-size: 11px; }
+  .h3-media-editor .mml-segstack { margin-left: auto; }
+  .mml-tmover .mml-tmbody { flex-direction: column; }
+  .mml-tmover .mml-tmside { max-width: 100%; width: 100%; flex-basis: auto; padding: 10px; }
+  .mml-tmover .mml-tmhead, .mml-tmover .mml-tmfoot, .mml-tmover .mml-tmcropbar { flex-wrap: wrap; }
+  .mml-tmover input, .mml-tmover select { min-width: 0; }
+}
 .svi-lora-row > * { min-width: 0; }
 .svi-lora-rows + button { align-self: start; }
 .wide { grid-column: 1 / -1; }

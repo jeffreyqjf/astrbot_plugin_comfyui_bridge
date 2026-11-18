@@ -65,7 +65,7 @@ from ..workflows.lightning import (
     lightning_options,
     lightning_workflow,
 )
-from ..workflows.minimax_h3 import h3_v3_fields, h3_with_reference, save_h3_v3_field
+from ..workflows.minimax_h3 import h3_v3_fields, h3_with_media, h3_with_reference, save_h3_v3_field
 from ..workflows.parameter_layout import (
     preserve_parameter_layout,
     read_parameter_layout,
@@ -125,6 +125,7 @@ from ..workflows.workflow_store import (
     workflow_path,
     workflow_revision,
 )
+from .h3_media import H3Media, media_view
 from .input_library import InputLibrary, InputUnavailable
 from .mask_image import apply_mask, reference_body_limit
 from .prompt_library import PromptLibrary
@@ -227,6 +228,7 @@ class StudioSettings:
         self.service = service
         self.anima = anima
         self.input_library = InputLibrary(service, anima.workspace)
+        self.h3_media = H3Media(service)
         self.lora_families = {
             "anima": anima,
             "illustrious": LoraSettings(service, "illustrious", "Illustrious"),
@@ -1378,6 +1380,13 @@ class StudioSettings:
             return [advanced_v40_loras(base, rows, catalog, files) for rows in variants]
         return [workflow_loras(workflow, rows, catalog, files) for rows in variants]
 
+    @staticmethod
+    def with_h3_media(workflow, items):
+        selected = h3_with_media(workflow, items)
+        for row in items:
+            media_view(row["file"])
+        return selected
+
     async def add_jobs(self):
         if not request.username:
             return error_response("请登录 AstrBot 面板。", status_code=401)
@@ -1402,6 +1411,8 @@ class StudioSettings:
                 workflow.image_required and workflow.name not in V40_WORKFLOWS | {AIO_WORKFLOW}
             ):
                 raise WorkflowError("请选择可直接生成的工作流。需要参考图时可用命令表单上传。")
+            if "h3_media" in data:
+                workflow = self.with_h3_media(workflow, data["h3_media"])
             controls, sources, control_archive = await asyncio.to_thread(
                 self.prepare_controls, workflow.name, data.get("controlnets"),
             )

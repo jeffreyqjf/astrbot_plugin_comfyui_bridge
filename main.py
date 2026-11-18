@@ -283,6 +283,10 @@ class ComfyUIBridge(Star):
             ("studio/queue", self.studio.queue, "GET"),
             ("studio/queue/loras", self.studio.queue_loras, "GET"),
             ("studio/queue", self.studio.add_jobs, "POST"),
+            ("studio/h3/media", self.studio.h3_media.state, "GET"),
+            ("studio/h3/media/rpc", self.studio.h3_media.rpc, "POST"),
+            ("studio/h3/media/upload", self.studio.h3_media.upload, "POST"),
+            ("studio/h3/media/preview", self.studio.h3_media.preview, "POST"),
             ("studio/queue/command", self.run_studio_command, "POST"),
             ("studio/queue/command/workflow", self.studio_command_workflow, "POST"),
             ("studio/queue/templates", self.studio.command_templates, "GET"),
@@ -603,6 +607,7 @@ class ComfyUIBridge(Star):
             result = await self.run_remote_command(
                 command, account, image, owner=f"studio:{request.username}", allow_nsfw=True,
                 controlnets=data.get("controlnets"),
+                h3_media=data.get("h3_media"),
             )
             return json_response(result)
         except (ComfyError, OSError, ValueError) as exc:
@@ -657,6 +662,7 @@ class ComfyUIBridge(Star):
 
     async def run_remote_command(
         self, command, account, image_data, *, owner="studio:remote", allow_nsfw=False, controlnets=None,
+        h3_media=None,
     ):
         if not self.config.get("enabled", True):
             raise WorkflowError("ComfyUI 插件已在面板禁用。")
@@ -664,6 +670,8 @@ class ComfyUIBridge(Star):
             raise WorkflowError("请填写不超过 16000 字符的任务命令。")
         action, argument = route_command(command)
         await self.service.initialize()
+        if h3_media is not None and action in {"help", "lora", "sweep"}:
+            raise WorkflowError("H3 媒体加载器用于 /comfy gen --wf h3-v3 生成任务。")
         if controlnets not in (None, {}) and action in {"help", "lora"}:
             raise WorkflowError("独立 ControlNet 仅用于创建生成任务。")
         if action == "help":
@@ -686,6 +694,8 @@ class ComfyUIBridge(Star):
         workflow, options, parsed = await self._studio_generation_target(
             action, argument, owner, [image_data] if image_data is not None else [], allow_nsfw,
         )
+        if h3_media is not None:
+            workflow = self.studio.with_h3_media(workflow, h3_media)
         prompt, _, negative, seed, preset, *_ = parsed
         bindings, sources, control_archive = await asyncio.to_thread(
             self.studio.prepare_controls, workflow.name, controlnets,
@@ -1667,3 +1677,4 @@ class ComfyUIBridge(Star):
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
         await self.service.close()
+        await asyncio.to_thread(self.studio.h3_media.close)

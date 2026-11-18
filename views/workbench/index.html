@@ -690,6 +690,15 @@
               <small class="section-note">多批次会分别入队，任务可单独取消。提示词按原文提交。超时从 ComfyUI 接收任务后计时，包含 ComfyUI 内的排队和执行。</small>
               <footer><button type="submit" class="primary" id="queue-add">加入队列</button></footer>
             </form>
+            <section id="queue-h3-media" class="h3-media-editor" hidden tabindex="0" aria-label="H3 参考素材编辑器">
+              <header class="h3-media-header">
+                <div><h3>Fantastic H3 Media Loader</h3><small>图片、视频和音频参考素材</small></div>
+                <button type="button" data-h3-reload>读取已保存素材</button>
+              </header>
+              <div data-h3-panel></div>
+              <small class="section-note">点击图片可放大预览，右下角可编辑裁剪。可拖入或粘贴文件，并调整素材顺序、启用状态和音轨。此处设置用于本次任务。</small>
+              <p id="h3-media-status" role="status"></p>
+            </section>
             <div class="field queue-reference" id="queue-reference" hidden>参考图
               <div class="row-actions">
                 <button type="button" id="queue-reference-open">从收藏选图</button>

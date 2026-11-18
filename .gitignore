@@ -8,3 +8,4 @@ tests/*
 !tests/test_workflow_adapters.py
 !tests/test_parameter_layout.py
 !tests/test_control_submission.py
+!tests/test_h3_media.py

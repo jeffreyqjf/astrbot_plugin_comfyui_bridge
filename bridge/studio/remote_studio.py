@@ -17,7 +17,10 @@ from ..workflows.workflow_archive import ARCHIVE_LIMIT
 from .mask_image import reference_body_limit
 from .studio_settings import COMMAND_IMPORT_LIMIT
 
-ASSETS = ("style.css", "app.js", "image_review.js", "remote.js", "prompt_library.js", "mask_editor.js", "videos.js")
+ASSETS = (
+    "style.css", "app.js", "image_review.js", "remote.js", "prompt_library.js", "mask_editor.js", "videos.js",
+    "h3_media.js", "h3_media_transport.js", "h3_media_vendor.js", "h3_media_vendor.css", "h3_media_LICENSE.txt",
+)
 VIEW = PACKAGE_ROOT / "views" / "workbench"
 API_PATHS = frozenset({
     "studio", "studio/navigation-order", "studio/workflow", "studio/workflow/layout",
@@ -35,6 +38,7 @@ API_PATHS = frozenset({
     "studio/prompt-tags", "studio/prompt-tags/preview",
     "studio/videos", "studio/videos/play", "studio/videos/delete",
     "anima/settings", "anima/branches",
+    "studio/h3/media", "studio/h3/media/rpc", "studio/h3/media/upload", "studio/h3/media/preview",
 })
 PRIVATE_NETWORKS = tuple(map(ipaddress.ip_network, (
     "127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10",
@@ -76,10 +80,12 @@ class RemoteStudio:
         self.token = token
         app = web.Application(middlewares=[self.authorize], client_max_size=max(
             reference_body_limit(self.plugin.service.client.max_image_bytes, controls=2), WORKFLOW_UPLOAD_LIMIT,
+            self.plugin.service.client.max_video_bytes + 1024 * 1024,
         ))
         app.on_response_prepare.append(self._headers)
         app.router.add_get("/", self._index)
         app.router.add_get("/video/{token}", self._video)
+        app.router.add_get("/h3-media/{token}", self._h3_media)
         for asset in ASSETS:
             app.router.add_get("/" + asset, self._asset)
         for (method, route) in self.routes:
@@ -184,6 +190,15 @@ class RemoteStudio:
             raise web.HTTPNotFound() from None
         return web.FileResponse(path, headers={"Content-Type": VIDEO_MIME[path.suffix.lower()]})
 
+    async def _h3_media(self, request):
+        try:
+            path, authorization, mime = self.plugin.studio.h3_media.remote_file(request.match_info["token"])
+            if not self._active_session(authorization.removeprefix("Bearer ")):
+                raise WorkflowError("媒体预览已过期。")
+            return web.FileResponse(path, headers={"Content-Type": mime})
+        except (OSError, ValueError):
+            raise web.HTTPNotFound() from None
+
     @staticmethod
     def _error(message, status=400):
         return web.json_response({"status": "error", "message": message}, status=status)
@@ -202,6 +217,8 @@ class RemoteStudio:
                 limit = WORKFLOW_UPLOAD_LIMIT
             elif route == "studio/queue/templates/import":
                 limit = COMMAND_IMPORT_LIMIT
+            elif route == "studio/h3/media/upload":
+                limit = max(self.plugin.service.client.max_image_bytes, self.plugin.service.client.max_video_bytes) + 1024 * 1024
         if request.content_length is not None and request.content_length > limit:
             return self._error("请求数据过大。", 413)
         if request.headers.get("Transfer-Encoding"):

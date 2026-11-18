@@ -387,6 +387,7 @@ async def check(root, archive, core):
         assert ("GET", f"/{PLUGIN}/studio/controlnet/profiles") in context.routes
         assert ("POST", f"/{PLUGIN}/studio/controlnet/profiles") in context.routes
         await check_controlnet_profiles(instance, root, module.ADVANCED_V40_WORKFLOW)
+        await check_h3_media(instance, root)
         assert (plugin / "user docs" / "MINIMAX_H3_SEED_HUNTER.md").is_file()
         with patch.object(service, "_run") as run:
             result = await instance.run_remote_command("/comfy gen --wf h3 --seed 1000 A fox --raw", "", None)
@@ -404,6 +405,91 @@ async def check(root, archive, core):
         print(f"Loaded {len(service.workflows)} workflows and {len(context.routes)} web routes.")
     finally:
         await instance.terminate()
+
+
+async def check_h3_media(instance, root):
+    from astrbot.api.web import PluginRequest, bind_request_context
+    from starlette.requests import Request
+
+    async def call(route, payload=None, method="POST"):
+        async def receive():
+            return {"type": "http.request", "body": json.dumps(payload).encode()}
+        incoming = Request({
+            "type": "http", "method": method, "path": "/api/" + route,
+            "headers": [(b"authorization", b"Bearer test-session")], "query_string": b"",
+        }, receive)
+        with bind_request_context(PluginRequest(incoming, username="test")):
+            return await instance.remote_studio.routes[(method, route)]()
+
+    service = instance.service
+    source = service.workflows["MiniMax_H3_Seed_Hunter_V3_AstrBot"].graph["416"]["inputs"]["media_state"]
+    response = await call("studio/h3/media", method="GET")
+    assert response.status_code == 200 and json.loads(response.body)["available"]
+    items = [{"kind": "picture", "file": "minimax_h3/portrait.png [input]", "mirror": True, "rotate": 90},
+             {"kind": "video", "file": "minimax_h3/clip.mp4 [input]", "trim": {"start": 1, "end": 4},
+              "has_audio": True, "audio_mode": "paired"}]
+    with patch.object(service, "_run") as run:
+        for route, payload in (
+            ("studio/queue", {"workflow": "MiniMax_H3_Seed_Hunter_V3_AstrBot", "positive": "A fox", "count": 1}),
+            ("studio/queue/command", {"command": "/comfy gen --wf h3-v3 --seed 42 A fox --raw", "account": ""}),
+        ):
+            response = await call(route, {**payload, "h3_media": items})
+            assert response.status_code == 200, response.body
+            assert json.loads(run.call_args.args[1]["416"]["inputs"]["media_state"]) == items
+    assert service.workflows["MiniMax_H3_Seed_Hunter_V3_AstrBot"].graph["416"]["inputs"]["media_state"] == source
+    calls = []
+
+    async def native(method, path, **kwargs):
+        calls.append((method, path, kwargs))
+        if path == "/minimax_h3/token":
+            return {"token": "native-private-token"}
+        if path == "/view":
+            kwargs["output_path"].write_bytes(b"preview")
+            return kwargs["output_path"]
+        if path == "/minimax_h3/upload":
+            assert kwargs["headers"] == {"X-MiniMaxH3-Token": "native-private-token"}
+            assert kwargs["form"].is_multipart
+            return {"file": "minimax_h3/picture.png [input]", "kind": "picture", "name": "picture.png"}
+        return {"presets": []}
+
+    with patch.object(service.client, "request", side_effect=native):
+        response = await call("studio/h3/media/rpc", {
+            "method": "POST", "path": "/minimax_h3/presets/save", "body": {"name": "fixture", "items": items},
+        })
+        assert response.status_code == 200, response.body
+        assert calls[-1][2]["headers"] == {"X-MiniMaxH3-Token": "native-private-token"}
+        assert b"native-private-token" not in response.body
+        response = await call("studio/h3/media/preview", {"file": items[0]["file"]})
+        assert response.status_code == 200, response.body
+        url = json.loads(response.body)["src"]
+        assert url.startswith("/h3-media/")
+        preview, owner, mime = instance.studio.h3_media.remote_file(url.rsplit("/", 1)[-1])
+        assert preview.is_relative_to(root) and preview.read_bytes() == b"preview"
+        assert owner == "Bearer test-session" and mime == "image/png"
+        before = len(calls)
+        assert (await call("studio/h3/media/preview", {"file": items[0]["file"]})).status_code == 200
+        assert len(calls) == before
+        response = await call("studio/h3/media/rpc", {"method": "POST", "path": "/interrupt", "body": {}})
+        assert response.status_code == 400 and len(calls) == before
+        upload_body = (
+            b'--fixture\r\nContent-Disposition: form-data; name="file"; filename="picture.png"\r\n'
+            b'Content-Type: image/png\r\n\r\nimage-fixture\r\n--fixture--\r\n'
+        )
+
+        async def receive_upload():
+            return {"type": "http.request", "body": upload_body}
+
+        upload = Request({
+            "type": "http", "method": "POST", "path": "/api/studio/h3/media/upload",
+            "headers": [(b"content-type", b"multipart/form-data; boundary=fixture")], "query_string": b"",
+        }, receive_upload)
+        try:
+            with bind_request_context(PluginRequest(upload, username="test")):
+                response = await instance.studio.h3_media.upload()
+                assert response.status_code == 200, response.body
+                assert json.loads(response.body)["kind"] == "picture"
+        finally:
+            await upload.close()
 
 
 if __name__ == "__main__":
