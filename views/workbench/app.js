@@ -25,6 +25,7 @@ const names = {
   [lightningWorkflow]: "WAN 2.2 Lightning · 长视频",
   MiniMax_H3_Seed_Hunter_AstrBot: "MiniMax H3 · Seed Hunter",
   MiniMax_H3_Seed_Final_AstrBot: "MiniMax H3 · 放大定稿",
+  MiniMax_H3_Seed_Hunter_V3_AstrBot: "MiniMax H3 · Seed Hunter v3 完整版",
   SDXL_Turbo_T2I_AstrBot: "SDXL Turbo",
 };
 let studio;
@@ -182,6 +183,7 @@ function completed(text) {
 
 function sviLoraEditor(field, container) {
   container.classList.add("wide");
+  const h3 = field.editor === "h3-loras";
   const input = document.createElement("input");
   input.type = "hidden";
   input.value = JSON.stringify(field.value);
@@ -192,25 +194,34 @@ function sviLoraEditor(field, container) {
   add.textContent = "添加 LoRA";
   const sync = () => {
     input.value = JSON.stringify([...rows.children].map((row) => {
-      const [phase, name, strength] = row.children;
-      return { phase: phase.value, name: name.value, strength: strength.valueAsNumber };
+      const [target, name, strength, clip] = row.children;
+      return h3
+        ? { name: name.value, enabled: target.checked, model: strength.valueAsNumber, clip: clip.valueAsNumber }
+        : { phase: target.value, name: name.value, strength: strength.valueAsNumber };
     }));
     add.disabled = !field.choices.length || rows.children.length >= 16;
     input.dispatchEvent(new Event("input", { bubbles: true }));
   };
-  const addRow = ({ phase = "high", name = "", strength = 1 } = {}) => {
+  const addRow = ({ phase = "high", name = "", strength = 1, enabled = true, model = 1, clip = 1 } = {}) => {
     const row = document.createElement("div");
     row.className = "svi-lora-row";
-    const target = document.createElement("select");
-    target.setAttribute("aria-label", "LoRA 作用阶段");
-    target.add(new Option("高噪声", "high"));
-    target.add(new Option("低噪声", "low"));
-    target.add(new Option("高低噪声", "both"));
-    if (field.node === "svi") {
-      target.add(new Option("仅 SVI 高噪声", "svi-high"));
-      target.add(new Option("仅 Lightning 高噪声", "lightning-high"));
+    const target = document.createElement(h3 ? "input" : "select");
+    if (h3) {
+      row.classList.add("h3-lora-row");
+      target.type = "checkbox";
+      target.checked = enabled;
+      target.setAttribute("aria-label", "启用 LoRA");
+    } else {
+      target.setAttribute("aria-label", "LoRA 作用阶段");
+      target.add(new Option("高噪声", "high"));
+      target.add(new Option("低噪声", "low"));
+      target.add(new Option("高低噪声", "both"));
+      if (field.node === "svi") {
+        target.add(new Option("仅 SVI 高噪声", "svi-high"));
+        target.add(new Option("仅 Lightning 高噪声", "lightning-high"));
+      }
+      target.value = phase;
     }
-    target.value = phase;
     const file = document.createElement("select");
     file.setAttribute("aria-label", "LoRA 文件");
     file.add(new Option("选择视频 LoRA", ""));
@@ -220,14 +231,23 @@ function sviLoraEditor(field, container) {
     const weight = document.createElement("input");
     weight.type = "number";
     weight.step = "any";
-    weight.value = strength;
-    weight.setAttribute("aria-label", "LoRA 强度");
+    weight.value = h3 ? model : strength;
+    weight.setAttribute("aria-label", h3 ? "模型强度" : "LoRA 强度");
     const remove = document.createElement("button");
     remove.type = "button";
     remove.textContent = "移除";
     remove.addEventListener("click", () => { row.remove(); sync(); });
     row.addEventListener("input", sync);
-    row.append(target, file, weight, remove);
+    row.append(target, file, weight);
+    if (h3) {
+      const clipWeight = weight.cloneNode();
+      weight.title = "模型强度";
+      clipWeight.value = clip;
+      clipWeight.title = "CLIP 强度";
+      clipWeight.setAttribute("aria-label", "CLIP 强度");
+      row.append(clipWeight);
+    }
+    row.append(remove);
     rows.append(row);
   };
   for (const row of field.value) addRow(row);
@@ -253,11 +273,11 @@ function fieldControl(field) {
   label.dataset.layoutTitle = name;
   label.dataset.search = [field.category, name, field.title, field.name, `#${field.node}`]
     .join(" ").toLowerCase();
-  if (field.editor === "svi-loras") return sviLoraEditor(field, label);
+  if (field.editor === "svi-loras" || field.editor === "h3-loras") return sviLoraEditor(field, label);
   const input = document.createElement(field.kind === "select" ? "select"
     : field.multiline || field.kind === "json" ? "textarea" : "input");
   if (field.kind === "select") {
-    field.choices.forEach((value, index) => input.add(new Option(String(value), String(index))));
+    field.choices.forEach((value, index) => input.add(new Option(field.choice_labels?.[value] ?? String(value), String(index))));
     const index = field.choices.indexOf(field.value);
     if (index < 0) input.add(new Option(String(field.value) + "（当前不可用）", "-1", true, true));
     else input.value = String(index);

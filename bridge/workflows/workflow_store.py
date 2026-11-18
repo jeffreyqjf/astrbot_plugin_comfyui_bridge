@@ -7,6 +7,7 @@ from tempfile import NamedTemporaryFile
 
 from .detailer import add_feet_to_profile, detailer_workflow
 from .lightning import lightning_workflow
+from .minimax_h3 import h3_v3_workflow
 from .parameter_layout import preserve_parameter_layout
 from .svi import svi_workflow
 from .v40 import V40_WORKFLOWS, upgrade_detailer, v40_workflow
@@ -16,6 +17,7 @@ from .workflow import (
     ANIMA_WORKFLOW,
     DETAILER_WORKFLOW,
     H3_SEED_FINAL,
+    H3_SEED_FULL,
     H3_SEED_HUNTER,
     LIGHTNING_WORKFLOW,
     REVERSE_WORKFLOW,
@@ -47,6 +49,7 @@ WORKFLOW_SHORT_NAMES = {
     LIGHTNING_WORKFLOW: "lightning",
     H3_SEED_HUNTER: "h3",
     H3_SEED_FINAL: "h3-final",
+    H3_SEED_FULL: "h3-v3",
     REVERSE_WORKFLOW: "reverse",
 }
 WORKFLOW_ALIASES = {
@@ -99,6 +102,7 @@ def workflow_from_profile(name, data, mapping=None):
             return v40_workflow(name, graph, settings, mapping)
     builder = {
         DETAILER_WORKFLOW: detailer_workflow, SVI_WORKFLOW: svi_workflow, LIGHTNING_WORKFLOW: lightning_workflow,
+        H3_SEED_FULL: h3_v3_workflow,
     }.get(name)
     if builder:
         graph, settings = profile_parts(data)

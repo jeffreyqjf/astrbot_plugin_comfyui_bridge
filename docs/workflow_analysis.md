@@ -16,7 +16,7 @@
 | Advanced Gemma V40、Detailer V40 | `v40.py`、`detailer.py` | 扩写、局部修复、参考图或遮罩、两阶段采样 |
 | WAI、SDXL | `illustrious.py`、通用 `workflow.py` | WAI LoRA 分族、重采样先决条件与 Union ControlNet、SDXL 提示词和输出 |
 | WAN 2.2 普通与分段视频 | 通用 `workflow.py`、`svi.py`、`lightning.py` | 高低噪声阶段、原段编号、参考图、视频输出 |
-| MiniMax H3 Seed Hunter | `minimax_h3.py`、随包的两份 MiniMax H3 API 图 | 基准种子映射、三路候选偏移、可选参考图、潜空间放大和带音频 MP4 |
+| MiniMax H3 Seed Hunter | `minimax_h3.py`、两份简化版 API 和一份 v3 完整版配置 | 基准种子映射、三路候选偏移、可选参考图、潜空间放大和带音频 MP4 |
 | PixAI 和 WD14 | 反推工作流与 `templates/Anima_WD14_Caption_AstrBot.json` | 文本输出、参考图序号、可选扩写 |
 
 正式更新依次修改 AstrBot 画布、导出 API、同步随包文件。记录画布、API 和随包路径，核对节点 ID、`class_type`、端口与连线、条件分支、模型和输出可达性。涉及参考图时核对入口、预处理与目标节点。涉及分段视频时核对单段及非顺序多段。必要的实际生成纳入当轮验证记录。
@@ -31,4 +31,5 @@
 
 - 原画布位于 `MiniMaxH3/FoxFurEssence H3 Seed Hunter v3.json`。首轮三套采样共享模型、提示词和音视频潜空间，使用基准种子及两个偏移值。首轮视频和音频分别解码并由 VHS 合流。原图另有可切换的定稿、参考视频续写、音频、插帧及参考引导分支。
 - AstrBot 版将首轮搜种和放大定稿拆成两张显式连线画布。`h3` 在 15、35、55 输出候选，`h3-final` 以选中的实际种子重建首轮、放大去噪潜空间并运行二轮采样，节点 67 输出。两图映射 `5.prompt` 和 `16.value`，单张参考图由插件按需接到 `5.ref_images.ref_image_0`。
+- `h3-v3` 复制 FoxFurEssence v3 画布的 168 个节点，保留子图和节点 ID。将 UE 记录中的连接显式化，补齐首轮子图采样器、Sigma 和视频 VAE。用 ComfyUI 原生导出收集不同分支的执行图，随包配置通过生成模式选择执行图，并按节点 ID 和字段名保存共用参数。搜种返回 #18/#134/#144，定稿和续写返回 #34。额外素材由 #416 分发，临时上传图接原画布 Picture 1 的消费者。
 - 两张画布保存在 ComfyUI 的 `AstrBot/`，用已安装的转换器和本机节点定义导出到 `api/`，随后同步插件 `workflows/`。操作与权重清单见 [Seed Hunter 使用教程](../user%20docs/MINIMAX_H3_SEED_HUNTER.md)。

@@ -124,3 +124,10 @@
 - 桌面侧栏根据当前窗口的可见高度限制列表区域。工作流列表独立滚动，参数区仍可正常滚动。
 - Chromium 在 820 × 430 和 1200 × 680 下验证参数区停在顶部时可滚到列表末项，在 360px 宽度下检查单列布局。
 - Git Commit Message 为 `fix: scroll the workflow sidebar independently`。
+
+## v2.34.0 · Seed Hunter v3 完整版
+
+- 新增 `h3-v3`，保留原画布的 168 个节点和子图布局，补齐 17 条显式连接。同步 ComfyUI API 导出和插件工作流。原画布与两份简化版保留。
+- 工作台提供 11 种生成模式和 45–123 个参数项，支持实时模型选项、多 LoRA、提示词编辑器切换、候选选择和各模式专用设置。
+- 34 项回归测试通过，隔离 AstrBot 加载 14 条工作流和 64 条路由，三条 H3 指令均通过模拟提交。本机 ComfyUI 提交校验覆盖 11 种模式，未执行 GPU 生成与 QQ 投递。运行副本未部署。
+- Git Commit Message 为 `feat: add configurable MiniMax H3 Seed Hunter v3 workflow`。

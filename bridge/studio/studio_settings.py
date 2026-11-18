@@ -65,7 +65,7 @@ from ..workflows.lightning import (
     lightning_options,
     lightning_workflow,
 )
-from ..workflows.minimax_h3 import h3_with_reference
+from ..workflows.minimax_h3 import h3_v3_fields, h3_with_reference, save_h3_v3_field
 from ..workflows.parameter_layout import (
     preserve_parameter_layout,
     read_parameter_layout,
@@ -93,6 +93,7 @@ from ..workflows.v40 import (
 from ..workflows.workflow import (
     ADVANCED_V40_WORKFLOW,
     DETAILER_WORKFLOW,
+    H3_SEED_FULL,
     H3_WORKFLOWS,
     LIGHTNING_WORKFLOW,
     REVERSE_WORKFLOW,
@@ -633,7 +634,8 @@ class StudioSettings:
                         {
                             **workflow.describe(),
                             "controlnets": controlnet_capabilities(workflow.name, control_profiles),
-                            **({"supports_reference": True} if workflow.name in H3_WORKFLOWS else {}),
+                            **({"supports_reference": True}
+                               if workflow.name in H3_WORKFLOWS and "5" in workflow.active else {}),
                             "sweep_lora_family": workflow.sweep_lora_family,
                             **({"kind": "auto_image", "requires_image": False} if workflow.name == AIO_WORKFLOW else {}),
                         }
@@ -1986,6 +1988,8 @@ class StudioSettings:
         types = {node["class_type"] for node in (workflow.graph if graph is None else graph).values()}
         if workflow.name == WAI_WORKFLOW:
             types.add("Canny")
+        if workflow.name == H3_SEED_FULL:
+            types.add("LoraLoaderModelOnly")
         schemas = await self.service.client.node_schemas(types, cached=cached)
         if workflow.kind == "image_to_text":
             self._local_caption_models(schemas)
@@ -2104,6 +2108,8 @@ class StudioSettings:
 
     @staticmethod
     def _fields(workflow, schemas, settings=None, raw_graph=None):
+        if workflow.name == H3_SEED_FULL:
+            return h3_v3_fields(raw_graph, settings, workflow, schemas)
         if workflow.name in V40_WORKFLOWS and settings and "v40" in settings:
             config = settings["v40"]
             schemas = {"JPEG artifacts removal FBCNN": V40_FBCNN_SCHEMA, **schemas}
@@ -2347,7 +2353,9 @@ class StudioSettings:
                         raise WorkflowError(f"字段 {key} 不可编辑。")
                     field = fields[key]
                     value = parse_field(field, value)
-                    if field["node"] == "aio":
+                    if name == H3_SEED_FULL:
+                        save_h3_v3_field(graph, settings, field, value, schemas)
+                    elif field["node"] == "aio":
                         settings.setdefault("aio", {})[field["name"]] = value
                     elif field["node"] in ("svi", "lightning"):
                         config = settings.setdefault(field["node"], {})
@@ -2417,7 +2425,7 @@ class StudioSettings:
                         (field.node, field.name) for field in candidate.image_inputs
                         if name not in V40_WORKFLOWS or candidate.image_required
                     })
-                else:
+                elif name != H3_SEED_FULL:
                     validate_graph(
                         {key: graph[key] for key in candidate.active},
                         schemas,
@@ -2425,10 +2433,14 @@ class StudioSettings:
                         if candidate.image_required
                         else (),
                     )
+                if name == H3_SEED_FULL and "h3_v3.mode" in changes:
+                    schemas = await self._node_schemas(candidate)
                 before = read_profile(path)
                 if workflow_revision(before) != revision:
                     return error_response("工作流已更新，请刷新后重试。", status_code=409)
                 saved = profile_bytes(data)
+                if len(saved) > WORKFLOW_LIMIT:
+                    raise WorkflowError("保存参数后工作流超过大小上限。")
                 response = json_response(
                     self._describe(
                         workflow_revision(saved),

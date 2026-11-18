@@ -27,7 +27,8 @@ SWEEP_LORA_DEFAULTS = {
 VIDEO_FOLDER = "vedio"
 H3_SEED_HUNTER = "MiniMax_H3_Seed_Hunter_AstrBot"
 H3_SEED_FINAL = "MiniMax_H3_Seed_Final_AstrBot"
-H3_WORKFLOWS = {H3_SEED_HUNTER, H3_SEED_FINAL}
+H3_SEED_FULL = "MiniMax_H3_Seed_Hunter_V3_AstrBot"
+H3_WORKFLOWS = {H3_SEED_HUNTER, H3_SEED_FINAL, H3_SEED_FULL}
 VIDEO_OUTPUT_NODES = frozenset({"SaveVideo", "SaveWEBM", "VHS_VideoCombine"})
 
 
@@ -393,7 +394,7 @@ class Workflow:
                 if filename.strip() in {"", ".", ".."}:
                     filename = self.name
                 node["inputs"]["filename_prefix"] = f"{folder}/{filename}"
-            if node_type == "VHS_VideoCombine":
+            if node_type == "VHS_VideoCombine" and self.name != H3_SEED_FULL:
                 node["inputs"].update(save_output=True, save_metadata=True)
         return graph, actual_seed if self.seeds else None
 

@@ -15,7 +15,12 @@ from bridge.workflows.controlnet import (
     without_controlnet_images,
 )
 from bridge.workflows.detailer import LEGACY_FEET_LINKS
-from bridge.workflows.minimax_h3 import h3_with_reference
+from bridge.workflows.minimax_h3 import (
+    H3_V3_DEFAULT,
+    h3_v3_fields,
+    h3_with_reference,
+    save_h3_v3_field,
+)
 from bridge.workflows.v40 import advanced_v40_loras, upgrade_detailer, v40_workflow
 from bridge.workflows.workflow import (
     ADVANCED_V40_WORKFLOW,
@@ -23,12 +28,14 @@ from bridge.workflows.workflow import (
     ANIMA_WORKFLOW,
     DETAILER_WORKFLOW,
     H3_SEED_FINAL,
+    H3_SEED_FULL,
     H3_SEED_HUNTER,
     WAI_WORKFLOW,
     Workflow,
     WorkflowError,
     image_loras,
 )
+from bridge.workflows.workflow_store import workflow_from_profile
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -46,6 +53,44 @@ def combo(field, choices, *, group="required"):
 
 
 class MiniMaxH3WorkflowsTest(unittest.TestCase):
+    def test_v3_modes_keep_subgraph_inputs_and_share_saved_parameters(self):
+        data = profile(H3_SEED_FULL)
+        graph, settings = data["prompt"], data["astrbot"]
+        config = settings["h3_v3"]
+        workflow = workflow_from_profile(H3_SEED_FULL, data)
+        fields = h3_v3_fields(graph, settings, workflow, {})
+        self.assertEqual(config["mode"], H3_V3_DEFAULT)
+        self.assertEqual(workflow.outputs, ["18", "134", "144"])
+        save_h3_v3_field(graph, settings, fields["597.slider_2"], 10, {})
+        save_h3_v3_field(graph, settings, fields["h3_v3.134"], False, {})
+        save_h3_v3_field(graph, settings, fields["593.SwitchState"], "2", {})
+        workflow = workflow_from_profile(H3_SEED_FULL, data)
+        self.assertEqual(workflow.outputs, ["18", "144"])
+        prepared, _ = workflow.prepare("Write to the secondary editor", seed=10)
+        self.assertEqual(prepared["585"]["inputs"]["prompt"], "Write to the secondary editor")
+        self.assertEqual(prepared["16"]["inputs"]["seed"], 10)
+        self.assertFalse(prepared["18"]["inputs"]["save_output"])
+        self.assertEqual(prepared["125:12"]["inputs"]["sampler"], ["22:6", 0])
+        self.assertEqual(prepared["125:12"]["inputs"]["sigmas"], ["542", 0])
+        for mode in config["variants"]:
+            config["mode"] = mode
+            workflow = workflow_from_profile(H3_SEED_FULL, data)
+            prepared, _ = workflow.prepare("Generate H3", seed=10)
+            state = json.loads(prepared["597"]["inputs"]["SlidersState"])
+            self.assertEqual(state["sliders"][2]["value"], 10)
+            if "604" in prepared:
+                self.assertEqual(prepared["604"]["inputs"]["samples"], ["600", 0])
+                self.assertEqual(workflow.outputs, ["34"])
+
+    def test_v3_reference_also_reaches_first_frame_guide(self):
+        data = profile(H3_SEED_FULL)
+        data["astrbot"]["h3_v3"]["mode"] = "搜种 · 首帧参考"
+        workflow = workflow_from_profile(H3_SEED_FULL, data)
+        reference = h3_with_reference(workflow)
+        graph, _ = reference.prepare("Walk forward", seed=1, image_filename="ref.png")
+        self.assertEqual(graph["274"]["inputs"]["image"], ["astrbot_h3_reference", 0])
+        self.assertEqual(graph["5"]["inputs"]["ref_images.ref_image_0"], ["astrbot_h3_reference", 0])
+
     def test_candidate_seed_offsets_and_final_preserve_first_pass(self):
         hunter = Workflow(H3_SEED_HUNTER, profile(H3_SEED_HUNTER))
         final = Workflow(H3_SEED_FINAL, profile(H3_SEED_FINAL))

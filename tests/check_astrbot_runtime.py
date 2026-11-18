@@ -396,6 +396,11 @@ async def check(root, archive, core):
             response = await instance.run_remote_command("/comfy gen --wf h3-final --seed 2000 A fox --raw", "", None)
             assert response["queued"] and run.call_args.args[2] == ["67"]
             assert run.call_args.args[1]["16"]["inputs"]["value"] == 2000
+            response = await instance.run_remote_command("/comfy gen --wf h3-v3 --seed 3000 A fox --raw", "", None)
+            assert response["queued"] and run.call_args.args[2] == ["18", "134", "144"]
+            graph = run.call_args.args[1]
+            assert graph["16"]["inputs"]["seed"] == 3000
+            assert graph["365"]["inputs"]["prompt"] == "A fox"
         print(f"Loaded {len(service.workflows)} workflows and {len(context.routes)} web routes.")
     finally:
         await instance.terminate()

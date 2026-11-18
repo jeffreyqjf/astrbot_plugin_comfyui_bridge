@@ -99,6 +99,9 @@ WORKFLOW_HELP = {
     "h3-final": """MiniMax H3 · 放大定稿
 保持预览时的描述、参考图和首轮参数，用 --seed 指定候选实际种子，再运行潜空间放大和第二轮采样。
 例：/comfy gen --wf h3-final --seed 2000 A red fox walks through snow --raw""",
+    "h3-v3": """MiniMax H3 · Seed Hunter v3 完整版
+在工作台保存生成模式、模型、参考素材与采样参数，再用命令指定本次提示词和搜种种子。
+例：/comfy gen --wf h3-v3 --seed 1000 A red fox walks through snow --raw""",
     "t2i": """Anima T2I · 文生图
 输入画面描述。明确用 --wf t2i 时走文生图。若启用 ControlNet 参考分支，图像来源按工作台设置。
 --hands / --face / --eyes / --feet 用 on 或 off 切换本次修复；--denoise 0–1。

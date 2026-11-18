@@ -104,6 +104,7 @@ small, #count { font-weight: 400; font-size: 12px; }
 .field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
 .svi-lora-rows { display: grid; gap: 6px; }
 .svi-lora-row { display: grid; grid-template-columns: 6rem minmax(0, 1fr) 5rem auto; gap: 6px; }
+.h3-lora-row { grid-template-columns: auto minmax(0, 1fr) 5rem 5rem auto; align-items: center; }
 .svi-lora-row > * { min-width: 0; }
 .svi-lora-rows + button { align-self: start; }
 .wide { grid-column: 1 / -1; }
@@ -314,6 +315,8 @@ button.order-name { border-color: transparent; background: transparent; text-ali
 }
 @media (max-width: 710px) {
   .svi-lora-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .h3-lora-row { grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .h3-lora-row select { grid-column: 1 / -1; grid-row: 1; }
   .workspace { grid-template-columns: minmax(0, 1fr); grid-template-areas: "workflows" "management" "content"; gap: 14px; }
   aside { position: static; }
   nav { grid-template-columns: repeat(auto-fit, minmax(min(100%, 155px), 1fr)); }
