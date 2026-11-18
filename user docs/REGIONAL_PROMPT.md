@@ -54,3 +54,9 @@ Anima T2I 的 Hires、2ndSampler、Ultimate SD Upscaler 直接使用原版对应
 简易添加和普通命令添加都支持这五个开关。命令 sweep 不提供这些选项。可选功能使用英文原名且不带 Enable。
 
 本机核对发现原默认的 `noobaiInpainting_v10.safetensors` 未安装；使用 Inpaint／Outpaint 前，请在工作流参数的 ControlNetLoader #35／#36 选择本机已有且适配所用模型的文件并保存。提交时会核对所选模型是否可用，缺失会显示节点与参数提示；插件不会自动下载或替换模型。
+
+## Detailer 的 ComfyUI 修复对比
+
+Detailer V40 的原版与 AstrBot 版已参照 Advanced Gemma V40，在整图 Detailer、遮罩、SAM 3.1、手、NSFW、脸、眼、脚及 Ultimate 放大后提供滑动比较；Anima Detailer 对应主要分支也有比较。新增节点 A 是处理后、B 是处理前，重新打开画布并执行后查看。
+
+修脚比较沿用当前修脚开关，关闭时不会为比较额外运行修脚。原节点坐标和分组保持，比较画面只在 ComfyUI 显示，插件运行 API 沿用既有结果输出。

@@ -75,3 +75,18 @@
 复用 V40 的分支裁剪及参数面板协议，独立配置 32 个有效分组，前端可选功能仅包含 Hires Pre/PostDetailer、In/Outpaint、Mask Detailer、Ultimate SD Upscaler。没有原版修脚、Regional Prompt 或独立 2ndSampler，因此不加入这些选项。旁路映射依据实际端口类型及连线生成，子图按已安装转换器展开，动态输入保留 RTX／GLSL 分支定义。
 
 默认 38 个输出可达节点通过本机 schema 检查；32 种可选功能组合均通过节点及连线检查。In/Outpaint 原模型 `anima-lllite-inpainting-v2.safetensors` 在当前 ModelPatchLoader 列表中缺失，保留原值并在启用提交时明确报错。尚未执行 GPU 或 QQ 投递验证。
+
+## 主要修复比较节点（v3.6.0）
+
+按用户明确授权更新两个原版与两个 AstrBot 版，新增范围最终以“主要修复处，参照 Advanced Gemma V40”为准。
+
+| 画布 | 新增比较的处理节点 | 复用 |
+| --- | --- | --- |
+| Detailer V40 original／AstrBot | #23 Detailer、#37 Mask Detailer、#68 SAM Detailer、#55 手、#56 NSFW、#57 脸、#58 眼、#499 脚、#33 Ultimate | 原有 #73 全局比较保留 |
+| Anima Detailer original／AstrBot | #36 Mask Detailer、#37 Detailer、#56 SAM Detailer、#43 手、#44 NSFW、#45 脸、#46 眼 | #54 Ultimate 对比复用，#55 全局比较保留 |
+
+新增比较 A 接处理后、B 接该步骤真实 image 输入，使用 Slide 模式，保持与参考工作流一致。V40 脚节点虽为 mode=0，原 #500 可关闭其执行，因此比较 A 接 #500 结果、B 接对应 on_false 原图，未绕过现有选择器。其他原始模式、模型、分组边界、节点位置和处理连线均保留。
+
+比较框放在相应处理列下方的空白区域，并避开现有分组，避免影响按位置计算的旁路分组归属。没有给预处理、Pad／Resize、Hires、解码或滤镜逐个加比较框。新的 Viewer 空预览在再次执行画布后生成，不携带参考工作流的旧图片 URL。
+
+两份 AstrBot 模板随包保存。实际导出四份修改前／后的图，去掉比较终端后，全部处理 API 节点及输入相同；插件执行 API 保持原值。`scripts/add_detailer_comparisons.py` 可在明确授权下补齐主要节点，复用已有成对连接，重复执行不重复添加。

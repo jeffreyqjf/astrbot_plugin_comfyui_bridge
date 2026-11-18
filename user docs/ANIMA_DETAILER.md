@@ -50,10 +50,16 @@ SAM 3.1、去背景及其他旁路分支仍受各自模型和节点条件约束�
 
 ## 文件与后续维护
 
-- 原版：ComfyUI `user/default/workflows/main/AnimaDetailer.json`，保持不变。
+- 原版：ComfyUI `user/default/workflows/main/AnimaDetailer.json`。v3.6.0 按用户要求补充主要修复比较节点，原模型和处理连线保留。
 - AstrBot 画布：ComfyUI `user/default/workflows/AstrBot/Anima_Detailer_AstrBot.json`，插件随包模板同名。
 - API：ComfyUI `user/default/workflows/api/Anima_Detailer_AstrBot_API.json`；插件 `workflows/Anima_Detailer_AstrBot.json` 保留全部分支和旁路描述，按本次设置裁剪。
 
 AstrBot 版仅将 #2 改为任务参考图占位、#15 改为插件可归档的 SaveImage，并移除旧输出的 metadata 连线；保留节点 ID、布局、分组、其他模型与参数。Image Saver 的专属文件名／元数据控件由插件输出和图片记录替代。
 
 首次导出工具为 `scripts/export_anima_detailer.py`，使用 ComfyUI 环境已有的 comfy-cli 转换器及本机 object_info 快照，生成 AstrBot 画布、API 和随包配置。后续正式修改以 AstrBot 画布为准再导出；不要重新用原版覆盖已经手动调整的 AstrBot 画布或插件参数布局。安装包不自动重载生产插件，也不覆盖已保存的运行图。
+
+## 在 ComfyUI 查看主要修复前后
+
+原版和 AstrBot 版现在在遮罩、整图 Detailer、SAM 3.1、手、NSFW、脸、眼的主要修复列下方提供 `Image … #节点号` 比较框，保留原有 Ultimate 放大和全局比较。与 Advanced Gemma V40 一样，新增节点使用 Slide 模式：A 为处理后，B 为处理前，在图像上移动鼠标比较效果。
+
+保存中的画布需要重新打开并运行一次才显示新预览。旁路的修复没有应用时，对应前后画面可能相同。原处理节点与分组位置保留，未给零散的预处理、尺寸或滤镜步骤增加比较框。插件生成 API 和新建任务功能保持原有行为。

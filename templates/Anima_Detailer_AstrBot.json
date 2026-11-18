@@ -1,8 +1,8 @@
 {
   "id": "f7a250a1-53fb-496b-8c39-c60d9e764028",
   "revision": 0,
-  "last_node_id": 529,
-  "last_link_id": 888,
+  "last_node_id": 536,
+  "last_link_id": 902,
   "nodes": [
     {
       "id": 106,
@@ -2992,7 +2992,8 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            89
+            89,
+            890
           ]
         },
         {
@@ -5109,7 +5110,9 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            103
+            103,
+            894,
+            901
           ]
         }
       ],
@@ -6439,7 +6442,8 @@
           "links": [
             90,
             91,
-            109
+            109,
+            899
           ]
         },
         {
@@ -6862,7 +6866,9 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            1
+            1,
+            897,
+            900
           ]
         },
         {
@@ -7284,7 +7290,9 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            4
+            4,
+            895,
+            898
           ]
         },
         {
@@ -7707,7 +7715,9 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            96
+            96,
+            893,
+            896
           ]
         },
         {
@@ -8538,7 +8548,9 @@
           "type": "IMAGE",
           "links": [
             102,
-            112
+            112,
+            891,
+            902
           ]
         }
       ],
@@ -8850,7 +8862,9 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            88
+            88,
+            889,
+            892
           ]
         }
       ],
@@ -11972,6 +11986,412 @@
       },
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 530,
+      "type": "Image Comparer (rgthree)",
+      "pos": [
+        2670,
+        1688
+      ],
+      "size": [
+        320,
+        360
+      ],
+      "flags": {},
+      "order": 107,
+      "mode": 0,
+      "inputs": [
+        {
+          "dir": 3,
+          "name": "image_a",
+          "type": "IMAGE",
+          "link": 889
+        },
+        {
+          "dir": 3,
+          "name": "image_b",
+          "type": "IMAGE",
+          "link": 890
+        }
+      ],
+      "outputs": [
+        {
+          "dir": 4,
+          "name": "images",
+          "shape": 3,
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "title": "Image Mask Detailer #36",
+      "properties": {
+        "cnr_id": "rgthree-comfy",
+        "ver": "b84f39c7c224de765de0b54c55b967329011819d",
+        "comparer_mode": "Slide",
+        "aux_id": "rgthree/rgthree-comfy",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        []
+      ],
+      "widgets_values_named": {
+        "rgthree_comparer": {
+          "images": []
+        }
+      }
+    },
+    {
+      "id": 531,
+      "type": "Image Comparer (rgthree)",
+      "pos": [
+        3040,
+        1688
+      ],
+      "size": [
+        320,
+        360
+      ],
+      "flags": {},
+      "order": 108,
+      "mode": 0,
+      "inputs": [
+        {
+          "dir": 3,
+          "name": "image_a",
+          "type": "IMAGE",
+          "link": 891
+        },
+        {
+          "dir": 3,
+          "name": "image_b",
+          "type": "IMAGE",
+          "link": 892
+        }
+      ],
+      "outputs": [
+        {
+          "dir": 4,
+          "name": "images",
+          "shape": 3,
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "title": "Image Detailer #37",
+      "properties": {
+        "cnr_id": "rgthree-comfy",
+        "ver": "b84f39c7c224de765de0b54c55b967329011819d",
+        "comparer_mode": "Slide",
+        "aux_id": "rgthree/rgthree-comfy",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        []
+      ],
+      "widgets_values_named": {
+        "rgthree_comparer": {
+          "images": []
+        }
+      }
+    },
+    {
+      "id": 532,
+      "type": "Image Comparer (rgthree)",
+      "pos": [
+        3780,
+        1440
+      ],
+      "size": [
+        320,
+        360
+      ],
+      "flags": {},
+      "order": 109,
+      "mode": 0,
+      "inputs": [
+        {
+          "dir": 3,
+          "name": "image_a",
+          "type": "IMAGE",
+          "link": 893
+        },
+        {
+          "dir": 3,
+          "name": "image_b",
+          "type": "IMAGE",
+          "link": 894
+        }
+      ],
+      "outputs": [
+        {
+          "dir": 4,
+          "name": "images",
+          "shape": 3,
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "title": "Image Hand ADetailer #43",
+      "properties": {
+        "cnr_id": "rgthree-comfy",
+        "ver": "b84f39c7c224de765de0b54c55b967329011819d",
+        "comparer_mode": "Slide",
+        "aux_id": "rgthree/rgthree-comfy",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        []
+      ],
+      "widgets_values_named": {
+        "rgthree_comparer": {
+          "images": []
+        }
+      }
+    },
+    {
+      "id": 533,
+      "type": "Image Comparer (rgthree)",
+      "pos": [
+        4150,
+        1440
+      ],
+      "size": [
+        320,
+        360
+      ],
+      "flags": {},
+      "order": 110,
+      "mode": 0,
+      "inputs": [
+        {
+          "dir": 3,
+          "name": "image_a",
+          "type": "IMAGE",
+          "link": 895
+        },
+        {
+          "dir": 3,
+          "name": "image_b",
+          "type": "IMAGE",
+          "link": 896
+        }
+      ],
+      "outputs": [
+        {
+          "dir": 4,
+          "name": "images",
+          "shape": 3,
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "title": "Image NSFW ADetailer #44",
+      "properties": {
+        "cnr_id": "rgthree-comfy",
+        "ver": "b84f39c7c224de765de0b54c55b967329011819d",
+        "comparer_mode": "Slide",
+        "aux_id": "rgthree/rgthree-comfy",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        []
+      ],
+      "widgets_values_named": {
+        "rgthree_comparer": {
+          "images": []
+        }
+      }
+    },
+    {
+      "id": 534,
+      "type": "Image Comparer (rgthree)",
+      "pos": [
+        4520,
+        1440
+      ],
+      "size": [
+        320,
+        360
+      ],
+      "flags": {},
+      "order": 111,
+      "mode": 0,
+      "inputs": [
+        {
+          "dir": 3,
+          "name": "image_a",
+          "type": "IMAGE",
+          "link": 897
+        },
+        {
+          "dir": 3,
+          "name": "image_b",
+          "type": "IMAGE",
+          "link": 898
+        }
+      ],
+      "outputs": [
+        {
+          "dir": 4,
+          "name": "images",
+          "shape": 3,
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "title": "Image Face ADetailer #45",
+      "properties": {
+        "cnr_id": "rgthree-comfy",
+        "ver": "b84f39c7c224de765de0b54c55b967329011819d",
+        "comparer_mode": "Slide",
+        "aux_id": "rgthree/rgthree-comfy",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        []
+      ],
+      "widgets_values_named": {
+        "rgthree_comparer": {
+          "images": []
+        }
+      }
+    },
+    {
+      "id": 535,
+      "type": "Image Comparer (rgthree)",
+      "pos": [
+        4890,
+        1440
+      ],
+      "size": [
+        320,
+        360
+      ],
+      "flags": {},
+      "order": 112,
+      "mode": 0,
+      "inputs": [
+        {
+          "dir": 3,
+          "name": "image_a",
+          "type": "IMAGE",
+          "link": 899
+        },
+        {
+          "dir": 3,
+          "name": "image_b",
+          "type": "IMAGE",
+          "link": 900
+        }
+      ],
+      "outputs": [
+        {
+          "dir": 4,
+          "name": "images",
+          "shape": 3,
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "title": "Image Eyes ADetailer #46",
+      "properties": {
+        "cnr_id": "rgthree-comfy",
+        "ver": "b84f39c7c224de765de0b54c55b967329011819d",
+        "comparer_mode": "Slide",
+        "aux_id": "rgthree/rgthree-comfy",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        []
+      ],
+      "widgets_values_named": {
+        "rgthree_comparer": {
+          "images": []
+        }
+      }
+    },
+    {
+      "id": 536,
+      "type": "Image Comparer (rgthree)",
+      "pos": [
+        3410,
+        1440
+      ],
+      "size": [
+        320,
+        360
+      ],
+      "flags": {},
+      "order": 113,
+      "mode": 0,
+      "inputs": [
+        {
+          "dir": 3,
+          "name": "image_a",
+          "type": "IMAGE",
+          "link": 901
+        },
+        {
+          "dir": 3,
+          "name": "image_b",
+          "type": "IMAGE",
+          "link": 902
+        }
+      ],
+      "outputs": [
+        {
+          "dir": 4,
+          "name": "images",
+          "shape": 3,
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "title": "Image Any Detailer (SAM 3.1) #56",
+      "properties": {
+        "cnr_id": "rgthree-comfy",
+        "ver": "b84f39c7c224de765de0b54c55b967329011819d",
+        "comparer_mode": "Slide",
+        "aux_id": "rgthree/rgthree-comfy",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        []
+      ],
+      "widgets_values_named": {
+        "rgthree_comparer": {
+          "images": []
+        }
+      }
     }
   ],
   "links": [
@@ -13884,6 +14304,118 @@
       106,
       0,
       40,
+      1,
+      "IMAGE"
+    ],
+    [
+      889,
+      36,
+      0,
+      530,
+      0,
+      "IMAGE"
+    ],
+    [
+      890,
+      79,
+      1,
+      530,
+      1,
+      "IMAGE"
+    ],
+    [
+      891,
+      37,
+      0,
+      531,
+      0,
+      "IMAGE"
+    ],
+    [
+      892,
+      36,
+      0,
+      531,
+      1,
+      "IMAGE"
+    ],
+    [
+      893,
+      43,
+      0,
+      532,
+      0,
+      "IMAGE"
+    ],
+    [
+      894,
+      56,
+      0,
+      532,
+      1,
+      "IMAGE"
+    ],
+    [
+      895,
+      44,
+      0,
+      533,
+      0,
+      "IMAGE"
+    ],
+    [
+      896,
+      43,
+      0,
+      533,
+      1,
+      "IMAGE"
+    ],
+    [
+      897,
+      45,
+      0,
+      534,
+      0,
+      "IMAGE"
+    ],
+    [
+      898,
+      44,
+      0,
+      534,
+      1,
+      "IMAGE"
+    ],
+    [
+      899,
+      46,
+      0,
+      535,
+      0,
+      "IMAGE"
+    ],
+    [
+      900,
+      45,
+      0,
+      535,
+      1,
+      "IMAGE"
+    ],
+    [
+      901,
+      56,
+      0,
+      536,
+      0,
+      "IMAGE"
+    ],
+    [
+      902,
+      37,
+      0,
+      536,
       1,
       "IMAGE"
     ]

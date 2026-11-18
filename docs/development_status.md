@@ -1,5 +1,15 @@
 # 开发状态
 
+## v3.6.0 · 两个 Detailer 的主要修复比较
+
+- 本轮用户明确授权修改两个 Detailer 的 original 和 AstrBot 画布。按最新澄清参照 Advanced Gemma V40，仅为主要 Detailer 修复链和 Ultimate 放大增加 rgthree 滑动比较；滤镜、预处理、尺寸变化及逐次 VAE 解码不增加比较节点。
+- Detailer V40 原版／AstrBot 版各新增 9 个，覆盖整图 Detailer、遮罩、SAM 3.1、手、NSFW、脸、眼、脚及 Ultimate；Anima Detailer 两版各新增 7 个，覆盖遮罩、整图 Detailer、SAM 3.1、手、NSFW、脸、眼，复用原有 Ultimate 比较。保留已有全局比较。
+- 新增节点沿用参考工作流的 Slide 模式及 A=处理后、B=处理前，优先排在对应修复列下方；避开原节点和原分组，不移动旧节点、不修改旧分组或处理连线。V40 修脚比较取 #500 的选择结果，避免修脚关闭时为预览强制运行 #499。
+- 两份 AstrBot 画布同步至插件模板，增加随包 Detailer V40 画布。原始文件及原 Anima 模板已在工作区外备份。通过 ComfyUI 已安装转换器实际导出比较，除 Image Comparer 终端外的 API 完全相同，插件运行 API 文件无需改动，原有参数和开关继续有效。
+- 校验四份画布的所有输入／输出连线、ID 唯一性、旧节点参数／坐标、原分组、覆盖范围、重复执行不重复添加及新增节点不重叠；比较节点通过本机 schema 检查。51 项回归检查及隔离安装包加载验证通过，15 条工作流和两个 Detailer 的任务／LoRA／遮罩回归正常。
+- Minor v3.6.0；未安装／重载生产插件，未执行 GPU 出图或 QQ 投递。比较结果需重新打开 ComfyUI 画布并运行后显示。
+- Git Commit Message：`feat: add before-after viewers to major Detailer repairs`。
+
 ## v3.5.0 · Anima Detailer 独立工作流
 
 - 将用户新增 `main/AnimaDetailer.json` 复制为 AstrBot 版并导出 API，接入独立 `Anima_Detailer_AstrBot`，简称 `anima-detailer`，兼容 `animadetailer/adetailer`。原版不变；保留节点、分组、坐标及模型参数，改参考图占位和输出 SaveImage，旧 Saver 元数据由插件归档替代。原有 Detailer V40 继续保留。

@@ -52,6 +52,7 @@ def build(target=None):
         "templates/drawing_persona.txt",
         "templates/Anima_T2I_AstrBot.json",
         "templates/Anima_Detailer_AstrBot.json",
+        "templates/Detailer_V40_AstrBot.json",
         "templates/Anima_I2I_AIO_AstrBot.json",
         "templates/Anima_WD14_Caption_AstrBot.json",
         "views/workbench/index.html",

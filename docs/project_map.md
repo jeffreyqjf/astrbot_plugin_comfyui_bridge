@@ -28,3 +28,8 @@
 - `bridge/workflows/detailer.py`：任务功能及 Anima ModelOnly LoRA 注入；分支执行及参数面板复用 `v40.py` 和 `studio_settings.py`。
 - `scripts/export_anima_detailer.py`：使用 ComfyUI 环境已有转换器进行受控导出；不加入运行安装包。
 - `user docs/ANIMA_DETAILER.md`：新建任务、QQ、节点参数和本机模型条件。
+
+## Detailer 主要修复对比
+
+- `templates/Detailer_V40_AstrBot.json`、`templates/Anima_Detailer_AstrBot.json`：带主要修复滑动比较的 AstrBot 画布，与本机同名画布同步。
+- `scripts/add_detailer_comparisons.py`：依据主要修复节点的实际输入／输出补齐比较，保留原位置、分组、处理连线及已有比较；处理原版需有用户明确授权。测试位于 `tests/test_detailer_comparisons.py`。
