@@ -8,6 +8,7 @@ import json
 import os
 import sys
 from argparse import ArgumentParser
+from itertools import product
 from pathlib import Path
 from subprocess import CompletedProcess
 from tempfile import TemporaryDirectory
@@ -342,7 +343,7 @@ async def check_controlnet_profiles(instance, root, name):
         assert second["capabilities"]["any"]["types"] == ["canny", "depth"]
 
 
-async def check(root, archive, core):
+async def check(root, archive, core, *, anima_workspace=None, anima_schemas=None):
     os.environ["ASTRBOT_ROOT"] = str(root)
     plugins = root / "data" / "plugins"
     with ZipFile(archive) as bundle:
@@ -388,6 +389,8 @@ async def check(root, archive, core):
         assert ("POST", f"/{PLUGIN}/studio/controlnet/profiles") in context.routes
         await check_controlnet_profiles(instance, root, module.ADVANCED_V40_WORKFLOW)
         await check_h3_media(instance, root)
+        if anima_workspace and anima_schemas:
+            await check_anima_features(instance, anima_workspace, anima_schemas)
         assert (plugin / "user docs" / "MINIMAX_H3_SEED_HUNTER.md").is_file()
         with patch.object(service, "_run") as run:
             result = await instance.run_remote_command("/comfy gen --wf h3 --seed 1000 A fox --raw", "", None)
@@ -675,10 +678,89 @@ async def check_h3_media(instance, root):
             await upload.close()
 
 
+async def check_anima_features(instance, workspace, schemas_path):
+    """Use local node schemas and the installed converter; never submit a ComfyUI prompt."""
+    from astrbot.api.web import PluginRequest, bind_request_context
+    from PIL import Image
+    from starlette.requests import Request
+
+    async def call(route, payload):
+        async def receive():
+            return {"type": "http.request", "body": json.dumps(payload).encode()}
+        incoming = Request({"type": "http", "method": "POST", "path": "/api/" + route,
+                            "headers": [], "query_string": b""}, receive)
+        with bind_request_context(PluginRequest(incoming, username="anima-check")):
+            return await instance.remote_studio.routes["POST", route]()
+
+    studio, service = instance.studio, instance.service
+    schemas = json.loads(schemas_path.read_bytes())
+    files = schemas["LoraLoaderModelOnly"]["input"]["required"]["lora_name"][0]
+    filenames = [name for name in files if name.replace("\\", "/").startswith("anima/")][:2]
+    assert len(filenames) == 2, "Choose two installed Anima LoRAs for the integration check"
+    catalog = {key: {"id": key, "title": key, "number": f"C{index}", "category": "C", "tag": "",
+                     "filename": name.replace("\\", "/"), "default_strength": 0.7}
+               for index, (key, name) in enumerate(zip(("alpha", "beta"), filenames, strict=True), 1)}
+    rgb = io.BytesIO()
+    Image.new("RGB", (12, 8), "white").save(rgb, "PNG")
+    feature_data = {
+        "regional": {"mask": base64.b64encode(rgb.getvalue()).decode(), "base_strength": 0.7,
+                     "regions": [{"text": text, "strength": 1} for text in ("Red fox", "Green tree", "Blue bird")]},
+        "sampling": {"hires_pre": True, "hires_post": True, "second_sampler": True}, "anima_upscale": True,
+    }
+    defaults = studio.anima.path.read_bytes()
+    with patch.object(studio.anima, "workspace", workspace), patch.object(service.client, "request", return_value=schemas), patch.object(
+        studio.anima, "lora_catalog", return_value=catalog
+    ), patch.object(service, "_run") as run:
+        base = service.workflows["Anima_T2I_AstrBot"]
+        for pre, post, second, ultimate, regional in product([False, True], repeat=5):
+            workflow = await studio.anima.for_generation(base, {
+                "sampling": {"hires_pre": pre, "hires_post": post, "second_sampler": second},
+                "anima_upscale": ultimate, "regional": feature_data["regional"] if regional else None, "loras": [],
+            }, False, {})
+            for node, enabled in (("93", pre), ("94", post), ("51", second), ("91", ultimate), ("20", regional)):
+                assert (node in workflow.active) == enabled, (node, enabled)
+            assert set(workflow.input_images) == ({"0", "1", "2"} if regional else set())
+            for key, row in workflow.graph.items():
+                for value in row["inputs"].values():
+                    if isinstance(value, list) and len(value) == 2 and isinstance(value[0], str):
+                        assert value[0] in workflow.graph, (key, value)
+        for route, payload in (
+            ("studio/queue", {"workflow": "Anima_T2I_AstrBot", "positive": "Scene"}),
+            ("studio/queue/command", {"command": "/comfy gen --wf t2i Scene --raw"}),
+            ("studio/queue", {"workflow": "Anima_T2I_AstrBot", "positive": "Scene", "loras": [{"id": "alpha"}, {"id": "beta"}]}),
+            ("studio/queue", {"workflow": "Anima_T2I_AstrBot", "positive": "Scene", "lora_sweep": True, "count": 2}),
+        ):
+            run.reset_mock()
+            response = await call(route, {**payload, **feature_data})
+            assert response.status_code == 200, response.body
+            expected = 4 if payload.get("lora_sweep") else 1
+            assert run.call_count == expected, run.call_count
+            for item in run.call_args_list:
+                graph = item.args[1]
+                assert {"20", "93", "94", "51", "91"}.issubset(graph)
+                assert graph["4"]["inputs"]["populated_text"] == "Green tree"
+                assert set(item.kwargs["input_images"]) == {"0", "1", "2"}
+        response = await call("studio/queue", {"workflow": "Anima_T2I_AstrBot", "positive": "Scene", "regional": None,
+                                             "sampling": {key: False for key in feature_data["sampling"]}, "anima_upscale": False})
+        assert response.status_code == 200, response.body
+        assert not {"20", "93", "94", "51", "91"}.intersection(run.call_args.args[1])
+        before = run.call_count
+        for value in ("yes", 1, None):
+            for route, data in (("studio/queue", {"workflow": "Anima_T2I_AstrBot", "positive": "Scene"}),
+                                ("studio/queue/command", {"command": "/comfy gen --wf t2i Scene --raw"})):
+                response = await call(route, {**data, "anima_upscale": value})
+                assert response.status_code == 400 and run.call_count == before, response.body
+    assert defaults == studio.anima.path.read_bytes()
+    print("PASS: Anima 32 feature combinations, queue, command, stacked LoRAs, sweep, explicit off and invalid switches")
+
+
 if __name__ == "__main__":
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("--astrbot-core", required=True, type=Path)
     parser.add_argument("--archive", required=True, type=Path)
+    parser.add_argument("--anima-workspace", type=Path)
+    parser.add_argument("--anima-schemas", type=Path)
     args = parser.parse_args()
     with TemporaryDirectory(prefix="astrbot-comfy-bridge-") as directory:
-        asyncio.run(check(Path(directory).resolve(), args.archive.resolve(), args.astrbot_core.resolve()))
+        asyncio.run(check(Path(directory).resolve(), args.archive.resolve(), args.astrbot_core.resolve(),
+                          anima_workspace=args.anima_workspace, anima_schemas=args.anima_schemas))

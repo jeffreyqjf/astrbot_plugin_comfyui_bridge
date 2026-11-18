@@ -4,15 +4,15 @@
 
 | 工作流 | 本次可选功能 |
 | --- | --- |
-| Advanced Gemma V40 | OpenPose、Any ControlNet、区域提示词 RGB、Ultimate 放大（Detailer 前／后） |
-| Anima T2I | Anima LLLite |
+| Advanced Gemma V40 | OpenPose、Any ControlNet、Regional Prompting、Ultimate SD Upscale Pre/Post Detailer、Hires Pre/PostDetailer、2ndSampler |
+| Anima T2I | Anima LLLite、Regional Prompting、Hires Pre/PostDetailer、2ndSampler、Ultimate SD Upscaler |
 | 其他工作流 | 保留各自提示词、参考图和 H3 等专用输入；没有对应节点时不显示空开关 |
 
 ControlNet 勾选后选择模型预设、控制类型、直用或预处理以及图片。未勾选的分支不会沿用工作流中已开启的同名分支。直接使用旧 API 且未传单次选项时，仍沿用已保存工作流。
 
 ## Regional Prompt
 
-1. 选择 **Advanced Gemma V40**，填写整体正向提示词，例如 `three girls standing in a garden`。
+1. 选择 **Advanced Gemma V40** 或 **Anima T2I**，填写整体正向提示词，例如 `three girls standing in a garden`。
 2. 勾选 **Regional Prompting**。初始是红、绿、蓝三列遮罩，可切换三行，或清空后自行画区域。
 3. 点击红、绿、蓝区域按钮选择绘制颜色，用画笔、矩形或橡皮调整遮罩。支持触摸绘制、笔径调整和撤销。黑色表示不额外指定区域，整体提示词仍生效。
 4. 分别填写三个区域的主体与细节，例如红区 `1girl, red hair, red dress`，绿区 `1girl, green hair, green dress`，蓝区 `1girl, blue hair, blue dress`。
@@ -37,6 +37,8 @@ ControlNet 勾选后选择模型预设、控制类型、直用或预处理以及
 
 ## Hires 与 2ndSampler
 
-Advanced Gemma V40 新建任务可勾选 Hires PreDetailer、Hires PostDetailer、2ndSampler，可独立启用并与前后 Ultimate 放大组合。分辨率、模型、步数、降噪等参数沿用工作流已保存值；仅影响本次任务。普通生成命令、简易添加及简易 LoRA 遍历支持这些选项。
+Advanced Gemma V40 与 Anima T2I 新建任务均可勾选 Hires PreDetailer、Hires PostDetailer、2ndSampler。V40 可与前后 Ultimate 放大组合；Anima T2I 提供原版单路 Ultimate SD Upscaler 开关。分辨率、模型、步数、降噪等参数沿用工作流已保存值；仅影响本次任务。普通生成命令、简易添加及简易 LoRA 遍历支持这些选项。
+
+Anima T2I 的 Hires、2ndSampler、Ultimate SD Upscaler 直接使用原版对应分支。请在左侧 Anima T2I 工作流参数中调整各分支的倍率、模型、步数、降噪等并保存，然后回到新建任务勾选所需功能。未勾选显式关闭本次分支，不会修改保存的默认值。RGB 编辑、整套提示词预设、普通命令与简易 LoRA 叠加／遍历和 V40 共用操作方式。
 
 可选功能标签沿用 ComfyUI 英文名称（不带 Enable 前缀），中文说明及内部功能 ID 保持原有含义。

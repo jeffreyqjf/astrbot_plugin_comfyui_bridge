@@ -26,6 +26,7 @@ from bridge.workflows.minimax_h3 import (
     save_h3_v3_field,
 )
 from bridge.workflows.regional import (
+    feature_catalog,
     prepare_regional,
     regional_text,
     sampling_options,
@@ -396,6 +397,32 @@ class RegionalPromptTests(unittest.TestCase):
         disabled = v40_workflow(ADVANCED_V40_WORKFLOW, graph, original["astrbot"], options=switches)
         self.assertNotIn("51", disabled.active)
         self.assertFalse(images)
+
+    def test_anima_rgb_bindings_and_feature_upgrade(self):
+        graph = {"20": node("AttentionCouplePPM"), "9": node("ConditioningSetAreaStrength", strength=1)}
+        for image, prompt, strength in (("0", "3", "6"), ("1", "4", "7"), ("2", "5", "8")):
+            graph[image] = node("LoadImage", image="original.png")
+            graph[prompt] = node("ImpactWildcardProcessor", wildcard_text="original", populated_text="original")
+            graph[strength] = node("ConditioningSetAreaStrength", strength=1)
+        original = deepcopy(graph)
+        prepared, switches, images = prepare_regional(ANIMA_WORKFLOW, graph, {}, self.payload(), 1024 * 1024)
+        self.assertEqual(switches, {"119": True})
+        self.assertEqual(set(images), {"0", "1", "2"})
+        self.assertEqual(prepared["3"]["inputs"]["populated_text"], "red subject")
+        self.assertEqual(prepared["8"]["inputs"]["strength"], 1.5)
+        self.assertEqual(prepared["9"]["inputs"]["strength"], 0.8)
+        self.assertEqual(graph, original)
+        self.assertEqual(prepare_regional(ANIMA_WORKFLOW, graph, {}, None, 1024)[1:], ({"119": False}, {}))
+        workflow = workflow_from_profile(ANIMA_WORKFLOW, profile(ANIMA_WORKFLOW), {"positive": ["504.text"], "negative": ["507.text"], "seed": ["50.seed"], "image": [], "optional_image": ["21.image", "129.image"]})
+        workflow.task_features = [row for row in workflow.task_features if row["kind"] == "controlnet"]
+        features = feature_catalog(workflow)
+        self.assertEqual({row["id"] for row in features}, {
+            "controlnet.lllite", "regional", "sampling.hires_pre", "sampling.hires_post", "sampling.second_sampler", "anima.ultimate",
+        })
+        for pre, post, second in product([False, True], repeat=3):
+            self.assertEqual(sampling_options(ANIMA_WORKFLOW, {
+                "hires_pre": pre, "hires_post": post, "second_sampler": second,
+            }), {"13": pre, "14": post, "15": second})
 
     def test_reject_invalid_masks_prompts_and_workflows(self):
         source = profile(ADVANCED_V40_WORKFLOW)

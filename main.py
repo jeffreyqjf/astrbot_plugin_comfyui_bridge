@@ -601,6 +601,8 @@ class ComfyUIBridge(Star):
             data = json.loads(body)
             if not isinstance(data, dict):
                 raise WorkflowError("命令提交格式无效。")
+            if "anima_upscale" in data and type(data["anima_upscale"]) is not bool:
+                raise WorkflowError("Ultimate SD Upscaler 开关须为布尔值。")
             command, account = data.get("command", ""), data.get("account")
             if account is None:
                 account = ""
@@ -616,6 +618,7 @@ class ComfyUIBridge(Star):
                 regional={"regional": data["regional"]} if "regional" in data else None,
                 upscale=data.get("upscale"),
                 sampling=data.get("sampling"),
+                anima_upscale=data.get("anima_upscale"),
             )
             return json_response(result)
         except (ComfyError, OSError, ValueError) as exc:
@@ -681,6 +684,7 @@ class ComfyUIBridge(Star):
         regional=None,
         upscale=None,
         sampling=None,
+        anima_upscale=None,
     ):
         if not self.config.get("enabled", True):
             raise WorkflowError("ComfyUI 插件已在面板禁用。")
@@ -692,7 +696,7 @@ class ComfyUIBridge(Star):
             raise WorkflowError("区域提示词请使用普通生成命令或简易添加。")
         if upscale is not None and action in {"help", "lora", "sweep"}:
             raise WorkflowError("放大开关请使用普通生成命令或简易添加。")
-        if sampling is not None and action in {"help", "lora", "sweep"}:
+        if (sampling is not None or anima_upscale is not None) and action in {"help", "lora", "sweep"}:
             raise WorkflowError("Hires 与 2ndSampler 请使用普通生成命令或简易添加。")
         if (h3_media is not None or h3_prompt is not None) and action in {"help", "lora", "sweep"}:
             raise WorkflowError("H3 素材和提示词设置仅用于生成任务。")
@@ -722,7 +726,7 @@ class ComfyUIBridge(Star):
         if h3_media is not None:
             workflow = self.studio.with_h3_media(workflow, h3_media)
         if regional is not None:
-            if workflow.name != ADVANCED_V40_WORKFLOW:
+            if workflow.name not in {ADVANCED_V40_WORKFLOW, ANIMA_WORKFLOW}:
                 raise WorkflowError("当前工作流不支持区域提示词。")
             options = {**options, **regional}
         prompt, _, negative, seed, preset, *_ = parsed
@@ -731,9 +735,13 @@ class ComfyUIBridge(Star):
                 raise WorkflowError("当前工作流不支持前后两段放大。")
             options = {**options, "upscale": upscale}
         if sampling is not None:
-            if workflow.name != ADVANCED_V40_WORKFLOW:
+            if workflow.name not in {ADVANCED_V40_WORKFLOW, ANIMA_WORKFLOW}:
                 raise WorkflowError("当前工作流不支持 Hires Pre/PostDetailer 与 2ndSampler。")
             options = {**options, "sampling": sampling}
+        if anima_upscale is not None:
+            if workflow.name != ANIMA_WORKFLOW:
+                raise WorkflowError("当前工作流不支持 Anima Ultimate SD Upscaler。")
+            options = {**options, "anima_upscale": anima_upscale}
         if h3_prompt is not None:
             if workflow.name not in H3_WORKFLOWS or not isinstance(h3_prompt, str) or len(h3_prompt) > 8000:
                 raise WorkflowError("H3 提示词须为不超过 8000 字符的文本。")

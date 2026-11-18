@@ -45,13 +45,14 @@ export function mountTaskFeatures({bridge, host, onControlChange, pickGallery}) 
     payload() {
       const active = selected.get(workflow);
       const result = entries.some(item => item.kind === "regional") ? {regional: active.has("regional") ? regional.payload() : null} : {};
-      if (entries.some(item => item.kind === "branch")) result.upscale = {
+      if (entries.some(item => item.id.startsWith("upscale."))) result.upscale = {
         pre: active.has("upscale.pre"), post: active.has("upscale.post"),
       };
       if (entries.some(item => item.id.startsWith("sampling."))) result.sampling = {
         hires_pre: active.has("sampling.hires_pre"), hires_post: active.has("sampling.hires_post"),
         second_sampler: active.has("sampling.second_sampler"),
       };
+      if (entries.some(item => item.id === "anima.ultimate")) result.anima_upscale = active.has("anima.ultimate");
       return result;
     },
   };

@@ -378,6 +378,35 @@
           "kind": "controlnet",
           "branch": "lllite",
           "title": "Anima LLLite"
+        },
+        {
+          "id": "regional",
+          "kind": "regional",
+          "title": "Regional Prompting"
+        },
+        {
+          "id": "sampling.hires_pre",
+          "kind": "branch",
+          "branch": "hires_pre",
+          "title": "Hires PreDetailer"
+        },
+        {
+          "id": "sampling.hires_post",
+          "kind": "branch",
+          "branch": "hires_post",
+          "title": "Hires PostDetailer"
+        },
+        {
+          "id": "sampling.second_sampler",
+          "kind": "branch",
+          "branch": "second_sampler",
+          "title": "2ndSampler"
+        },
+        {
+          "id": "anima.ultimate",
+          "kind": "branch",
+          "branch": "ultimate",
+          "title": "Ultimate SD Upscaler"
         }
       ]
     }

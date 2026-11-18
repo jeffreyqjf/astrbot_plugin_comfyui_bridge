@@ -1,5 +1,14 @@
 # 开发状态
 
+## v3.3.0 · Anima T2I 可选功能补全
+
+- 新建任务新增 Regional Prompting、Hires PreDetailer、Hires PostDetailer、2ndSampler、Ultimate SD Upscaler，保留 Anima LLLite；使用英文原名且不带 Enable。按工作流能力显示，旧声明自动补齐，不覆盖手动布局。
+- RGB 遮罩编辑、三区提示词／强度及整套预设复用现有组件；绑定 Anima 原版节点 0–20。采样／放大映射分支 13/14/15/19，参数沿用已保存工作流。仅本次任务重构分支，默认值不落盘；简易添加、普通命令、简易 LoRA 叠加及遍历均接入。修复 LoRA 构图丢失待上传 RGB 图片的路径；以执行图核对分支现状，重构时提交全部任务开关，避免画布与 API 默认分支不同引起开关失效或串开。
+- 更新随包 AstrBot 模板和 API 能力声明，实际导出核对默认执行图相同。本机 AstrBot 画布与 API 只同步声明；其已有默认值差异保留，未覆盖本机调参，也未修改原版工作流。
+- 43 项回归检查、32 种功能组合实际导出及输出可达性、隔离 AstrBot 的普通任务／命令／多 LoRA／遍历／关闭及非法参数检查通过；1200px／360px 浏览器检查六项功能、RGB 显示及提交通过。Ruff、JS 语法和 Git 差异检查通过。
+- Minor v3.3.0；安装包重新构建。未同步或重载生产插件，未运行 GPU 生成或 QQ 投递。需在目标环境确认 Anima 与 Attention Couple、LLLite、放大节点的画面质量；本轮验证覆盖实际构图及提交参数。
+- Git Commit Message：`feat: complete Anima T2I regional sampling and upscale task features`。
+
 ## v3.2.3 · 移除 Enable 前缀
 
 - 可选功能和工作流分支勾选标签去掉 Enable 前缀，仅显示英文名称；兼容已带前缀的旧声明，分支 ID、开关与提交内容不变。Patch v3.2.3。

@@ -7,10 +7,11 @@ from copy import deepcopy
 from PIL import Image
 
 from .controlnet import CONTROL_BRANCHES
-from .workflow import ADVANCED_V40_WORKFLOW, WorkflowError
+from .workflow import ADVANCED_V40_WORKFLOW, ANIMA_WORKFLOW, WorkflowError
 
 CHANNELS = ("R", "G", "B")
 REGIONS = (("1", "4", "7"), ("2", "5", "18"), ("3", "6", "26"))
+ANIMA_REGIONS = (("0", "3", "6"), ("1", "4", "7"), ("2", "5", "8"))
 UPSCALE_FEATURES = [
     {"id": "upscale.pre", "kind": "branch", "branch": "pre", "title": "Ultimate 放大 · Detailer 前"},
     {"id": "upscale.post", "kind": "branch", "branch": "post", "title": "Ultimate 放大 · Detailer 后"},
@@ -19,6 +20,13 @@ SAMPLING_FEATURES = [
     {"id": "sampling.hires_pre", "kind": "branch", "branch": "hires_pre", "title": "Hires PreDetailer"},
     {"id": "sampling.hires_post", "kind": "branch", "branch": "hires_post", "title": "Hires PostDetailer"},
     {"id": "sampling.second_sampler", "kind": "branch", "branch": "second_sampler", "title": "2ndSampler"},
+]
+
+
+ANIMA_FEATURES = [
+    {"id": "regional", "kind": "regional", "title": "Regional Prompting"},
+    *SAMPLING_FEATURES,
+    {"id": "anima.ultimate", "kind": "branch", "branch": "ultimate", "title": "Ultimate SD Upscaler"},
 ]
 
 
@@ -37,13 +45,16 @@ def feature_catalog(workflow):
                 branch = item.get("branch")
                 if not isinstance(branch, str) or branch not in CONTROL_BRANCHES.get(workflow.name, {}) or item["id"] != f"controlnet.{branch}":
                     raise WorkflowError("工作流未适配所声明的 ControlNet 分支。")
-            elif item in UPSCALE_FEATURES + SAMPLING_FEATURES and workflow.name == ADVANCED_V40_WORKFLOW:
+            elif ((workflow.name == ADVANCED_V40_WORKFLOW and item in UPSCALE_FEATURES + SAMPLING_FEATURES)
+                  or (workflow.name == ANIMA_WORKFLOW and item in ANIMA_FEATURES)):
                 pass
             elif item.get("kind") != "regional" or item["id"] != "regional" or workflow.name != ADVANCED_V40_WORKFLOW:
                 raise WorkflowError("工作流可选功能需要对应的已注册适配器。")
         result = deepcopy(workflow.task_features)
         if workflow.name == ADVANCED_V40_WORKFLOW:
             result.extend(deepcopy(item) for item in UPSCALE_FEATURES + SAMPLING_FEATURES if item["id"] not in seen)
+        if workflow.name == ANIMA_WORKFLOW:
+            result.extend(deepcopy(item) for item in ANIMA_FEATURES if item["id"] not in seen)
         return result
     result = [
         {"id": f"controlnet.{key}", "kind": "controlnet", "branch": key,
@@ -54,6 +65,8 @@ def feature_catalog(workflow):
         result.append({"id": "regional", "kind": "regional", "title": "区域提示词 · RGB"})
         result.extend(deepcopy(UPSCALE_FEATURES))
         result.extend(deepcopy(SAMPLING_FEATURES))
+    if workflow.name == ANIMA_WORKFLOW:
+        result.extend(deepcopy(ANIMA_FEATURES))
     return result
 
 
@@ -65,8 +78,9 @@ def upscale_options(name, value):
 
 
 def sampling_options(name, value):
-    branches = {"hires_pre": "18", "hires_post": "40", "second_sampler": "second_sampler"}
-    if (name != ADVANCED_V40_WORKFLOW or not isinstance(value, dict) or value.keys() != branches.keys()
+    branches = ({"hires_pre": "13", "hires_post": "14", "second_sampler": "15"} if name == ANIMA_WORKFLOW
+                else {"hires_pre": "18", "hires_post": "40", "second_sampler": "second_sampler"})
+    if (name not in {ADVANCED_V40_WORKFLOW, ANIMA_WORKFLOW} or not isinstance(value, dict) or value.keys() != branches.keys()
             or any(type(item) is not bool for item in value.values())):
         raise WorkflowError("Hires 与 2ndSampler 设置须包含三个布尔开关。")
     return {branch: value[key] for key, branch in branches.items()}
@@ -89,10 +103,12 @@ def regional_text(value):
 
 
 def prepare_regional(name, graph, settings, value, limit):
-    if name != ADVANCED_V40_WORKFLOW or "24" not in settings.get("v40", {}).get("branches", {}):
+    anima = name == ANIMA_WORKFLOW
+    branch = "119" if anima else "24"
+    if not anima and (name != ADVANCED_V40_WORKFLOW or "24" not in settings.get("v40", {}).get("branches", {})):
         raise WorkflowError("当前工作流没有 RGB 区域提示词分支。")
     if value is None:
-        return graph, {"24": False}, {}
+        return graph, {branch: False}, {}
     if not isinstance(value, dict) or value.keys() != {"mask", "regions", "base_strength"}:
         raise WorkflowError("区域提示词任务参数无效。")
     texts = regional_text({key: value[key] for key in ("regions", "base_strength")})
@@ -120,16 +136,20 @@ def prepare_regional(name, graph, settings, value, limit):
     except (OSError, ValueError, Image.DecompressionBombError) as exc:
         raise WorkflowError(f"无法读取 RGB 区域遮罩：{exc}") from exc
     selected = deepcopy(graph)
-    if selected.get("51", {}).get("class_type") != "AttentionCouplePPM":
+    if selected.get("20" if anima else "51", {}).get("class_type") != "AttentionCouplePPM":
         raise WorkflowError("区域提示词缺少 Attention Couple 节点。")
     images = {}
-    for (image, prompt, strength), row in zip(REGIONS, texts["regions"], strict=True):
+    for (image, prompt, strength), row in zip(ANIMA_REGIONS if anima else REGIONS, texts["regions"], strict=True):
         if (selected.get(image, {}).get("class_type") != "LoadImage"
-                or selected.get(prompt, {}).get("class_type") != "ImpactWildcardProcessor"):
+                or selected.get(prompt, {}).get("class_type") != "ImpactWildcardProcessor"
+                or selected.get(strength, {}).get("class_type") != "ConditioningSetAreaStrength"):
             raise WorkflowError("区域提示词节点映射已变化，请更新工作流。")
         selected[image]["inputs"]["image"] = "__astrbot_region_pending__.png"
         selected[prompt]["inputs"].update(wildcard_text=row["text"], populated_text=row["text"], mode="fixed")
         selected[strength]["inputs"]["strength"] = row["strength"]
         images[image] = mask
-    selected["27"]["inputs"]["strength"] = texts["base_strength"]
-    return selected, {"24": True}, images
+    base = selected.get("9" if anima else "27", {})
+    if base.get("class_type") != "ConditioningSetAreaStrength":
+        raise WorkflowError("区域提示词缺少全局强度节点。")
+    base["inputs"]["strength"] = texts["base_strength"]
+    return selected, {branch: True}, images

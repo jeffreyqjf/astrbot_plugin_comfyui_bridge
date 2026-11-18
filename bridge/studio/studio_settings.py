@@ -1402,7 +1402,7 @@ class StudioSettings:
         variants = [[row] for row in rows] if sweep else [rows]
         self.service.check_queue_capacity(workflow.name, count * len(variants))
         if workflow.name == ANIMA_WORKFLOW:
-            base = await self.anima.for_generation(workflow, {"loras": []}, has_reference, {}, controlnets=controls)
+            base = await self.anima.for_generation(workflow, {"loras": [], **(regional or {})}, has_reference, {}, controlnets=controls)
             return await self.anima.apply_lora_variants(base, variants, catalog)
         files = await lora_loader_files(self.service.client)
         if workflow.name == WAI_WORKFLOW:
@@ -1451,8 +1451,14 @@ class StudioSettings:
                 regional["upscale"] = data["upscale"]
             if "sampling" in data:
                 regional["sampling"] = data["sampling"]
-            if regional and workflow.name != ADVANCED_V40_WORKFLOW:
-                raise WorkflowError("此工作流不支持区域提示词。")
+            if "anima_upscale" in data:
+                regional["anima_upscale"] = data["anima_upscale"]
+            if regional and workflow.name not in {ADVANCED_V40_WORKFLOW, ANIMA_WORKFLOW}:
+                raise WorkflowError("此工作流不支持所选任务功能。")
+            if "upscale" in regional and workflow.name != ADVANCED_V40_WORKFLOW:
+                raise WorkflowError("此工作流不支持前后两段放大。")
+            if "anima_upscale" in regional and workflow.name != ANIMA_WORKFLOW:
+                raise WorkflowError("此工作流不支持 Anima Ultimate SD Upscaler。")
             if not inputs["simple"]:
                 raise WorkflowError("当前工作流不能用生成任务表单执行。")
             if (prompt.strip() and not inputs["positive"]) or (negative.strip() and not inputs["negative"]):
@@ -1521,7 +1527,7 @@ class StudioSettings:
                 pending = catalog.pending_loras.get(owner) if catalog else None
                 options = {"loras": pending} if pending is not None else {}
                 if workflow.name == ANIMA_WORKFLOW:
-                    workflow = await self.anima.for_generation(workflow, options, image is not None, {}, controlnets=controls)
+                    workflow = await self.anima.for_generation(workflow, {**options, **regional}, image is not None, {}, controlnets=controls)
                 elif workflow.name == AIO_WORKFLOW:
                     workflow = await asyncio.to_thread(self.aio_generation, image is not None)
                 elif workflow.name == WAI_WORKFLOW:

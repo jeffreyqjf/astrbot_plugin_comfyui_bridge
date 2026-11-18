@@ -82,4 +82,11 @@
 
 ## V40 Hires 与二次采样（v3.2.0）
 
-新增 `sampling.hires_pre/sampling.hires_post/sampling.second_sampler`，kind 为 branch。任务传 `sampling:{hires_pre:bool,hires_post:bool,second_sampler:bool}`，对应 18、40、second_sampler，仅 Advanced Gemma V40 接受。省略保留默认，网页显式提交勾选状态，三个值均须为布尔类型。
+新增 `sampling.hires_pre/sampling.hires_post/sampling.second_sampler`，kind 为 branch。任务传 `sampling:{hires_pre:bool,hires_post:bool,second_sampler:bool}`，V40 对应 18、40、second_sampler；从 v3.3.0 起 Anima T2I 也接受，分别对应 13、14、15。省略保留默认，网页显式提交勾选状态，三个值均须为布尔类型。
+
+## Anima T2I 可选功能（v3.3.0）
+
+- `task_inputs.features` 补充 `regional`、`sampling.hires_pre/hires_post/second_sampler` 与 `anima.ultimate`。已保存的旧功能声明仅有 LLLite 时，注册表补齐这些已适配能力，不覆盖现有参数布局。
+- `POST studio/queue` 和普通 `POST studio/queue/command` 支持既有 `regional`、`sampling` 结构及新的 `anima_upscale:bool`。Anima 不接受 V40 的 `upscale:{pre,post}`，其他工作流不接受 `anima_upscale`。字段省略沿用默认；网页显式提交全部状态；命令 sweep 仍只提供 ControlNet，简易遍历支持全部新增功能。
+- `regional:null` 关闭 119；有效 RGB 载荷启用 119，并绑定 `0/1/2.image`、`3/4/5` 文本、`6/7/8` 强度和 `9` 全局强度。图片在构图校验时声明待上传，在任务执行时共用一次上传结果；不进入普通参考图映射。`anima_upscale` 映射分支 19，sampling 映射 13/14/15。
+- 仅重新构建本次任务的图，沿用保存的字段覆盖和布局；LoRA 叠加／遍历保留 `input_images`。开关必须能映射到输出可达节点，否则明确报错。

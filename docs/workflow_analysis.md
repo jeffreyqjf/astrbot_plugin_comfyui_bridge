@@ -33,3 +33,17 @@
 - AstrBot 版将首轮搜种和放大定稿拆成两张显式连线画布。`h3` 在 15、35、55 输出候选，`h3-final` 以选中的实际种子重建首轮、放大去噪潜空间并运行二轮采样，节点 67 输出。两图映射 `5.prompt` 和 `16.value`，单张参考图由插件按需接到 `5.ref_images.ref_image_0`。
 - `h3-v3` 复制 FoxFurEssence v3 画布的 168 个节点，保留子图和节点 ID。将 UE 记录中的连接显式化，补齐首轮子图采样器、Sigma 和视频 VAE。用 ComfyUI 原生导出收集不同分支的执行图，随包配置通过生成模式选择执行图，并按节点 ID 和字段名保存共用参数。搜种返回 #18/#134/#144，定稿和续写返回 #34。额外素材由 #416 分发，临时上传图接原画布 Picture 1 的消费者。
 - 两张画布保存在 ComfyUI 的 `AstrBot/`，用已安装的转换器和本机节点定义导出到 `api/`，随后同步插件 `workflows/`。操作与权重清单见 [Seed Hunter 使用教程](../user%20docs/MINIMAX_H3_SEED_HUNTER.md)。
+
+## Anima T2I 任务功能补全（v3.3.0）
+
+| 任务功能 | 分支 | 实际执行节点 |
+| --- | --- | --- |
+| Regional Prompting | 119 | RGB `0/1/2 → 11/15/16 → 12/13/14`；提示词 `3/4/5 → 17/18/19 → 6/7/8`，基底强度 9 与遮罩 10 汇入 AttentionCouplePPM 20 |
+| Hires PreDetailer | 13 | easy hiresFix 93 |
+| Hires PostDetailer | 14 | easy hiresFix 94 |
+| 2ndSampler | 15 | KSampler 51，输入 latent 来自主 KSampler 27，输出经 VAEDecode 73 |
+| Ultimate SD Upscaler | 19 | UpscaleModelLoader 90、UltimateSDUpscale 91，图像尺寸与计算辅助 134/100/118 |
+
+启用全部五项、局部修复保持随包默认关闭时，区域条件作用于主采样 27 和二次采样 51，图像输出走 `73 → 93 → 91 → 94 → 497 → 510`。关闭分支由原画布旁路连线接续；保留原有节点 ID 和布局，不额外插入模型或修复节点。32 种组合检查节点开关和输出依赖，验证全局提示词不会覆盖三个区域文本。
+
+随包模板已实际导出为 API，默认执行图除能力声明外无变化。本机 AstrBot 画布和现有 API 的默认分支／参数原本存在差异，本次只同步能力声明，保留两者各自的默认值；没有用一次全量导出覆盖本机独立调参。原版画布和运行实例均未改动。

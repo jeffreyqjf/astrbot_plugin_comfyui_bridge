@@ -20,6 +20,7 @@ from .controlnet import (
     without_controlnet_images,
 )
 from .parameter_layout import read_parameter_layout
+from .regional import prepare_regional, sampling_options
 from .workflow import Workflow, WorkflowError, profile_parts, sweep_lora_family
 from .workflow_fields import editable_fields, parse_field, validate_graph
 from .workflow_store import atomic_write, profile_bytes, read_profile, workflow_revision
@@ -67,6 +68,7 @@ ANIMA_RUN_BRANCHES = {
     "feet": ("123", "514"),
     "nsfw_repair": ("7", "54"),
 }
+ANIMA_TASK_BRANCHES = {"119": "20", "13": "93", "14": "94", "15": "51", "19": "91"}
 IMG2IMG_DENOISE = 0.55
 QQ_IMAGE_NODES = tuple(field.split(".", 1)[0] for field in ANIMA_MAPPING["optional_image"])
 BACKGROUND_WEIGHTS = {
@@ -457,6 +459,23 @@ class AnimaSettings(LoraSettings):
         async with self.service.workflow_lock:
             workflow = self.service.workflows.get(self.workflow_name, workflow)
             _, _, settings, canvas = await asyncio.to_thread(self._read)
+        options = dict(options)
+        task_switches = {}
+        has_regional = "regional" in options
+        regional = options.pop("regional", None)
+        # Presence distinguishes an explicit off switch from legacy defaults.
+        if has_regional:
+            task_switches["119"] = regional is not None
+        if "sampling" in options:
+            task_switches.update(sampling_options(self.workflow_name, options.pop("sampling")))
+        if "anima_upscale" in options:
+            enabled = options.pop("anima_upscale")
+            if type(enabled) is not bool:
+                raise WorkflowError("Ultimate SD Upscaler 开关须为布尔值。")
+            task_switches["19"] = enabled
+        if not isinstance(options.get("branches", {}), dict):
+            raise WorkflowError("Anima 分支参数必须是对象。")
+        options["branches"] = {**options.get("branches", {}), **task_switches}
         loras = options.get("loras", state.get("loras"))
         catalog = await asyncio.to_thread((lora_settings or self).lora_catalog) if loras else {}
         options = merge_options(state, self.run_options(options, catalog, lora_settings=lora_settings))
@@ -469,6 +488,7 @@ class AnimaSettings(LoraSettings):
             for key, (_, nodes) in branch_groups(canvas).items()
         }
         known.update({branch: node in workflow.active for branch, node in ANIMA_RUN_BRANCHES.values()})
+        known.update({branch: node in workflow.active for branch, node in ANIMA_TASK_BRANCHES.items()})
         known["120"] = "131" in workflow.active
         switches = {
             key: enabled for key, enabled in requested.items() if enabled != known.get(key)
@@ -483,18 +503,18 @@ class AnimaSettings(LoraSettings):
         ):
             denoise = IMG2IMG_DENOISE
         schemas = None
-        if switches or any((controlnets or {}).values()):
+        if switches or any((controlnets or {}).values()) or regional is not None:
             schemas = await self.service.client.request("GET", "/object_info")
             _, workflow = await self._prepare(
                 {
-                    "branches": switches,
+                    "branches": {**switches, **task_switches},
                     "rebuild": bool(switches),
                     "changes": {"50.denoise": denoise} if denoise is not None else {},
                     "positive_prefix": settings.get("positive_prefix", ""),
                     "use_canvas_seed": settings.get("use_canvas_seed", False),
                     "reference_source": source,
                 },
-                deepcopy(graph), settings, canvas, schemas, controlnets=controlnets,
+                deepcopy(graph), settings, canvas, schemas, controlnets=controlnets, regional=regional,
             )
             for branch, node in ANIMA_RUN_BRANCHES.values():
                 if branch in switches and switches[branch] != (node in workflow.active):
@@ -517,6 +537,9 @@ class AnimaSettings(LoraSettings):
                     schemas = await self.service.client.request("GET", "/object_info/LoadImage")
                 if not panel_reference_available(workflow.graph, schemas, (f.node for f in workflow.image_inputs)):
                     raise WorkflowError("图生图需要参考图。请在 QQ 同条消息附图或引用图片。")
+        for branch, node in ANIMA_TASK_BRANCHES.items():
+            if branch in task_switches and task_switches[branch] != (node in workflow.active):
+                raise WorkflowError(f"分支「{BRANCH_LABELS[int(branch)]}」无法切换，请检查到最终输出的连线。")
         loras = options.get("loras")
         if loras is None:
             loader = workflow.graph.get("26") if "26" in workflow.active else None
@@ -590,6 +613,7 @@ class AnimaSettings(LoraSettings):
         )
         candidate.controlnet_outputs.update(workflow.controlnet_outputs)
         candidate.active.update(workflow.controlnet_outputs.values())
+        candidate.input_images = workflow.input_images
         return candidate
 
     async def save(self, *, update_config=None):
@@ -629,7 +653,7 @@ class AnimaSettings(LoraSettings):
         except (OSError, ValueError, KeyError, TypeError, TimeoutError, ComfyError) as exc:
             return error_response(str(exc) or "导出超时，请重试。", status_code=400)
 
-    async def _prepare(self, payload, graph, settings, canvas, schemas, *, controlnets=None):
+    async def _prepare(self, payload, graph, settings, canvas, schemas, *, controlnets=None, regional=None):
         fields = all_fields(graph, canvas, schemas)
         branches = dict(settings.get("branches", {}))
         overrides = dict(settings.get("overrides", {}))
@@ -664,6 +688,10 @@ class AnimaSettings(LoraSettings):
             raise WorkflowError("提示词前缀或种子模式无效。")
         apply_overrides(graph, overrides, schemas)
         replaced = configure_controlnets(self.workflow_name, graph, controlnets, schemas)
+        images = {}
+        if regional is not None:
+            graph, _, images = prepare_regional(self.workflow_name, graph, settings, regional, self.service.client.max_image_bytes)
+            replaced = set(replaced) | {(key, "image") for key in images}
         mapping = self.service.workflow_mappings().get(self.workflow_name)
         if replaced:
             mapping = without_controlnet_images({**(mapping or {}), **settings.get("node_mapping", {})}, replaced)
@@ -685,6 +713,7 @@ class AnimaSettings(LoraSettings):
         }
         workflow = Workflow(self.workflow_name, profile, mapping)
         self._validate(graph, schemas, source, workflow.mapping, replaced)
+        workflow.input_images = images
         return profile, workflow
 
     def _validate(self, graph, schemas, source, mapping=None, replaced_images=()):
