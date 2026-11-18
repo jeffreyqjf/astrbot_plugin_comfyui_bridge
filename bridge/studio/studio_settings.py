@@ -49,7 +49,13 @@ from ..workflows.controlnet import (
     normalize_controlnet_profiles,
     validate_controlnet_profile_choices,
 )
-from ..workflows.detailer import FEET_NODES, detailer_workflow, feet_switch
+from ..workflows.detailer import (
+    DETAILER_TASK_BRANCHES,
+    FEET_NODES,
+    detailer_options,
+    detailer_workflow,
+    feet_switch,
+)
 from ..workflows.illustrious import (
     WAI_BRANCHES,
     lora_loader_files,
@@ -631,14 +637,20 @@ class StudioSettings:
         if workflow.name == AIO_WORKFLOW:
             _, _, graph, settings, _, mapping = self._read(AIO_WORKFLOW)
             image_workflow = aio_workflow(graph, settings, True, mapping=mapping)
+        if workflow.name == DETAILER_WORKFLOW:
+            _, _, graph, settings, _, mapping = self._read(DETAILER_WORKFLOW)
+            if "v40" in settings:
+                image_workflow = v40_workflow(DETAILER_WORKFLOW, graph, settings, mapping,
+                                              {branch: True for branch in DETAILER_TASK_BRANCHES.values()})
         mask = any(
             value == [field.node, 1]
             for key in image_workflow.active for value in image_workflow.graph[key]["inputs"].values()
             for field in image_workflow.image_inputs
         )
+        prompt_workflow = image_workflow if workflow.name == DETAILER_WORKFLOW else workflow
         return {
-            "simple": simple, "positive": bool(workflow.positive), "negative": bool(workflow.negative),
-            "presets": bool(workflow.positive) and not full_h3,
+            "simple": simple, "positive": bool(prompt_workflow.positive), "negative": bool(prompt_workflow.negative),
+            "presets": bool(prompt_workflow.positive) and not full_h3,
             "reference": reference and not full_h3, "mask": reference and mask and not full_h3,
             "h3_prompt": full_h3 and bool(workflow.positive),
             "h3_media": full_h3 and "416" in workflow.active,
@@ -1414,6 +1426,8 @@ class StudioSettings:
         if workflow.name == ADVANCED_V40_WORKFLOW:
             base = await self.v40_generation(workflow.name, regional or {}, controlnets=controls)
             return [advanced_v40_loras(base, rows, catalog, files) for rows in variants]
+        if workflow.name == DETAILER_WORKFLOW:
+            workflow = await self.v40_generation(workflow.name, regional or {})
         return [workflow_loras(workflow, rows, catalog, files) for rows in variants]
 
     @staticmethod
@@ -1453,8 +1467,14 @@ class StudioSettings:
                 regional["sampling"] = data["sampling"]
             if "anima_upscale" in data:
                 regional["anima_upscale"] = data["anima_upscale"]
-            if regional and workflow.name not in {ADVANCED_V40_WORKFLOW, ANIMA_WORKFLOW}:
+            if "detailer" in data:
+                regional["detailer"] = data["detailer"]
+            if regional and workflow.name not in {ADVANCED_V40_WORKFLOW, ANIMA_WORKFLOW, DETAILER_WORKFLOW}:
                 raise WorkflowError("此工作流不支持所选任务功能。")
+            if "detailer" in regional and workflow.name != DETAILER_WORKFLOW:
+                raise WorkflowError("此工作流不支持 Detailer 任务功能。")
+            if workflow.name == DETAILER_WORKFLOW and regional.keys() - {"detailer"}:
+                raise WorkflowError("Detailer V40 不支持所选任务功能。")
             if "upscale" in regional and workflow.name != ADVANCED_V40_WORKFLOW:
                 raise WorkflowError("此工作流不支持前后两段放大。")
             if "anima_upscale" in regional and workflow.name != ANIMA_WORKFLOW:
@@ -2083,13 +2103,17 @@ class StudioSettings:
             if controlnets:
                 raise WorkflowError("请更新 V40 工作流以使用独立 ControlNet。")
             return detailer_workflow(graph, settings, mapping, options) if name == DETAILER_WORKFLOW else workflow
-        allowed = REPAIR_OPTIONS | ({"img2img", "regional", "upscale", "sampling"} if name == ADVANCED_V40_WORKFLOW else set())
+        allowed = REPAIR_OPTIONS | ({"img2img", "regional", "upscale", "sampling"} if name == ADVANCED_V40_WORKFLOW else {"detailer"})
         if options.keys() - allowed:
             raise WorkflowError("V40 支持单次切换局部修复。Advanced V40 也支持 --img2img on/off。")
         if not allow_nsfw:
             options = {**options, "nsfw_repair": False}
         schemas = await self.service.client.node_schemas(controlnet_node_types(name)) if any((controlnets or {}).values()) else None
         images = {}
+        detailer_task = "detailer" in options
+        if detailer_task:
+            branches = detailer_options(options["detailer"])
+            options = {**{key: value for key, value in options.items() if key != "detailer"}, **branches}
         if "sampling" in options:
             branches = sampling_options(name, options["sampling"])
             options = {**{key: value for key, value in options.items() if key != "sampling"}, **branches}
@@ -2102,6 +2126,10 @@ class StudioSettings:
             )
             options = {**{key: value for key, value in options.items() if key != "regional"}, **branches}
         result = v40_workflow(name, graph, settings, mapping, options, controlnets=controlnets, schemas=schemas)
+        if detailer_task:
+            loaders = {key: result.graph[key] for key in ("35", "36") if key in result.active}
+            if loaders:
+                validate_graph(loaders, await self.service.client.node_schemas({"ControlNetLoader"}))
         result.input_images = images
         return result
 

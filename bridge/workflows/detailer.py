@@ -4,6 +4,16 @@ from copy import deepcopy
 
 from .workflow import DETAILER_WORKFLOW, Workflow, WorkflowError, is_link
 
+DETAILER_TASK_BRANCHES = {"hires": "15", "inpaint": "27", "outpaint": "28", "mask": "mask", "upscale": "30"}
+
+
+def detailer_options(value):
+    if (not isinstance(value, dict) or value.keys() != DETAILER_TASK_BRANCHES.keys()
+            or any(type(enabled) is not bool for enabled in value.values())):
+        raise WorkflowError("Detailer 任务功能须包含 hires、inpaint、outpaint、mask、upscale 五个布尔开关。")
+    return {branch: value[key] for key, branch in DETAILER_TASK_BRANCHES.items()}
+
+
 FEET_NODES = ("497", "498", "499")
 FEET_DETAILER = FEET_NODES[-1]
 FEET_SWITCH = "500"

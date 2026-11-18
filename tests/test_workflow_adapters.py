@@ -18,7 +18,7 @@ from bridge.workflows.controlnet import (
     normalize_controlnet_profiles,
     without_controlnet_images,
 )
-from bridge.workflows.detailer import LEGACY_FEET_LINKS
+from bridge.workflows.detailer import DETAILER_TASK_BRANCHES, LEGACY_FEET_LINKS, detailer_options
 from bridge.workflows.minimax_h3 import (
     H3_V3_DEFAULT,
     h3_v3_fields,
@@ -472,3 +472,38 @@ class V40SamplingTaskTests(unittest.TestCase):
         for invalid in ({}, {"hires_pre": 1, "hires_post": False, "second_sampler": True}):
             with self.assertRaises(WorkflowError):
                 sampling_options(ADVANCED_V40_WORKFLOW, invalid)
+
+
+class DetailerTaskFeatureTests(unittest.TestCase):
+    def test_all_task_combinations_preserve_reachable_branches_and_masks(self):
+        source = profile(DETAILER_WORKFLOW)
+        original = deepcopy(source)
+        for flags in product([False, True], repeat=5):
+            choices = dict(zip(DETAILER_TASK_BRANCHES, flags, strict=True))
+            workflow = v40_workflow(DETAILER_WORKFLOW, source["prompt"], source["astrbot"],
+                                    options=detailer_options(choices))
+            for key, enabled in zip(("7", "77", "96", "37", "33"), flags, strict=True):
+                self.assertEqual(key in workflow.active, enabled, choices)
+            if choices["inpaint"]:
+                self.assertEqual(workflow.graph["75"]["inputs"]["mask"], ["2", 1])
+            if choices["outpaint"]:
+                self.assertEqual(workflow.graph["90"]["inputs"]["mask"], ["50", 1])
+            if choices["mask"]:
+                self.assertEqual(workflow.graph["37"]["inputs"]["mask"], ["2", 1])
+            prepared, _ = workflow.prepare("Task description", seed=123, image_filename="reference.png")
+            if "1" in prepared:
+                self.assertEqual(prepared["1"]["inputs"]["text"], "Task description")
+            for key, row in prepared.items():
+                for value in row["inputs"].values():
+                    if isinstance(value, list) and len(value) == 2 and isinstance(value[0], str):
+                        self.assertIn(value[0], prepared, key)
+        self.assertEqual(source, original)
+        workflow = workflow_from_profile(DETAILER_WORKFLOW, source)
+        workflow.task_features = []
+        self.assertEqual({item["id"] for item in feature_catalog(workflow)}, {f"detailer.{key}" for key in DETAILER_TASK_BRANCHES})
+
+    def test_task_options_reject_missing_extra_and_non_boolean_values(self):
+        off = dict.fromkeys(DETAILER_TASK_BRANCHES, False)
+        for value in (None, {}, {**off, "other": False}, {**off, "hires": 1}, {**off, "mask": "off"}):
+            with self.subTest(value=value), self.assertRaises(WorkflowError):
+                detailer_options(value)

@@ -6,6 +6,10 @@ export function mountTaskFeatures({bridge, host, onControlChange, pickGallery}) 
   };
   const choices = host.querySelector("[data-feature-choices]");
   const regionHost = host.querySelector("[data-regional]");
+  const detailerNote = document.createElement("small");
+  detailerNote.hidden = true;
+  detailerNote.textContent = "Inpaint / Mask Detailer 使用参考图遮罩，可在参考图预览中绘制；Outpaint 的四边扩展量及采样、放大参数沿用工作流设置。";
+  choices.after(detailerNote);
   const selected = new Map();
   let workflow, entries = [];
   const regional = mountRegional({bridge, host: regionHost, pickGallery});
@@ -16,6 +20,7 @@ export function mountTaskFeatures({bridge, host, onControlChange, pickGallery}) 
       if (!selected.has(name)) selected.set(name, new Set());
       const active = selected.get(name);
       choices.replaceChildren();
+      detailerNote.hidden = true;
       host.hidden = !features.length;
       regionHost.hidden = !features.some(item => item.kind === "regional" && active.has(item.id));
       for (const feature of features) {
@@ -28,6 +33,7 @@ export function mountTaskFeatures({bridge, host, onControlChange, pickGallery}) 
         const title = featureNames[feature.id] || feature.title;
         label.append(input, document.createTextNode(title.replace(/^(?:Enable\s+)+/i, "")));
         const apply = () => {
+          detailerNote.hidden = !features.some(item => item.id.startsWith("detailer.") && active.has(item.id));
           if (feature.kind === "controlnet") onControlChange(feature.branch, input.checked);
           if (feature.kind === "regional") {
             regionHost.hidden = !input.checked;
@@ -53,6 +59,9 @@ export function mountTaskFeatures({bridge, host, onControlChange, pickGallery}) 
         second_sampler: active.has("sampling.second_sampler"),
       };
       if (entries.some(item => item.id === "anima.ultimate")) result.anima_upscale = active.has("anima.ultimate");
+      if (entries.some(item => item.id.startsWith("detailer."))) result.detailer = Object.fromEntries(
+        entries.filter(item => item.id.startsWith("detailer.")).map(item => [item.branch, active.has(item.id)]),
+      );
       return result;
     },
   };

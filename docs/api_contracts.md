@@ -90,3 +90,10 @@
 - `POST studio/queue` 和普通 `POST studio/queue/command` 支持既有 `regional`、`sampling` 结构及新的 `anima_upscale:bool`。Anima 不接受 V40 的 `upscale:{pre,post}`，其他工作流不接受 `anima_upscale`。字段省略沿用默认；网页显式提交全部状态；命令 sweep 仍只提供 ControlNet，简易遍历支持全部新增功能。
 - `regional:null` 关闭 119；有效 RGB 载荷启用 119，并绑定 `0/1/2.image`、`3/4/5` 文本、`6/7/8` 强度和 `9` 全局强度。图片在构图校验时声明待上传，在任务执行时共用一次上传结果；不进入普通参考图映射。`anima_upscale` 映射分支 19，sampling 映射 13/14/15。
 - 仅重新构建本次任务的图，沿用保存的字段覆盖和布局；LoRA 叠加／遍历保留 `input_images`。开关必须能映射到输出可达节点，否则明确报错。
+
+## Detailer V40 可选任务分支（v3.4.0）
+
+- `task_inputs.features` 注册 `detailer.hires/inpaint/outpaint/mask/upscale`，`kind:branch`，对应英文 HiresFix、Inpaint、Outpaint、Mask Detailer、Ultimate SD Upscale。旧功能声明可补齐，不覆盖参数布局。
+- 简易 `POST studio/queue` 和普通 `POST studio/queue/command` 接受 `detailer:{hires:bool,inpaint:bool,outpaint:bool,mask:bool,upscale:bool}`，必须包含五项且不带额外字段；分别映射 V40 分支 `15/27/28/mask/30`。仅 Detailer V40 接受，省略沿用已有默认。网页显式提交五项，普通命令添加有可选功能时通过 JSON 提交，避免文件上传捷径丢失开关。
+- Detailer 输入能力按包含可选分支的图计算提示词／负向词／遮罩支持；不受保存分支关闭状态影响。图片和遮罩复用 `image/reference_id/mask`、`apply_mask` 和 `2.image`，Outpaint 遮罩来自 #50。任务仅重构执行图，不写入保存设置；模型等节点参数仍由工作流参数管理。
+- 提交新 Detailer 功能时，仅在 Inpaint／Outpaint 对应加载器实际可达时读取 ControlNetLoader schema，验证 #35／#36 的模型下拉项。缺失返回 400，任务不入队；不自动更换或下载模型。其他已保存的修复分支保持原逻辑。

@@ -6,6 +6,7 @@
 | --- | --- |
 | Advanced Gemma V40 | OpenPose、Any ControlNet、Regional Prompting、Ultimate SD Upscale Pre/Post Detailer、Hires Pre/PostDetailer、2ndSampler |
 | Anima T2I | Anima LLLite、Regional Prompting、Hires Pre/PostDetailer、2ndSampler、Ultimate SD Upscaler |
+| Detailer V40 | HiresFix、Inpaint、Outpaint、Mask Detailer、Ultimate SD Upscale |
 | 其他工作流 | 保留各自提示词、参考图和 H3 等专用输入；没有对应节点时不显示空开关 |
 
 ControlNet 勾选后选择模型预设、控制类型、直用或预处理以及图片。未勾选的分支不会沿用工作流中已开启的同名分支。直接使用旧 API 且未传单次选项时，仍沿用已保存工作流。
@@ -42,3 +43,14 @@ Advanced Gemma V40 与 Anima T2I 新建任务均可勾选 Hires PreDetailer、Hi
 Anima T2I 的 Hires、2ndSampler、Ultimate SD Upscaler 直接使用原版对应分支。请在左侧 Anima T2I 工作流参数中调整各分支的倍率、模型、步数、降噪等并保存，然后回到新建任务勾选所需功能。未勾选显式关闭本次分支，不会修改保存的默认值。RGB 编辑、整套提示词预设、普通命令与简易 LoRA 叠加／遍历和 V40 共用操作方式。
 
 可选功能标签沿用 ComfyUI 英文名称（不带 Enable 前缀），中文说明及内部功能 ID 保持原有含义。
+
+## Detailer V40 新建任务
+
+1. 选择 **Detailer V40**，从图集或本地文件选择参考图。
+2. 在「本次可选功能」勾选 HiresFix、Inpaint、Outpaint、Mask Detailer、Ultimate SD Upscale。五项独立，可组合启用；未勾选显式关闭本次分支。其他修复分支仍沿用工作流设置。
+3. 使用 Inpaint 或 Mask Detailer 时，在参考图预览中绘制遮罩，或提供已有透明通道的图片；只有遮罩区域参与对应局部处理。Outpaint 使用工作流节点 #50 保存的 left/top/right/bottom 扩展量，扩展遮罩由该节点产生。
+4. 提示词／预设与采样、模型、倍率等按现有输入和工作流设置生效。即使保存的工作流关闭这些分支，新建任务仍提供所需提示词及遮罩输入。勾选只影响本次任务，不修改保存的参数。
+
+简易添加和普通命令添加都支持这五个开关。命令 sweep 不提供这些选项。可选功能使用英文原名且不带 Enable。
+
+本机核对发现原默认的 `noobaiInpainting_v10.safetensors` 未安装；使用 Inpaint／Outpaint 前，请在工作流参数的 ControlNetLoader #35／#36 选择本机已有且适配所用模型的文件并保存。提交时会核对所选模型是否可用，缺失会显示节点与参数提示；插件不会自动下载或替换模型。

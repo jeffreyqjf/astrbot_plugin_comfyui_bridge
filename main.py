@@ -34,6 +34,7 @@ from .bridge.studio.remote_studio import API_PATHS, RemoteStudio
 from .bridge.studio.studio_settings import StudioSettings
 from .bridge.workflows.anima_aio import AIO_WORKFLOW
 from .bridge.workflows.anima_settings import ANIMA_RUN_BRANCHES, BRANCH_CATEGORIES, AnimaSettings
+from .bridge.workflows.detailer import detailer_options
 from .bridge.workflows.illustrious import lora_loader_files, workflow_loras
 from .bridge.workflows.minimax_h3 import h3_with_reference
 from .bridge.workflows.svi import NUMERIC_RUN_OPTIONS, parse_stage_loras, parse_stages
@@ -41,6 +42,7 @@ from .bridge.workflows.svi import RUN_OPTIONS as VIDEO_RUN_OPTIONS
 from .bridge.workflows.v40 import V40_WORKFLOWS, advanced_v40_lora_sweep, advanced_v40_loras
 from .bridge.workflows.workflow import (
     ADVANCED_V40_WORKFLOW,
+    DETAILER_WORKFLOW,
     H3_WORKFLOWS,
     LIGHTNING_WORKFLOW,
     REVERSE_WORKFLOW,
@@ -603,6 +605,8 @@ class ComfyUIBridge(Star):
                 raise WorkflowError("命令提交格式无效。")
             if "anima_upscale" in data and type(data["anima_upscale"]) is not bool:
                 raise WorkflowError("Ultimate SD Upscaler 开关须为布尔值。")
+            if "detailer" in data:
+                detailer_options(data["detailer"])
             command, account = data.get("command", ""), data.get("account")
             if account is None:
                 account = ""
@@ -619,6 +623,7 @@ class ComfyUIBridge(Star):
                 upscale=data.get("upscale"),
                 sampling=data.get("sampling"),
                 anima_upscale=data.get("anima_upscale"),
+                detailer=data.get("detailer"),
             )
             return json_response(result)
         except (ComfyError, OSError, ValueError) as exc:
@@ -685,6 +690,7 @@ class ComfyUIBridge(Star):
         upscale=None,
         sampling=None,
         anima_upscale=None,
+        detailer=None,
     ):
         if not self.config.get("enabled", True):
             raise WorkflowError("ComfyUI 插件已在面板禁用。")
@@ -692,6 +698,8 @@ class ComfyUIBridge(Star):
             raise WorkflowError("请填写不超过 16000 字符的任务命令。")
         action, argument = route_command(command)
         await self.service.initialize()
+        if detailer is not None and action in {"help", "lora", "sweep"}:
+            raise WorkflowError("Detailer 可选功能请使用普通生成命令或简易添加。")
         if regional is not None and action in {"help", "lora", "sweep"}:
             raise WorkflowError("区域提示词请使用普通生成命令或简易添加。")
         if upscale is not None and action in {"help", "lora", "sweep"}:
@@ -742,6 +750,10 @@ class ComfyUIBridge(Star):
             if workflow.name != ANIMA_WORKFLOW:
                 raise WorkflowError("当前工作流不支持 Anima Ultimate SD Upscaler。")
             options = {**options, "anima_upscale": anima_upscale}
+        if detailer is not None:
+            if workflow.name != DETAILER_WORKFLOW:
+                raise WorkflowError("当前工作流不支持 Detailer 任务功能。")
+            options = {**options, "detailer": detailer}
         if h3_prompt is not None:
             if workflow.name not in H3_WORKFLOWS or not isinstance(h3_prompt, str) or len(h3_prompt) > 8000:
                 raise WorkflowError("H3 提示词须为不超过 8000 字符的文本。")

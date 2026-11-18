@@ -2845,7 +2845,7 @@ get("remote-command-form").addEventListener("submit", async (event) => {
   const file = get("queue-reference-file").files[0];
   const options = { create: true, opensQueue: ({ queued }) => queued === true };
   const hasControls = [...taskControlnets.values()].some(({ enabled }) => enabled.value);
-  if (remote && taskInputs.reference && file?.size && (!taskInputs.mask || !queueMask()) && !hasControls && !taskInputs.features?.some(item => item.kind === "regional")) {
+  if (remote && taskInputs.reference && file?.size && (!taskInputs.mask || !queueMask()) && !hasControls && !taskInputs.features?.length) {
     form.set("image", file);
     changeQueue("command", form, button, (result) => result.message, options);
     return;

@@ -1,5 +1,15 @@
 # 开发状态
 
+## v3.4.0 · Detailer V40 新建任务可选功能
+
+- 添加 HiresFix、Inpaint、Outpaint、Mask Detailer、Ultimate SD Upscale 五项独立勾选，沿用英文原名且不带 Enable。映射原有分支 15/27/28/mask/30，仅影响本次执行图，保留默认参数、其他修复分支及节点顺序。
+- 支持简易添加和普通命令添加；避免手机文件上传路径丢失可选开关。关闭保存分支后，新建任务仍暴露可选功能需要的提示词／负向词／参考图遮罩入口。Inpaint 和 Mask Detailer 复用参考图遮罩，Outpaint 使用 #50 的扩展设置；采样、模型和倍率继续由工作流参数管理。
+- 更新随包图与本机 AstrBot 画布／API 的能力声明，已实际导出对比；本机画布和旧 API 原有默认差异保留，未覆盖参数或布局，原版未修改。
+- 45 项回归检查通过；隔离 AstrBot 验证 32 种组合、普通命令、遮罩 alpha 打包、显式关闭、非法参数、其他工作流拒绝、关闭默认分支后的输入能力和缺失模型拒绝。1200px／360px 浏览器检查五个开关、图集参考图、草稿保留及提交通过。Ruff、JS 语法与 Git 差异检查通过。
+- 本机 schema 校验发现 #35／#36 默认的 `noobaiInpainting_v10.safetensors` 未安装；使用 Inpaint／Outpaint 前需在工作流参数选择匹配的可用模型并保存。任务提交时验证模型存在，不自动替换或下载。本轮验证构图与提交，未运行 GPU 生成、QQ 投递或手机真机测试。
+- Minor v3.4.0；安装包已构建，未同步或重载生产插件，未提交 Git。
+- Git Commit Message：`feat: add Detailer V40 task feature switches`。
+
 ## v3.3.0 · Anima T2I 可选功能补全
 
 - 新建任务新增 Regional Prompting、Hires PreDetailer、Hires PostDetailer、2ndSampler、Ultimate SD Upscaler，保留 Anima LLLite；使用英文原名且不带 Enable。按工作流能力显示，旧声明自动补齐，不覆盖手动布局。

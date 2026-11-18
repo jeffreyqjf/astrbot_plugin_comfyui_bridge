@@ -3374,6 +3374,39 @@
           }
         }
       }
-    }
+    },
+    "task_feature_version": 1,
+    "task_features": [
+      {
+        "id": "detailer.hires",
+        "kind": "branch",
+        "branch": "hires",
+        "title": "HiresFix"
+      },
+      {
+        "id": "detailer.inpaint",
+        "kind": "branch",
+        "branch": "inpaint",
+        "title": "Inpaint"
+      },
+      {
+        "id": "detailer.outpaint",
+        "kind": "branch",
+        "branch": "outpaint",
+        "title": "Outpaint"
+      },
+      {
+        "id": "detailer.mask",
+        "kind": "branch",
+        "branch": "mask",
+        "title": "Mask Detailer"
+      },
+      {
+        "id": "detailer.upscale",
+        "kind": "branch",
+        "branch": "upscale",
+        "title": "Ultimate SD Upscale"
+      }
+    ]
   }
 }

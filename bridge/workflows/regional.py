@@ -7,7 +7,7 @@ from copy import deepcopy
 from PIL import Image
 
 from .controlnet import CONTROL_BRANCHES
-from .workflow import ADVANCED_V40_WORKFLOW, ANIMA_WORKFLOW, WorkflowError
+from .workflow import ADVANCED_V40_WORKFLOW, ANIMA_WORKFLOW, DETAILER_WORKFLOW, WorkflowError
 
 CHANNELS = ("R", "G", "B")
 REGIONS = (("1", "4", "7"), ("2", "5", "18"), ("3", "6", "26"))
@@ -30,6 +30,13 @@ ANIMA_FEATURES = [
 ]
 
 
+DETAILER_FEATURES = [
+    {"id": f"detailer.{key}", "kind": "branch", "branch": key, "title": title}
+    for key, title in (("hires", "HiresFix"), ("inpaint", "Inpaint"), ("outpaint", "Outpaint"),
+                       ("mask", "Mask Detailer"), ("upscale", "Ultimate SD Upscale"))
+]
+
+
 def feature_catalog(workflow):
     if workflow.task_features:
         if not isinstance(workflow.task_features, list) or len(workflow.task_features) > 16:
@@ -46,7 +53,8 @@ def feature_catalog(workflow):
                 if not isinstance(branch, str) or branch not in CONTROL_BRANCHES.get(workflow.name, {}) or item["id"] != f"controlnet.{branch}":
                     raise WorkflowError("工作流未适配所声明的 ControlNet 分支。")
             elif ((workflow.name == ADVANCED_V40_WORKFLOW and item in UPSCALE_FEATURES + SAMPLING_FEATURES)
-                  or (workflow.name == ANIMA_WORKFLOW and item in ANIMA_FEATURES)):
+                  or (workflow.name == ANIMA_WORKFLOW and item in ANIMA_FEATURES)
+                  or (workflow.name == DETAILER_WORKFLOW and item in DETAILER_FEATURES)):
                 pass
             elif item.get("kind") != "regional" or item["id"] != "regional" or workflow.name != ADVANCED_V40_WORKFLOW:
                 raise WorkflowError("工作流可选功能需要对应的已注册适配器。")
@@ -55,6 +63,8 @@ def feature_catalog(workflow):
             result.extend(deepcopy(item) for item in UPSCALE_FEATURES + SAMPLING_FEATURES if item["id"] not in seen)
         if workflow.name == ANIMA_WORKFLOW:
             result.extend(deepcopy(item) for item in ANIMA_FEATURES if item["id"] not in seen)
+        if workflow.name == DETAILER_WORKFLOW:
+            result.extend(deepcopy(item) for item in DETAILER_FEATURES if item["id"] not in seen)
         return result
     result = [
         {"id": f"controlnet.{key}", "kind": "controlnet", "branch": key,
@@ -67,6 +77,8 @@ def feature_catalog(workflow):
         result.extend(deepcopy(SAMPLING_FEATURES))
     if workflow.name == ANIMA_WORKFLOW:
         result.extend(deepcopy(ANIMA_FEATURES))
+    if workflow.name == DETAILER_WORKFLOW:
+        result.extend(deepcopy(DETAILER_FEATURES))
     return result
 
 

@@ -389,6 +389,7 @@ async def check(root, archive, core, *, anima_workspace=None, anima_schemas=None
         assert ("POST", f"/{PLUGIN}/studio/controlnet/profiles") in context.routes
         await check_controlnet_profiles(instance, root, module.ADVANCED_V40_WORKFLOW)
         await check_h3_media(instance, root)
+        await check_detailer_features(instance)
         if anima_workspace and anima_schemas:
             await check_anima_features(instance, anima_workspace, anima_schemas)
         assert (plugin / "user docs" / "MINIMAX_H3_SEED_HUNTER.md").is_file()
@@ -676,6 +677,79 @@ async def check_h3_media(instance, root):
                 assert json.loads(response.body)["kind"] == "picture"
         finally:
             await upload.close()
+
+
+async def check_detailer_features(instance):
+    from astrbot.api.web import PluginRequest, bind_request_context
+    from PIL import Image
+    from starlette.requests import Request
+
+    async def call(route, payload):
+        async def receive():
+            return {"type": "http.request", "body": json.dumps(payload).encode()}
+        incoming = Request({"type": "http", "method": "POST", "path": "/api/" + route,
+                            "headers": [], "query_string": b""}, receive)
+        with bind_request_context(PluginRequest(incoming, username="detailer-check")):
+            return await instance.remote_studio.routes["POST", route]()
+
+    studio, service = instance.studio, instance.service
+    name = "Detailer_V40_AstrBot"
+    path = service.workflow_dir / (name + ".json")
+    defaults = path.read_bytes()
+    keys = ("hires", "inpaint", "outpaint", "mask", "upscale")
+    image, mask = io.BytesIO(), io.BytesIO()
+    Image.new("RGB", (16, 12), "white").save(image, "PNG")
+    Image.new("RGBA", (16, 12), (255, 255, 255, 180)).save(mask, "PNG")
+    images = {"image": base64.b64encode(image.getvalue()).decode(), "mask": base64.b64encode(mask.getvalue()).decode()}
+    loader_schema = {"ControlNetLoader": {"input": {"required": {"control_net_name": [["noobaiInpainting_v10.safetensors"]]}}}}
+    with patch.object(service, "_run") as run, patch.object(service.client, "node_schemas", return_value=loader_schema) as schemas:
+        for flags in product([False, True], repeat=5):
+            choices = dict(zip(keys, flags, strict=True))
+            response = await call("studio/queue", {"workflow": name, "positive": "Scene", "detailer": choices, **images})
+            assert response.status_code == 200, response.body
+            graph = run.call_args.args[1]
+            for node, enabled in zip(("7", "77", "96", "37", "33"), flags, strict=True):
+                assert (node in graph) == enabled, (node, choices)
+            with Image.open(io.BytesIO(run.call_args.args[3])) as uploaded:
+                assert uploaded.getchannel("A").getpixel((0, 0)) == 75
+        for enabled in (False, True):
+            response = await call("studio/queue/command", {
+                "command": "/comfy gen --wf detailer Scene --raw", "detailer": dict.fromkeys(keys, enabled), **images,
+            })
+            assert response.status_code == 200, response.body
+            graph = run.call_args.args[1]
+            assert all((node in graph) == enabled for node in ("7", "77", "96", "37", "33"))
+        before = run.call_count
+        for value in (None, {}, {**dict.fromkeys(keys, False), "hires": 1}):
+            for route, data in (("studio/queue", {"workflow": name, "positive": "Scene"}),
+                                ("studio/queue/command", {"command": "/comfy gen --wf detailer Scene --raw"})):
+                response = await call(route, {**data, **images, "detailer": value})
+                assert response.status_code == 400 and run.call_count == before, response.body
+        response = await call("studio/queue", {"workflow": "SDXL_Turbo_T2I_AstrBot", "positive": "Scene", "detailer": dict.fromkeys(keys, False)})
+        assert response.status_code == 400 and run.call_count == before
+        schemas.return_value = {"ControlNetLoader": {"input": {"required": {"control_net_name": [["installed.safetensors"]]}}}}
+        for key, node in (("inpaint", "35"), ("outpaint", "36")):
+            response = await call("studio/queue", {"workflow": name, "positive": "Scene", **images,
+                                                   "detailer": {**dict.fromkeys(keys, False), key: True}})
+            assert response.status_code == 400 and run.call_count == before and node.encode() in response.body, response.body
+        schemas.return_value = loader_schema
+        saved = service.workflows[name]
+        modified = json.loads(defaults)
+        for branch in ("15", "27", "28", "mask", "30", "face"):
+            modified["astrbot"]["v40"]["branches"][branch]["enabled"] = False
+        store = importlib.import_module(f"data.plugins.{PLUGIN}.bridge.workflows.workflow_store")
+        try:
+            path.write_text(json.dumps(modified), encoding="utf-8")
+            service.workflows[name] = store.workflow_from_profile(name, modified)
+            inputs = studio.task_inputs(service.workflows[name])
+            assert inputs["positive"] and inputs["negative"] and inputs["mask"]
+            response = await call("studio/queue", {"workflow": name, "positive": "Scene", "detailer": dict.fromkeys(keys, True), **images})
+            assert response.status_code == 200 and "77" in run.call_args.args[1], response.body
+        finally:
+            path.write_bytes(defaults)
+            service.workflows[name] = saved
+    assert defaults == path.read_bytes()
+    print("PASS: Detailer 32 combinations, commands, masks, invalid options and dormant input capabilities")
 
 
 async def check_anima_features(instance, workspace, schemas_path):
