@@ -8,6 +8,9 @@ const bridge = window.AstrBotPluginView || (await import("./remote.js")).bridge;
 const get = (id) => document.getElementById(id);
 const h3Media = mountH3Media({
   bridge, host: get("queue-h3-media"),
+  pickGallery: (select) => imageReviews.pickResource("gallery", select, {
+    useControls: Boolean(studio.input_available), title: "从图集导入 H3 参考图",
+  }),
   status: (text, error = false) => {
     const target = get("h3-media-status");
     target.textContent = text;

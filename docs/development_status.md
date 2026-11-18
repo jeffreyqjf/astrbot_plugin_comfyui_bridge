@@ -139,3 +139,9 @@
 - 37 项单元测试通过。隔离 AstrBot 加载 14 条工作流和 68 条路由，验证两种任务入口携带完整素材描述，以及预览、上传和受限转发。Chromium 在 1200px 与 360px 下验证图片预览、裁剪镜像、视频截取、排序、音轨切换、上传与预设。隔离 ComfyUI 实际验证图片、视频、音频上传及读取、裁剪导出、音轨提取和预设保存读取。
 - GPU 视频生成、Auto Mask 实际推理和 QQ 投递待验证，运行副本尚未部署。高级编辑界面部分文字沿用上游原文。新增 vendor 资源及授权文本均纳入安装包。
 - Git Commit Message 为 `feat: add full H3 media loader to task creation`。
+
+## v2.36.0 · H3 图集导入
+
+- H3 素材加载器增加「从图集导入」，复用图集选择器的筛选、分页和预览。支持待评价、收藏、跳过及可用的控制图集，按原图格式导入，可重复添加多张图片。
+- Chromium 在 1200px 和 360px 下验证普通图集与控制图集导入，确认请求原图、文件后缀匹配、素材草稿进入任务参数。JavaScript 语法与 Git 差异检查通过。运行副本待安装。
+- Git Commit Message 为 `feat: import gallery images into H3 media loader`。

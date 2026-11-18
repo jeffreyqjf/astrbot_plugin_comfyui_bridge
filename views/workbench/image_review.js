@@ -594,9 +594,9 @@ export function mountImageReviews({
     }
   }
 
-  function pickResource(source, select, { type, useControls = false } = {}) {
+  function pickResource(source, select, { type, useControls = false, title } = {}) {
     resourceRequest = { source, select, type, path: [{ name: "ComfyUI input", id: "" }] };
-    get("task-resource-title").textContent = source === "input" ? "浏览 ComfyUI input" : "从图集选择控制图";
+    get("task-resource-title").textContent = title || (source === "input" ? "浏览 ComfyUI input" : "从图集选择控制图");
     get("task-resource-gallery-field").hidden = source === "input";
     get("task-resource-control-galleries").disabled = !useControls;
     resourceGallery.value = useControls ? "controls/favourite" : "images/favourite";
