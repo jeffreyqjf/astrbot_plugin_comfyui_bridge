@@ -708,13 +708,18 @@
                 <summary>H3 Prompt IDE<span>提示词与模板</span></summary>
                 <div class="h3-prompt-body">
                   <div class="h3-prompt-templates" aria-label="提示词模板">
-                    <label class="field">提示词模板<select data-h3-template-list><option value="">选择模板</option></select></label>
-                    <label class="field">模板名称<input data-h3-template-name maxlength="64" placeholder="输入名称，保存当前提示词"></label>
-                    <div class="row-actions">
-                      <button type="button" data-h3-template-load disabled>加载</button>
-                      <button type="button" data-h3-template-save disabled>保存模板</button>
-                      <button type="button" data-h3-template-delete disabled>删除</button>
-                      <button type="button" data-h3-template-refresh>刷新</button>
+                    <label class="field">提示词模板<select data-h3-template-list><option value="">选择即加载</option></select></label>
+                    <div class="h3-template-edit">
+                      <input data-h3-template-name maxlength="64" aria-label="模板名称" placeholder="模板名称">
+                      <button type="button" data-h3-template-save disabled>保存</button>
+                      <details class="h3-template-menu">
+                        <summary aria-label="更多模板操作" title="更多模板操作">⋯</summary>
+                        <div>
+                          <button type="button" data-h3-template-load disabled>恢复模板原文</button>
+                          <button type="button" data-h3-template-refresh>刷新列表</button>
+                          <button type="button" data-h3-template-delete disabled>删除模板</button>
+                        </div>
+                      </details>
                     </div>
                     <p data-h3-template-status role="status" hidden></p>
                   </div>

@@ -38,6 +38,7 @@ export function mountH3Prompt({ bridge, host, textarea, status, download }) {
   const templateSave = host.querySelector("[data-h3-template-save]");
   const templateDelete = host.querySelector("[data-h3-template-delete]");
   const templateRefresh = host.querySelector("[data-h3-template-refresh]");
+  const templateMenu = host.querySelector(".h3-template-menu");
   const templateMessage = host.querySelector("[data-h3-template-status]");
   const transfer = document.querySelector("[data-h3-transfer]");
   const transferMessage = transfer.querySelector("[data-h3-transfer-status]");
@@ -57,11 +58,11 @@ export function mountH3Prompt({ bridge, host, textarea, status, download }) {
     }
   }
   function templateControls() {
-    templateList.disabled = templateBusy;
+    templateList.disabled = templateBusy || !loaded;
     templateName.disabled = templateBusy;
     templateLoad.disabled = templateDelete.disabled = templateBusy || !loaded || !templateList.value;
     templateSave.disabled = templateBusy || !loaded || revision === undefined || !templateName.value.trim();
-    templateSave.textContent = Object.hasOwn(templates, templateName.value.trim()) ? "更新模板" : "保存模板";
+    templateSave.textContent = Object.hasOwn(templates, templateName.value.trim()) ? "更新" : "保存";
     templateRefresh.disabled = templateBusy;
     exportPrompt.disabled = templateBusy || !loaded;
     exportTemplates.disabled = importTemplates.disabled = templateBusy;
@@ -69,12 +70,13 @@ export function mountH3Prompt({ bridge, host, textarea, status, download }) {
   function templateCatalog(data, selected = templateList.value) {
     templates = data.templates;
     revision = data.revision;
-    templateList.replaceChildren(new Option("选择模板", ""));
+    templateList.replaceChildren(new Option("选择即加载", ""));
     for (const name of Object.keys(templates).sort((a, b) => a.localeCompare(b))) templateList.add(new Option(name, name));
     templateList.value = Object.hasOwn(templates, selected) ? selected : "";
   }
   async function templateAction(action) {
     if (templateBusy) return;
+    templateMenu.open = false;
     templateBusy = true;
     templateControls();
     templateStatus("");
@@ -85,8 +87,15 @@ export function mountH3Prompt({ bridge, host, textarea, status, download }) {
   templateList.addEventListener("change", () => {
     templateName.value = templateList.value;
     templateControls();
+    loadTemplate();
   });
   templateName.addEventListener("input", templateControls);
+  templateName.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.isComposing) {
+      event.preventDefault();
+      if (!templateSave.disabled) templateSave.click();
+    }
+  });
   templateRefresh.addEventListener("click", () => templateAction(async () => {
     templateCatalog(await bridge.apiGet(templatePath));
     templateStatus("模板列表已刷新。");
@@ -98,7 +107,7 @@ export function mountH3Prompt({ bridge, host, textarea, status, download }) {
     templateName.value = name;
     templateStatus(`已保存模板「${name}」。`);
   }));
-  templateLoad.addEventListener("click", () => {
+  function loadTemplate() {
     const template = templates[templateList.value];
     if (!template) return;
     updateText(template.prompt);
@@ -106,7 +115,11 @@ export function mountH3Prompt({ bridge, host, textarea, status, download }) {
     mode.value = template.mode;
     mode.dispatchEvent(new Event("change", {bubbles: true}));
     templateStatus(`已加载模板「${templateList.value}」。`);
-  });
+    templateMenu.open = false;
+  }
+  templateLoad.addEventListener("click", loadTemplate);
+  host.addEventListener("keydown", (event) => { if (event.key === "Escape") templateMenu.open = false; });
+  document.addEventListener("pointerdown", (event) => { if (!templateMenu.contains(event.target)) templateMenu.open = false; });
   templateDelete.addEventListener("click", () => templateAction(async () => {
     const name = templateList.value;
     templateCatalog(await bridge.apiPost(templatePath, {name, template: null, revision}));
