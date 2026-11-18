@@ -382,3 +382,5 @@ WAI 默认线稿型 Union ControlNet 的输入先做 Canny 边缘检测。选中
 ### 工作流基础配置
 
 工作流页面的命令简称、提示词前缀与种子、LoRA 扫图目录及参考图来源集中在「基础配置」，默认收起。点击标题展开后修改，保存方式沿用原有按钮；折叠不会清空草稿。不适用的选项仍按各工作流隐藏。
+
+工作流分支勾选项沿用原版英文名称并显示 Enable 前缀，例如 Hand ADetailer、Hires PreDetailer、Seperate VAE、2ndSampler。分类与说明保留中文；仅调整显示，开关保存和分支 ID 不变。

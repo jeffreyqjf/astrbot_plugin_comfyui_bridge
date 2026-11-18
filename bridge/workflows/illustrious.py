@@ -11,13 +11,13 @@ PIXEL_LORA = "pixel-illustrious.safetensors"
 
 # Branches bypass the associated node or group without discarding its settings.
 WAI_BRANCHES = {
-    "external_vae": ("使用外部 VAE", False),
-    "upscale": ("模型放大", True),
-    "face": ("人脸修复", False),
-    "refine": ("放大后重采样", True),
-    "control": ("重采样 ControlNet", True),
-    "detail_daemon": ("重采样 Detail Daemon", False),
-    "eyes": ("眼部修复", True),
+    "external_vae": ("External VAE", False),
+    "upscale": ("Upscale", True),
+    "face": ("Face detailer", False),
+    "refine": ("Upscale refiner", True),
+    "control": ("ControlNet", True),
+    "detail_daemon": ("Detail Daemon", False),
+    "eyes": ("Eye Detailer", True),
 }
 
 

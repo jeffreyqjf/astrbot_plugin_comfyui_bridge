@@ -1,5 +1,13 @@
 # 开发状态
 
+## v3.2.2 · 工作流分支沿用英文原名
+
+- Anima T2I、Advanced Gemma V40、Detailer V40、WAI-Illustrious 的工作流分支选择统一英文标签，并在勾选项显示 Enable 前缀。Anima 名称逐项核对随包画布分组；V40 的修复、VAE、二次采样等适配器虚拟 ID 映射回原版名称。WAI 使用对应原版分组／节点英文名。无分支列表的工作流不增加虚构分支。
+- 42 项回归检查通过；1200px／360px 浏览器验证英文分支标签、既有任务及功能选择。Ruff、JS 语法和 Git 差异检查通过。
+- 只改名称与显示，分类及说明保留中文，分支 ID、开关、参数、工作流文件和用户设置不变。Patch v3.2.2，运行副本未同步，本轮不运行 GPU 生成。
+- Git Commit Message：`fix: use original English names for workflow branch selectors`。
+
+
 ## v3.2.1 · 可选功能英文名称
 
 - 新建任务的已适配功能沿用 ComfyUI 开关英文，包含 Enable OpenPose、Enable Any ControlNet、Enable Regional Prompting、Enable Ultimate SD Upscale Pre/Post Detailer、Enable Hires Pre/PostDetailer、Enable 2ndSampler。Anima LLLite 同样保留英文。只调整显示名称，稳定 ID、分支、元数据和提交参数不变，不增加其他功能。

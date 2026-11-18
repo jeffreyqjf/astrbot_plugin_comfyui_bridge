@@ -698,7 +698,7 @@ function render(data, workflow = selected) {
     input.type = "checkbox";
     input.checked = branch.enabled;
     switches.set(branch.id, { input, enabled: branch.enabled, title: branch.title });
-    label.append(input, branch.title);
+    label.append(input, branch.title.startsWith("Enable ") ? branch.title : `Enable ${branch.title}`);
     categories.get(branch.category).append(label);
   }
   updateBranchSummary();

@@ -263,3 +263,14 @@ def upgrade_detailer(profile, bundled):
                 upgraded[key]["inputs"][field] = value
     v40_workflow(DETAILER_WORKFLOW, upgraded, updated_settings)
     return replacement
+
+
+def branch_title(name, key, fallback):
+    common = {"hands": "Hand ADetailer", "nsfw_repair": "NSFW ADetailer", "face": "Face ADetailer",
+              "eyes": "Eyes ADetailer", "feet": "Feet ADetailer", "mask": "Mask Detailer",
+              "full_detailer": "Detailer", "sam_detailer": "Any Detailer (SAM 3.1)",
+              "free_detailer": "Free ADetailer", "second_sampler": "2ndSampler",
+              "img2img": "Load Image", "metadata_saver": "Image Saver"}
+    labels = {ADVANCED_V40_WORKFLOW: {"21": "Seperate VAE", "22": "Compression Removal", "28": "Use SAMLoader", "121": "Prompt Enhancer"},
+              DETAILER_WORKFLOW: {"18": "Seperate VAE", "19": "Compression Removal", "26": "Image Compare", "31": "Use SAMLoader"}}
+    return labels.get(name, {}).get(key, common.get(key, fallback))

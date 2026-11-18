@@ -93,6 +93,7 @@ from ..workflows.v40 import (
     V40_FBCNN_SCHEMA,
     V40_WORKFLOWS,
     advanced_v40_loras,
+    branch_title,
     v40_branches,
     v40_workflow,
 )
@@ -2349,7 +2350,7 @@ class StudioSettings:
         if workflow.name in V40_WORKFLOWS and "v40" in settings:
             data["image_inputs"] = [field.label() for field in workflow.image_inputs]
             data["branches"] = [
-                {"id": key, "title": row["title"], "category": row["category"], "enabled": row["enabled"]}
+                {"id": key, "title": branch_title(workflow.name, key, row["title"]), "category": row["category"], "enabled": row["enabled"]}
                 for key, row in settings["v40"]["branches"].items()
             ]
         elif workflow.name == WAI_WORKFLOW:
@@ -2362,7 +2363,7 @@ class StudioSettings:
             switch = feet_switch(raw_graph)
             if switch:
                 data["branches"] = [{
-                    "id": "feet", "title": "修脚", "category": "局部修复", "enabled": switch["switch"],
+                    "id": "feet", "title": "Feet ADetailer", "category": "局部修复", "enabled": switch["switch"],
                 }]
         elif workflow.name in SEGMENTED_VIDEO_WORKFLOWS:
             data["svi_lora_files"] = svi_lora_files(schemas)
