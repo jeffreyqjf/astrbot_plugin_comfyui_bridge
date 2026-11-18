@@ -1371,7 +1371,7 @@ class StudioSettings:
             if workflow is None or workflow.sweep_lora_family is None:
                 raise WorkflowError("此工作流未配置 LoRA 目录。")
             family = await self.lora_catalog_for(workflow.sweep_lora_family)
-            catalog = await asyncio.to_thread(family.lora_catalog)
+            catalog = await asyncio.to_thread(family.task_catalog)
             return json_response({"entries": [
                 {key: entry[key] for key in ("id", "number", "title", "default_strength")}
                 for entry in catalog.values()
@@ -1738,10 +1738,18 @@ class StudioSettings:
             if len(body) > 4096:
                 raise WorkflowError("控制图请求过大。")
             data = json.loads(body)
-            if not isinstance(data, dict) or data.keys() != {"id", "state"}:
+            if not isinstance(data, dict) or data.keys() not in ({"id", "state"}, {"id", "name"}, {"id", "delete"}):
                 raise WorkflowError("控制图评价无效。")
             def rate():
-                return self._control_archive().rate(data["id"], data["state"])
+                archive = self._control_archive()
+                if "name" in data:
+                    return archive.rename(data["id"], data["name"])
+                if "delete" in data:
+                    if data["delete"] is not True:
+                        raise WorkflowError("删除标记无效。")
+                    archive.delete(data["id"])
+                    return None
+                return archive.rate(data["id"], data["state"])
             return json_response({"asset": await asyncio.to_thread(rate)})
         except InputUnavailable as exc:
             return error_response(str(exc), status_code=503)

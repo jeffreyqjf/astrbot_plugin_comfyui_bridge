@@ -4,7 +4,7 @@ const controlStates = { unevaluated: "待评价", favourite: "收藏", pass: "Pa
 export const controlBranchTitle = (name) => controlBranches[name] ?? name;
 export const controlTypeTitle = (name) => controlTypes[name] ?? name;
 const controlAssetId = (asset) => asset.asset_id ?? asset.id;
-const controlAssetTitle = (asset) => `${controlBranchTitle(asset.branch)} · ${controlTypeTitle(asset.type)}`;
+const controlAssetTitle = (asset) => asset.name || `${controlBranchTitle(asset.branch)} · ${controlTypeTitle(asset.type)}`;
 
 export function setTaskImagePreview(image, source) {
   const previous = image.getAttribute("src");
@@ -349,11 +349,29 @@ export function mountImageReviews({
   }
 
   get("queue-reference-open").addEventListener("click", () => {
-    pickFavourite("从收藏选择参考图", (item, preview) => {
-      referenceId.value = item.id;
-      referenceFile.value = "";
-      updateReference(`已选择收藏图片 · ${imageLabel(item)}`, preview);
-    });
+    pickResource("gallery", async ({entry, kind, state, label}) => {
+      const version = ++sourceVersion;
+      const buttons = [get("queue-add"), get("remote-command-send"), get("queue-reference-open")];
+      const disabled = buttons.map(button => button.disabled);
+      buttons.forEach(button => { button.disabled = true; });
+      try {
+        const {src} = await bridge.apiGet(kind === "controls" ? "studio/control-assets/preview" : "studio/images/file", {
+          id: kind === "controls" ? controlAssetId(entry) : entry.id,
+          ...(kind === "controls" ? {} : {state}), original: "1",
+        });
+        if (version !== sourceVersion) return;
+        const match = /^data:(image\/(?:png|jpeg|webp|gif));base64,([A-Za-z0-9+/=\r\n]+)$/.exec(src);
+        if (!match) throw new Error("图集原图格式无效。");
+        const suffix = {"image/png":"png","image/jpeg":"jpg","image/webp":"webp","image/gif":"gif"}[match[1]];
+        const bytes = Uint8Array.from(atob(match[2]), value => value.charCodeAt(0));
+        const files = new DataTransfer();
+        files.items.add(new File([bytes], `reference.${suffix}`, {type: match[1]}));
+        referenceFile.files = files.files;
+        referenceId.value = "";
+        updateReference(`已选择图集图片 · ${label}`, src);
+      } catch (error) { notify(error.message, true); }
+      finally { buttons.forEach((button, index) => { button.disabled = disabled[index]; }); }
+    }, {useControls: true, gallery: "images/favourite", title: "从图集选择参考图"});
   });
   get("queue-reference-close").addEventListener("click", () => referencePicker.close());
   get("queue-reference-rating").addEventListener("change", () => loadReferences(1));
@@ -594,12 +612,12 @@ export function mountImageReviews({
     }
   }
 
-  function pickResource(source, select, { type, useControls = false, title } = {}) {
+  function pickResource(source, select, { type, useControls = false, title, gallery } = {}) {
     resourceRequest = { source, select, type, path: [{ name: "ComfyUI input", id: "" }] };
     get("task-resource-title").textContent = title || (source === "input" ? "浏览 ComfyUI input" : "从图集选择控制图");
     get("task-resource-gallery-field").hidden = source === "input";
     get("task-resource-control-galleries").disabled = !useControls;
-    resourceGallery.value = useControls ? "controls/favourite" : "images/favourite";
+    resourceGallery.value = gallery || (useControls ? "controls/favourite" : "images/favourite");
     resourcePicker.showModal();
     changeResourceGallery();
   }
@@ -761,6 +779,40 @@ export function mountImageReviews({
             controlWrites.delete(id);
             if (visible()) renderState(asset.state);
           }
+        });
+        actions.append(button);
+      }
+      const name = document.createElement("input");
+      name.value = asset.name || "";
+      name.placeholder = "输入控制图名称";
+      name.maxLength = 128;
+      name.setAttribute("aria-label", "控制图名称");
+      const nameField = document.createElement("label");
+      nameField.className = "field";
+      nameField.append("控制图名称", name);
+      frame.insertBefore(nameField, actions);
+      for (const [text, deleting] of [["重命名", false], ["删除", true]]) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = text;
+        button.addEventListener("click", async () => {
+          if (controlWrites.has(id)) return;
+          if (deleting && !confirm("删除这张控制图原文件？关联的生成结果会保留。")) return;
+          controlWrites.add(id);
+          for (const action of actions.children) action.disabled = true;
+          try {
+            const result = await bridge.apiPost("studio/control-assets", deleting ? {id, delete: true} : {id, name: name.value});
+            if (deleting) {
+              frame.replaceChildren(document.createTextNode("控制图已删除。"));
+            } else {
+              Object.assign(asset, result.asset);
+              name.value = asset.name;
+              title.textContent = controlAssetTitle(asset);
+              status.textContent = "控制图已重命名。";
+            }
+            if (!controlGallery.hidden) loadControlGallery();
+          } catch (error) { status.textContent = error.message; }
+          finally { controlWrites.delete(id); if (!deleting || frame.contains(actions)) renderState(asset.state); }
         });
         actions.append(button);
       }

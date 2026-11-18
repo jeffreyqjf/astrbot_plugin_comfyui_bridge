@@ -43,6 +43,34 @@ class ControlNetArchiveTests(unittest.TestCase):
             source_sha256="b" * 64, preprocessor={"name": "DepthAnything", "resolution": 640},
         )
 
+    def test_rename_rate_delete_keep_id_and_protect_files(self):
+        asset = self.record()
+        key = asset["asset_id"]
+        renamed = self.archive.rename(key, "我的姿势")
+        self.assertEqual(renamed["asset_id"], key)
+        self.assertEqual(renamed["name"], "我的姿势.png")
+        self.assertEqual(self.archive.read(key, original=True)[1], self.data)
+        self.archive.rate(key, "favourite")
+        self.assertTrue((self.input_root / "my_input/favourite/我的姿势.png").is_file())
+        self.assertFalse((self.input_root / "my_input/unevaluated/我的姿势.png").exists())
+        other = self.record(slot=2)
+        self.archive.rename(other["asset_id"], "我的姿势.png")
+        with self.assertRaises(WorkflowError):
+            self.archive.rate(other["asset_id"], "favourite")
+        self.archive.rename(other["asset_id"], "其他姿势.png")
+        self.archive.rate(other["asset_id"], "favourite")
+        with self.assertRaises(WorkflowError):
+            self.archive.rename(other["asset_id"], "我的姿势.png")
+        for invalid in ("../bad.png", "CON.png", "bad.jpg"):
+            with self.assertRaises(WorkflowError):
+                self.archive.rename(key, invalid)
+        self.archive.delete(key)
+        self.archive.delete(key)
+        self.assertFalse((self.input_root / "my_input/favourite/我的姿势.png").exists())
+        with self.assertRaises(WorkflowError):
+            self.archive.read(key)
+        self.assertEqual(self.archive.list("favourite")["total"], 1)
+
     def media(self, asset_id, state):
         return self.input_root / "my_input" / state / f"{asset_id}.png"
 

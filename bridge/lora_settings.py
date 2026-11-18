@@ -140,7 +140,7 @@ class LoraSettings:
             return "C"
         return "O"
 
-    def _load_lora_catalog(self):
+    def _load_lora_catalog(self, *, hash_files=True):
         order, legacy, tags, categories, strengths = self._read_lora_settings()
         root = (self.workspace / "models/loras").resolve() / self.family
         if root.resolve() != root:
@@ -194,7 +194,7 @@ class LoraSettings:
                 tag.strip() if isinstance(tag, str) and len(tag) <= LORA_TAG_LIMIT else "",
             ))
             try:
-                sha256 = self._lora_sha256(resolved, version)
+                sha256 = self._lora_sha256(resolved, version) if hash_files else ""
             except OSError:
                 continue
             files.add(resolved)
@@ -203,8 +203,9 @@ class LoraSettings:
                 "default_tag": tag, "category": categories.get(key) or self._default_category(relative, meta),
                 "default_strength": strengths.get(key, 1),
             }
-        self.lora_hashes = {path: self.lora_hashes[path] for path in files}
-        migrated = legacy.keys() & catalog.keys()
+        if hash_files:
+            self.lora_hashes = {path: self.lora_hashes[path] for path in files}
+        migrated = legacy.keys() & catalog.keys() if hash_files else set()
         if migrated:
             for key in catalog:
                 if key in migrated:
@@ -229,6 +230,11 @@ class LoraSettings:
         with self.lora_lock:
             catalog, _, _, tags, _, _ = self._load_lora_catalog()
             return self._decorate_catalog(catalog, tags)
+
+    def task_catalog(self):
+        with self.lora_lock:
+            catalog, *_ = self._load_lora_catalog(hash_files=False)
+            return self._decorate_catalog(catalog, {})
 
     def _lora_order_snapshot(self, catalog, tags):
         entries = list(self._decorate_catalog(catalog, tags).values())

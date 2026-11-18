@@ -58,6 +58,7 @@ def _public(row):
         "job_id": row["job_id"], "artifact_slot": row["artifact_slot"], "created": row["created"],
         "source_kind": source_kind if _token(source_kind) else "",
         "source_label": _label(row.get("source_label")), "preprocessor": _label(preprocessor),
+        "name": row.get("filename", ""),
     }
 
 
@@ -178,7 +179,13 @@ class ControlNetArchive:
 
     def _media(self, row, state=None):
         suffix = FORMATS[row["format"]][0]
-        return self.input_root / "my_input" / (state or row["state"]) / f"{row['asset_id']}{suffix}"
+        name = row.get("filename", f"{row['asset_id']}{suffix}")
+        if (not isinstance(name, str) or not 1 <= len(name) <= 128
+                or re.search(r'[<>:"/\\|?*\x00-\x1f]', name) or name.endswith((".", " "))
+                or Path(name).suffix.lower() != suffix
+                or name.split(".")[0].upper() in {"CON", "PRN", "AUX", "NUL", *{f"COM{i}" for i in range(10)}, *{f"LPT{i}" for i in range(10)}}):
+            raise WorkflowError("控制图文件名无效。")
+        return self.input_root / "my_input" / (state or row["state"]) / name
 
     def _record(self, asset_id):
         if not isinstance(asset_id, str) or not ASSET_ID.fullmatch(asset_id):
@@ -202,7 +209,7 @@ class ControlNetArchive:
 
     def _lookup(self, asset_id):
         row = self._record(asset_id)
-        if row is None:
+        if row is None or row.get("deleted"):
             raise WorkflowError("控制图归档记录不存在。")
         try:
             _file_stat(self._media(row))
@@ -314,7 +321,7 @@ class ControlNetArchive:
                 continue
             try:
                 row = self._record(path.stem)
-                if row is not None and row["state"] == state:
+                if row is not None and not row.get("deleted") and row["state"] == state:
                     _file_stat(self._media(row))
                     yield row
             except (OSError, WorkflowError):
@@ -339,8 +346,14 @@ class ControlNetArchive:
 
     def _complete_move(self, row):
         previous = row.get("previous")
-        if isinstance(previous, dict) and previous.get("state") in STATES and previous["state"] != row["state"]:
-            path = self._media(row, previous["state"])
+        if isinstance(previous, dict) and previous.get("state") in STATES:
+            old = {**row}
+            old.pop("filename", None)
+            if previous.get("filename"):
+                old["filename"] = previous["filename"]
+            path = self._media(old, previous["state"])
+            if path == self._media(row):
+                return
             try:
                 if _identity(_file_stat(path)) == previous.get("identity"):
                     path.unlink()
@@ -348,6 +361,43 @@ class ControlNetArchive:
                 pass
             del row["previous"]
             self._write_record(row)
+
+    def rename(self, asset_id, name):
+        with self.lock:
+            row = self._lookup(asset_id)
+            self._complete_move(row)
+            source = self._media(row)
+            if not isinstance(name, str) or not name.strip():
+                raise WorkflowError("请填写控制图名称。")
+            name = name.strip()
+            suffix = FORMATS[row["format"]][0]
+            if not Path(name).suffix:
+                name += suffix
+            target = self._media({**row, "filename": name})
+            if target == source:
+                return _public(row)
+            if target.exists():
+                raise WorkflowError("同名控制图已存在。")
+            data, identity = self._read_media(row, source)
+            _publish(target, data)
+            row["previous"] = {"state": row["state"], "filename": source.name, "identity": identity}
+            row["filename"] = name
+            self._write_record(row)
+            self._complete_move(row)
+            return _public(row)
+
+    def delete(self, asset_id):
+        with self.lock:
+            row = self._record(asset_id)
+            if row is None:
+                raise WorkflowError("控制图记录不存在。")
+            self._complete_move(row)
+            path = self._media(row)
+            if path.exists():
+                self._read_media(row, path)
+            row["deleted"] = True
+            self._write_record(row)
+            path.unlink(missing_ok=True)
 
     def rate(self, asset_id, state):
         if state not in STATES:
@@ -358,9 +408,11 @@ class ControlNetArchive:
             data, identity = self._read_media(row, source)
             self._complete_move(row)
             if row["state"] != state:
+                if row.get("filename") and self._media(row, state).exists():
+                    raise WorkflowError("目标图集已有同名文件，请先重命名。")
                 self._publish_media(row, self._media(row, state), data)
                 # Keep the current copy until the new state is durable.
-                row["previous"] = {"state": row["state"], "identity": identity}
+                row["previous"] = {"state": row["state"], "filename": source.name, "identity": identity}
                 row["state"] = state
                 self._write_record(row)
                 self._complete_move(row)

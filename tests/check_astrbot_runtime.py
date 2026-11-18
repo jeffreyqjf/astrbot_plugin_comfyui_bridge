@@ -88,7 +88,7 @@ async def check_queue_loras(instance, root, name):
     options = {"input": {"required": {"lora_name": [[row["filename"] for row in entries.values()]]}}}
     with patch.object(studio.lora_families["illustrious"], "lora_catalog", return_value=entries), patch.object(
         service.client, "request", return_value={"LoraLoader": options}
-    ), patch.object(service, "_run") as run:
+    ), patch.object(studio.lora_families["illustrious"], "task_catalog", return_value=entries), patch.object(service, "_run") as run:
         catalog = await call("GET", "studio/queue/loras", f"workflow={name}".encode())
         assert catalog.status_code == 200, catalog.body
         assert [row["id"] for row in json.loads(catalog.body)["entries"]] == list(entries)
@@ -423,6 +423,29 @@ async def check_h3_media(instance, root):
 
     service = instance.service
     source = service.workflows["MiniMax_H3_Seed_Hunter_V3_AstrBot"].graph["416"]["inputs"]["media_state"]
+    family = type(instance.studio.lora_families["illustrious"])(
+        SimpleNamespace(config={"anima_workspace": str(root / "fast-lora")}, data_dir=root), "illustrious", "Test")
+    model = family.workspace / "models/loras/illustrious/C/test.safetensors"
+    model.parent.mkdir(parents=True)
+    header = json.dumps({"__metadata__": {"modelspec.architecture": "sdxl"}, "lora_up.weight": {}}).encode()
+    model.write_bytes(len(header).to_bytes(8, "little") + header + b"weights")
+    with patch.object(family, "_lora_sha256", side_effect=AssertionError("task list must not hash weights")):
+        fast = family.task_catalog()
+    full = family.lora_catalog()
+    assert [(x["id"], x["number"], x["default_strength"]) for x in fast.values()] == [
+        (x["id"], x["number"], x["default_strength"]) for x in full.values()]
+    from PIL import Image
+
+    png = io.BytesIO()
+    Image.new("RGB", (2, 2)).save(png, "PNG")
+    archive = instance.studio._control_archive()
+    asset = archive.record("d" * 32, "openpose", 1, png.getvalue(), control_type="openpose")
+    response = await call("studio/control-assets", {"id": asset["asset_id"], "name": "Renamed pose"})
+    assert response.status_code == 200 and json.loads(response.body)["asset"]["name"] == "Renamed pose.png", response.body
+    response = await call("studio/control-assets", {"id": asset["asset_id"], "delete": True}, username=None)
+    assert response.status_code == 401
+    response = await call("studio/control-assets", {"id": asset["asset_id"], "delete": True})
+    assert response.status_code == 200, response.body
     response = await call("studio", method="GET")
     descriptions = json.loads(response.body)["workflows"]
     for row in descriptions:
