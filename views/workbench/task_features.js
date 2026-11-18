@@ -26,7 +26,7 @@ export function mountTaskFeatures({bridge, host, onControlChange, pickGallery}) 
         input.checked = active.has(feature.id);
         input.dataset.feature = feature.id;
         const title = featureNames[feature.id] || feature.title;
-        label.append(input, document.createTextNode(title.startsWith("Enable ") ? title : `Enable ${title}`));
+        label.append(input, document.createTextNode(title.replace(/^(?:Enable\s+)+/i, "")));
         const apply = () => {
           if (feature.kind === "controlnet") onControlChange(feature.branch, input.checked);
           if (feature.kind === "regional") {

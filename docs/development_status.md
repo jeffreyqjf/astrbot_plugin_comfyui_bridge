@@ -1,5 +1,12 @@
 # 开发状态
 
+## v3.2.3 · 移除 Enable 前缀
+
+- 可选功能和工作流分支勾选标签去掉 Enable 前缀，仅显示英文名称；兼容已带前缀的旧声明，分支 ID、开关与提交内容不变。Patch v3.2.3。
+- 1200px／360px 浏览器检查标签及开关提交通过，JavaScript 语法与 Git 差异检查通过。
+- Git Commit Message：`fix: remove Enable prefixes from feature and branch labels`。运行副本未同步，本轮不运行 GPU 生成。
+
+
 ## v3.2.2 · 工作流分支沿用英文原名
 
 - Anima T2I、Advanced Gemma V40、Detailer V40、WAI-Illustrious 的工作流分支选择统一英文标签，并在勾选项显示 Enable 前缀。Anima 名称逐项核对随包画布分组；V40 的修复、VAE、二次采样等适配器虚拟 ID 映射回原版名称。WAI 使用对应原版分组／节点英文名。无分支列表的工作流不增加虚构分支。

@@ -13,7 +13,7 @@ ControlNet 勾选后选择模型预设、控制类型、直用或预处理以及
 ## Regional Prompt
 
 1. 选择 **Advanced Gemma V40**，填写整体正向提示词，例如 `three girls standing in a garden`。
-2. 勾选 **Enable Regional Prompting**。初始是红、绿、蓝三列遮罩，可切换三行，或清空后自行画区域。
+2. 勾选 **Regional Prompting**。初始是红、绿、蓝三列遮罩，可切换三行，或清空后自行画区域。
 3. 点击红、绿、蓝区域按钮选择绘制颜色，用画笔、矩形或橡皮调整遮罩。支持触摸绘制、笔径调整和撤销。黑色表示不额外指定区域，整体提示词仍生效。
 4. 分别填写三个区域的主体与细节，例如红区 `1girl, red hair, red dress`，绿区 `1girl, green hair, green dress`，蓝区 `1girl, blue hair, blue dress`。
 5. 区域强度和全局提示词强度初始均为 1。遮罩按工作流生成尺寸缩放，可切换横向与纵向绘制比例。
@@ -33,10 +33,10 @@ ControlNet 勾选后选择模型预设、控制类型、直用或预处理以及
 
 ## V40 前后放大
 
-勾选「Enable Ultimate SD Upscale Pre Detailer」或「Enable Ultimate SD Upscale Post Detailer」，可独立或同时启用。模型、倍率、采样等沿用保存的工作流；仅影响本次任务。普通生成命令与简易添加支持这两个开关，单次遍历使用简易添加。
+勾选「Ultimate SD Upscale Pre Detailer」或「Ultimate SD Upscale Post Detailer」，可独立或同时启用。模型、倍率、采样等沿用保存的工作流；仅影响本次任务。普通生成命令与简易添加支持这两个开关，单次遍历使用简易添加。
 
 ## Hires 与 2ndSampler
 
 Advanced Gemma V40 新建任务可勾选 Hires PreDetailer、Hires PostDetailer、2ndSampler，可独立启用并与前后 Ultimate 放大组合。分辨率、模型、步数、降噪等参数沿用工作流已保存值；仅影响本次任务。普通生成命令、简易添加及简易 LoRA 遍历支持这些选项。
 
-可选功能标签沿用 ComfyUI 英文开关名称（Enable …），中文说明及内部功能 ID 保持原有含义。
+可选功能标签沿用 ComfyUI 英文名称（不带 Enable 前缀），中文说明及内部功能 ID 保持原有含义。
