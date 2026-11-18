@@ -702,7 +702,12 @@
                       <button type="button" data-h3-template-save disabled>保存模板</button>
                       <button type="button" data-h3-template-delete disabled>删除</button>
                       <button type="button" data-h3-template-refresh>刷新</button>
+                      <button type="button" data-h3-prompt-export>导出当前提示词</button>
+                      <button type="button" data-h3-templates-export>导出模板库</button>
+                      <button type="button" data-h3-templates-import>导入提示词／模板</button>
+                      <input type="file" data-h3-templates-file accept=".json,.txt,application/json,text/plain" hidden>
                     </div>
+                    <label class="toggle"><input type="checkbox" data-h3-templates-replace>导入时覆盖同名模板</label>
                     <p data-h3-template-status role="status" hidden></p>
                   </div>
                   <div data-h3-prompt-editor></div>

@@ -8,6 +8,7 @@ const remote = !window.AstrBotPluginView;
 const bridge = window.AstrBotPluginView || (await import("./remote.js")).bridge;
 const get = (id) => document.getElementById(id);
 const h3Prompt = mountH3Prompt({
+  download: downloadJson,
   bridge, host: get("queue-h3-prompt"), textarea: get("queue-positive"),
   status: (text, error = false) => {
     const target = get("h3-prompt-status");
@@ -2197,6 +2198,7 @@ let queueLoraRequest = 0;
 let queueLoraEntries;
 const taskControlnets = new Map();
 let taskControlWorkflow;
+let taskInputs = {};
 
 function renderQueueLoraChoices() {
   const previous = queueLoraChoice.value;
@@ -2297,7 +2299,7 @@ let commandControlsTimer;
 let commandControlsRequest;
 
 function commandHasReference() {
-  return Boolean(get("queue-reference-id").value || get("queue-reference-file").files.length);
+  return Boolean(taskInputs.reference && (get("queue-reference-id").value || get("queue-reference-file").files.length));
 }
 
 async function resolveCommandControls() {
@@ -2316,11 +2318,11 @@ async function resolveCommandControls() {
   }
   const request = commandControlsRequest;
   try {
-    const { workflow, positive } = await request.result;
+    const { workflow, positive, task_inputs: inputs } = await request.result;
     if (request !== commandControlsRequest || queueMode.value !== "command"
         || command !== queueCommand.value.trim() || hasReference !== commandHasReference()) return false;
-    renderTaskControlnets(workflow);
-    await h3Prompt.show(workflow, positive);
+    renderTaskControlnets(workflow, inputs);
+    if (taskInputs.h3_prompt) await h3Prompt.show(workflow, positive);
     return true;
   } catch (error) {
     if (request !== commandControlsRequest) return false;
@@ -2338,38 +2340,46 @@ function scheduleCommandControls() {
 
 queueCommand.addEventListener("input", scheduleCommandControls);
 function queueUsesReference(name) {
-  if (name === h3FullWorkflow) return false;
-  return name === detailerWorkflow
-    || studio?.workflows.find((workflow) => workflow.name === name)?.supports_reference
-    || (name === advancedV40 && studio?.workflows.find((workflow) => workflow.name === name)?.image_inputs?.length);
+  return Boolean(studio?.workflows.find((workflow) => workflow.name === name)?.task_inputs?.reference);
 }
 
 function showQueueReference() {
   const reference = get("queue-reference");
-  reference.hidden = queueMode.value !== "command"
-    && !(queueMode.value === "simple" && queueUsesReference(queueWorkflow.value));
+  reference.hidden = !taskInputs.reference;
+  get("queue-reference-edit").hidden = !taskInputs.mask;
+  get("queue-reference-remove-mask").hidden = !taskInputs.mask || !queueMask();
   if (!reference.hidden) {
     const form = get(queueMode.value === "command" ? "remote-command-form" : "queue-form");
     form.querySelector("footer").before(reference);
   }
 }
 
-function renderTaskControlnets(selectedName = queueWorkflow.value) {
+function renderTaskControlnets(selectedName = queueWorkflow.value, inputs) {
   const isCommand = queueMode.value === "command";
   const form = get(isCommand ? "remote-command-form" : "queue-form");
   const controls = get("queue-controlnets");
+  const workflow = studio.workflows.find(({ name }) => name === selectedName);
+  taskInputs = inputs ?? workflow?.task_inputs ?? {};
+  function field(id, visible) {
+    const input = get(id);
+    input.closest("label").hidden = !visible;
+    input.disabled = !visible;
+  }
+  field("queue-negative", taskInputs.negative);
+  for (const id of ["queue-preset", "queue-preset-account", "remote-command-account"]) field(id, taskInputs.presets);
+  showQueueReference();
   const reference = get("queue-reference");
   const position = form.contains(reference) && !reference.hidden ? reference : form.querySelector("footer");
   position.before(get("queue-h3-media"));
   const promptAnchor = get(isCommand ? "queue-command-text" : "queue-positive").closest("label");
   promptAnchor.after(get("queue-h3-prompt"));
-  h3Prompt.show(selectedName);
-  h3Media.show(selectedName);
-  if (selectedName === h3FullWorkflow) reference.hidden = true;
+  h3Prompt.show(taskInputs.h3_prompt ? selectedName : null);
+  h3Media.show(taskInputs.h3_media ? selectedName : null);
+  field("queue-positive", taskInputs.positive);
+  if (taskInputs.h3_prompt) get("queue-positive").closest("label").hidden = true;
   if (controls.nextElementSibling !== position) position.before(controls);
   if (selectedName === taskControlWorkflow) return;
   taskControlWorkflow = selectedName;
-  const workflow = studio.workflows.find(({ name }) => name === selectedName);
   const branches = get("queue-controlnet-branches");
   for (const { thumbnail } of taskControlnets.values()) setTaskImagePreview(thumbnail, null);
   branches.replaceChildren();
@@ -2637,7 +2647,6 @@ controlProfileForm.addEventListener("submit", (event) => {
 });
 
 queueWorkflow.addEventListener("change", () => {
-  showQueueReference();
   renderQueueLoras();
   renderTaskControlnets();
 });
@@ -2646,8 +2655,10 @@ async function showCreateMode() {
   get("remote-command-form").hidden = mode !== "command";
   get("queue-form").hidden = mode !== "simple";
   if (mode === "simple") renderQueueLoras();
-  showQueueReference();
-  if (mode === "command") scheduleCommandControls();
+  if (mode === "command") {
+    renderTaskControlnets(null);
+    scheduleCommandControls();
+  }
   else renderTaskControlnets();
   if (!mode) return;
   if (mode === "command") refreshCommandTemplates();
@@ -2671,7 +2682,7 @@ function openCreateTask() {
   message("");
   createTaskMessage("");
   if (!queueWorkflow.options.length) {
-    for (const workflow of studio.workflows.filter((item) => !item.requires_image || item.name === detailerWorkflow || item.name === advancedV40)) {
+    for (const workflow of studio.workflows.filter((item) => item.task_inputs?.simple)) {
       queueWorkflow.add(new Option(workflowTitle(workflow.name), workflow.name));
     }
     if ([...queueWorkflow.options].some((item) => item.value === studio.default)) queueWorkflow.value = studio.default;
@@ -2732,10 +2743,10 @@ get("queue-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   try { await h3Prompt.ready(); }
   catch (error) { createTaskMessage(error.message, true); return; }
-  const preset = get("queue-preset").value;
-  const positive = get("queue-positive").value.trim();
+  const preset = taskInputs.presets ? get("queue-preset").value : "";
+  const positive = taskInputs.positive ? get("queue-positive").value : "";
   const workflow = queueWorkflow.value;
-  if (!preset && !positive && workflow !== advancedV40 && workflow !== detailerWorkflow) {
+  if (taskInputs.positive && !preset && !positive.trim() && workflow !== advancedV40 && workflow !== detailerWorkflow) {
     createTaskMessage("请填写正向提示词或选择预设。", true);
     return;
   }
@@ -2746,9 +2757,10 @@ get("queue-form").addEventListener("submit", async (event) => {
     return;
   }
   const data = {
-    workflow, preset, positive,
-    preset_account: get("queue-preset-account").value,
-    negative: get("queue-negative").value,
+    workflow,
+    ...(taskInputs.positive ? {positive} : {}),
+    ...(taskInputs.presets ? {preset, preset_account: get("queue-preset-account").value} : {}),
+    ...(taskInputs.negative ? {negative: get("queue-negative").value} : {}),
     count: get("queue-count").valueAsNumber,
   };
   if (!queueLora.hidden) {
@@ -2763,7 +2775,7 @@ get("queue-form").addEventListener("submit", async (event) => {
   }
   changeQueue("studio/queue", async () => {
     const [reference, controlnets, media] = await Promise.all([
-      queueUsesReference(workflow) ? queueReferencePayload() : {},
+      taskInputs.reference ? queueReferencePayload(taskInputs.mask) : {},
       queueControlnetPayload(),
       h3Media.payload(),
     ]);
@@ -2794,11 +2806,11 @@ function encodeReference(file) {
   });
 }
 
-async function queueReferencePayload() {
+async function queueReferencePayload(withMask = true) {
   const referenceId = get("queue-reference-id").value;
   const [image, mask] = await Promise.all([
     encodeReference(get("queue-reference-file").files[0]),
-    encodeReference(queueMask()),
+    encodeReference(withMask ? queueMask() : null),
   ]);
   return { reference_id: referenceId, image, mask };
 }
@@ -2817,14 +2829,14 @@ get("remote-command-form").addEventListener("submit", async (event) => {
   const file = get("queue-reference-file").files[0];
   const options = { create: true, opensQueue: ({ queued }) => queued === true };
   const hasControls = [...taskControlnets.values()].some(({ enabled }) => enabled.value);
-  if (remote && file?.size && !queueMask() && !hasControls && taskControlWorkflow !== h3FullWorkflow) {
+  if (remote && taskInputs.reference && file?.size && (!taskInputs.mask || !queueMask()) && !hasControls) {
     form.set("image", file);
     changeQueue("command", form, button, (result) => result.message, options);
     return;
   }
   changeQueue("studio/queue/command", async () => {
     const [reference, controlnets, media, prompt] = await Promise.all([
-      taskControlWorkflow === h3FullWorkflow ? {} : queueReferencePayload(), queueControlnetPayload(), h3Media.payload(),
+      taskInputs.reference ? queueReferencePayload(taskInputs.mask) : {}, queueControlnetPayload(), h3Media.payload(),
       h3Prompt.payload(),
     ]);
     return { command: form.get("command"), account: form.get("account") ?? "", ...reference, ...controlnets, ...media, ...prompt };

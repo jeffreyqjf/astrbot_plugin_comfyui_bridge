@@ -610,6 +610,31 @@ class StudioSettings:
         except (OSError, ValueError) as exc:
             return error_response(str(exc), status_code=400)
 
+    def task_inputs(self, workflow):
+        full_h3 = workflow.name == H3_SEED_FULL
+        reference = bool(workflow.image_inputs) or workflow.name == AIO_WORKFLOW or (
+            workflow.name in H3_WORKFLOWS and "5" in workflow.active
+        )
+        simple = workflow.kind != "image_to_text" and (
+            len(workflow.image_inputs) <= 1 or workflow.shared_reference
+        )
+        image_workflow = workflow
+        if workflow.name == AIO_WORKFLOW:
+            _, _, graph, settings, _, mapping = self._read(AIO_WORKFLOW)
+            image_workflow = aio_workflow(graph, settings, True, mapping=mapping)
+        mask = any(
+            value == [field.node, 1]
+            for key in image_workflow.active for value in image_workflow.graph[key]["inputs"].values()
+            for field in image_workflow.image_inputs
+        )
+        return {
+            "simple": simple, "positive": bool(workflow.positive), "negative": bool(workflow.negative),
+            "presets": bool(workflow.positive) and not full_h3,
+            "reference": reference and not full_h3, "mask": reference and mask and not full_h3,
+            "h3_prompt": full_h3 and bool(workflow.positive),
+            "h3_media": full_h3 and "416" in workflow.active,
+        }
+
     async def get(self):
         if not request.username:
             return error_response("请登录 AstrBot 面板。", status_code=401)
@@ -636,6 +661,7 @@ class StudioSettings:
                         {
                             **workflow.describe(),
                             "controlnets": controlnet_capabilities(workflow.name, control_profiles),
+                            "task_inputs": self.task_inputs(workflow),
                             **({"supports_reference": True}
                                if workflow.name in H3_WORKFLOWS and "5" in workflow.active else {}),
                             "sweep_lora_family": workflow.sweep_lora_family,
@@ -1353,7 +1379,7 @@ class StudioSettings:
         except (OSError, ValueError) as exc:
             return error_response(str(exc), status_code=400)
 
-    async def _queue_lora_variants(self, workflow, loras, sweep, count, controls):
+    async def _queue_lora_variants(self, workflow, loras, sweep, count, controls, *, has_reference=False):
         if workflow.sweep_lora_family is None:
             raise WorkflowError("此工作流未配置 LoRA 目录。")
         family = await self.lora_catalog_for(workflow.sweep_lora_family)
@@ -1366,7 +1392,7 @@ class StudioSettings:
         variants = [[row] for row in rows] if sweep else [rows]
         self.service.check_queue_capacity(workflow.name, count * len(variants))
         if workflow.name == ANIMA_WORKFLOW:
-            base = await self.anima.for_generation(workflow, {"loras": []}, False, {}, controlnets=controls)
+            base = await self.anima.for_generation(workflow, {"loras": []}, has_reference, {}, controlnets=controls)
             return await self.anima.apply_lora_variants(base, variants, catalog)
         files = await lora_loader_files(self.service.client)
         if workflow.name == WAI_WORKFLOW:
@@ -1407,22 +1433,31 @@ class StudioSettings:
                 raise WorkflowError("提示词或预设名称超长。")
             await self.service.initialize()
             workflow = self.service.workflows.get(name)
-            if workflow is None or (
-                workflow.image_required and workflow.name not in V40_WORKFLOWS | {AIO_WORKFLOW}
-            ):
+            if workflow is None:
                 raise WorkflowError("请选择可直接生成的工作流。需要参考图时可用命令表单上传。")
+            inputs = self.task_inputs(workflow)
+            if not inputs["simple"]:
+                raise WorkflowError("当前工作流不能用生成任务表单执行。")
+            if (prompt.strip() and not inputs["positive"]) or (negative.strip() and not inputs["negative"]):
+                raise WorkflowError("当前工作流没有对应的提示词输入。")
+            if preset and not inputs["presets"]:
+                raise WorkflowError("当前工作流不支持普通提示词预设，请使用 H3 提示词模板。")
+            if any(data.get(key) for key in ("image", "reference_id", "mask")) and not inputs["reference"]:
+                raise WorkflowError("当前工作流没有对应的单张参考图输入。")
+            if data.get("mask") and not inputs["mask"]:
+                raise WorkflowError("当前工作流没有对应的遮罩输入。")
             if "h3_media" in data:
+                if not inputs["h3_media"]:
+                    raise WorkflowError("当前工作流未启用 H3 媒体加载器。")
                 workflow = self.with_h3_media(workflow, data["h3_media"])
             controls, sources, control_archive = await asyncio.to_thread(
                 self.prepare_controls, workflow.name, data.get("controlnets"),
             )
             image = None
-            if workflow.name in H3_WORKFLOWS | {DETAILER_WORKFLOW} or (
-                workflow.name == ADVANCED_V40_WORKFLOW and workflow.image_inputs
-            ):
+            if inputs["reference"]:
                 image = await asyncio.to_thread(self.read_queue_reference, data)
                 if image is None and workflow.image_required:
-                    raise WorkflowError("当前 V40 分支需要一张参考图。")
+                    raise WorkflowError("当前工作流需要一张参考图。")
             if not prompt.strip() and not preset and workflow.name in V40_WORKFLOWS and workflow.positive:
                 field = workflow.positive[0]
                 prompt = workflow.graph[field.node]["inputs"][field.name]
@@ -1436,6 +1471,8 @@ class StudioSettings:
                 prompt = f"{base}, {prompt}" if prompt.strip() else base
                 if negative is None:
                     negative = row["negative"] or None
+            if not inputs["negative"]:
+                negative = None
             owner = f"studio:{request.username}"
             loras, sweep, count = data.get("loras", []), data.get("lora_sweep", False), data.get("count", 1)
             if not isinstance(loras, list) or len(loras) > 128 or type(sweep) is not bool:
@@ -1443,7 +1480,7 @@ class StudioSettings:
             if type(count) is not int or not 1 <= count <= self.service.queue_limit:
                 raise WorkflowError(f"生成批次须为 1 到 {self.service.queue_limit} 的整数。")
             if loras or sweep:
-                variants = await self._queue_lora_variants(workflow, loras, sweep, count, controls)
+                variants = await self._queue_lora_variants(workflow, loras, sweep, count, controls, has_reference=image is not None)
                 settings = {
                     "timeout_seconds": self.service.qq_timeout_for(workflow), "image_data": image,
                     "control_sources": sources, "control_archive": control_archive,
@@ -1467,9 +1504,9 @@ class StudioSettings:
                 pending = catalog.pending_loras.get(owner) if catalog else None
                 options = {"loras": pending} if pending is not None else {}
                 if workflow.name == ANIMA_WORKFLOW:
-                    workflow = await self.anima.for_generation(workflow, options, False, {}, controlnets=controls)
+                    workflow = await self.anima.for_generation(workflow, options, image is not None, {}, controlnets=controls)
                 elif workflow.name == AIO_WORKFLOW:
-                    workflow = await asyncio.to_thread(self.aio_generation, False)
+                    workflow = await asyncio.to_thread(self.aio_generation, image is not None)
                 elif workflow.name == WAI_WORKFLOW:
                     workflow = await self.illustrious_generation(options)
                 elif workflow.name in H3_WORKFLOWS and image is not None:

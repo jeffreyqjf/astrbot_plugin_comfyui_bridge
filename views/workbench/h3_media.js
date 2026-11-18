@@ -106,11 +106,13 @@ export function mountH3Media({ bridge, host, status, pickGallery, onChange = () 
       host.hidden = !state.active;
       if (!state.active) {
         for (const player of state.panel?.players || []) player.stop();
+        onChange([]);
         return;
       }
       if (!state.panel && !state.loading) state.loading = load().finally(() => { state.loading = null; });
       await state.loading;
       if (state.panel) {
+        onChange(state.items);
         try { await prepareH3Files(state.items); }
         catch (error) { status(error.message, true); }
       }

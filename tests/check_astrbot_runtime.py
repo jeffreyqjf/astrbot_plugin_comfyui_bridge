@@ -423,6 +423,17 @@ async def check_h3_media(instance, root):
 
     service = instance.service
     source = service.workflows["MiniMax_H3_Seed_Hunter_V3_AstrBot"].graph["416"]["inputs"]["media_state"]
+    response = await call("studio", method="GET")
+    descriptions = json.loads(response.body)["workflows"]
+    for row in descriptions:
+        workflow = service.workflows[row["name"]]
+        inputs = row["task_inputs"]
+        assert inputs["positive"] == bool(workflow.positive)
+        assert inputs["negative"] == bool(workflow.negative)
+        if inputs["reference"]:
+            assert workflow.image_inputs or workflow.name == "Anima_I2I_AIO_AstrBot" or (
+                workflow.name.startswith("MiniMax_H3") and "5" in workflow.active)
+        print("Task inputs:", row["name"], json.dumps(inputs, ensure_ascii=False))
     template_route = "studio/h3/prompt-templates"
     assert (await call(template_route, method="GET", username=None)).status_code == 401
     assert (await call(template_route, {}, username=None)).status_code == 401
@@ -439,6 +450,23 @@ async def check_h3_media(instance, root):
     assert json.loads((service.data_dir / "h3_prompt_templates.json").read_text("utf-8"))["templates"] == saved["templates"]
     response = await call(template_route, method="GET")
     assert json.loads(response.body) == saved
+    incoming = {"version": 1, "templates": {"多图模板": {"prompt": "Changed", "mode": "auto"}, "导入模板": template},
+                "replace": False, "revision": saved["revision"]}
+    response = await call(template_route, incoming)
+    assert response.status_code == 200, response.body
+    merged = json.loads(response.body)
+    assert merged["imported"] == 1 and merged["skipped"] == 1 and merged["templates"]["多图模板"] == template
+    response = await call(template_route, {**incoming, "replace": True, "revision": merged["revision"]})
+    merged = json.loads(response.body)
+    assert merged["imported"] == 2 and merged["templates"]["多图模板"]["prompt"] == "Changed"
+    corrupt_import = {**incoming, "templates": {"有效": template, "无效": {"prompt": ""}}, "revision": merged["revision"]}
+    response = await call(template_route, corrupt_import)
+    assert response.status_code == 400
+    assert json.loads((await call(template_route, method="GET")).body)["templates"] == merged["templates"]
+    response = await call(template_route, {"name": "导入模板", "template": None, "revision": merged["revision"]})
+    saved = json.loads(response.body)
+    response = await call(template_route, {**payload, "revision": saved["revision"]})
+    saved = json.loads(response.body)
     response = await call(template_route, {**payload, "template": None})
     assert response.status_code == 409
     for invalid in ({**template, "prompt": " "}, {**template, "prompt": "x" * 8001}, {**template, "mode": []}):
@@ -467,6 +495,9 @@ async def check_h3_media(instance, root):
              {"kind": "video", "file": "minimax_h3/clip.mp4 [input]", "trim": {"start": 1, "end": 4},
               "has_audio": True, "audio_mode": "paired"}]
     with patch.object(service, "_run") as run:
+        for invalid in ({"negative": "unsupported"}, {"preset": "1"}, {"reference_id": "not-an-image"}):
+            response = await call("studio/queue", {"workflow": "MiniMax_H3_Seed_Hunter_V3_AstrBot", "positive": "A fox", **invalid})
+            assert response.status_code == 400 and run.call_count == 0, response.body
         for route, payload in (
             ("studio/queue", {"workflow": "MiniMax_H3_Seed_Hunter_V3_AstrBot", "positive": "A fox", "count": 1}),
             ("studio/queue/command", {"command": "/comfy gen --wf h3-v3 --seed 42 A fox --raw", "account": ""}),
@@ -492,6 +523,28 @@ async def check_h3_media(instance, root):
             "command": "/comfy gen --wf sdxl --raw", "account": "", "h3_prompt": rich_prompt,
         })
         assert response.status_code == 400 and run.call_count == before
+        from PIL import Image
+
+        buffer = io.BytesIO()
+        Image.new("RGB", (2, 2)).save(buffer, "PNG")
+        encoded = base64.b64encode(buffer.getvalue()).decode()
+        for name in ("WAN22_I2V_AstrBot", "WAN22_SVI_I2V_AstrBot", "WAN22_Lightning_Long_I2V_AstrBot", "Anima_I2I_AIO_AstrBot"):
+            response = await call("studio/queue/command/workflow", {
+                "command": f'/comfy gen --wf "{name}" --raw', "has_reference": False,
+            })
+            resolved = json.loads(response.body)
+            assert resolved["workflow"] == name and resolved["task_inputs"]["reference"], response.body
+            response = await call("studio/queue", {"workflow": name, "positive": "A fox", "image": encoded, "count": 1})
+            assert response.status_code == 200, (name, response.body)
+            args = run.call_args.args
+            assert args[3] == buffer.getvalue() and args[4], name
+        with patch.object(instance.studio, "get_preset", return_value={
+            "id": "test", "name": "Preset", "positive": "A fox", "negative": "Avoid blur",
+        }):
+            response = await call("studio/queue", {
+                "workflow": "MiniMax_H3_Seed_Final_AstrBot", "preset": "1", "preset_account": "test", "count": 1,
+            })
+            assert response.status_code == 200, response.body
     assert service.workflows["MiniMax_H3_Seed_Hunter_V3_AstrBot"].graph["416"]["inputs"]["media_state"] == source
     calls = []
 

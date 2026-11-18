@@ -5,7 +5,7 @@ import { api, configureH3Transport, prepareH3Files } from "./h3_media_transport.
 import { computeTags } from "./h3_media_vendor.js";
 
 const workflowName = "MiniMax_H3_Seed_Hunter_V3_AstrBot";
-export function mountH3Prompt({ bridge, host, textarea, status }) {
+export function mountH3Prompt({ bridge, host, textarea, status, download }) {
   configureH3Transport(bridge);
   let active = false;
   let pending;
@@ -39,6 +39,10 @@ export function mountH3Prompt({ bridge, host, textarea, status }) {
   const templateDelete = host.querySelector("[data-h3-template-delete]");
   const templateRefresh = host.querySelector("[data-h3-template-refresh]");
   const templateMessage = host.querySelector("[data-h3-template-status]");
+  const exportPrompt = host.querySelector("[data-h3-prompt-export]");
+  const exportTemplates = host.querySelector("[data-h3-templates-export]");
+  const importTemplates = host.querySelector("[data-h3-templates-import]");
+  const importFile = host.querySelector("[data-h3-templates-file]");
   const templatePath = "studio/h3/prompt-templates";
   let templates = {};
   let revision;
@@ -55,6 +59,8 @@ export function mountH3Prompt({ bridge, host, textarea, status }) {
     templateSave.disabled = templateBusy || !loaded || revision === undefined || !templateName.value.trim();
     templateSave.textContent = Object.hasOwn(templates, templateName.value.trim()) ? "更新模板" : "保存模板";
     templateRefresh.disabled = templateBusy;
+    exportPrompt.disabled = templateBusy || !loaded;
+    exportTemplates.disabled = importTemplates.disabled = templateBusy || revision === undefined;
   }
   function templateCatalog(data, selected = templateList.value) {
     templates = data.templates;
@@ -103,6 +109,39 @@ export function mountH3Prompt({ bridge, host, textarea, status }) {
     templateName.value = "";
     templateStatus(`已删除模板「${name}」。`);
   }));
+  exportPrompt.addEventListener("click", () => templateAction(async () => {
+    if (!text.trim() || text.length > 8000) throw new Error("请填写 1 到 8000 字符的提示词后导出。");
+    const name = templateName.value.trim() || "H3 提示词";
+    download({version: 1, templates: {[name]: {prompt: text, mode: node._h3PromptIdeState.manualMode}}}, "h3-prompt.json");
+    templateStatus("已导出当前提示词及编辑模式。");
+  }));
+  exportTemplates.addEventListener("click", () => templateAction(async () => {
+    templateCatalog(await bridge.apiGet(templatePath));
+    download({version: 1, templates}, "h3-prompt-templates.json");
+    templateStatus("已导出模板库。");
+  }));
+  importTemplates.addEventListener("click", () => { importFile.value = ""; importFile.click(); });
+  importFile.addEventListener("change", () => {
+    const file = importFile.files[0];
+    if (!file) return;
+    templateAction(async () => {
+      if (file.size > 4 * 1024 * 1024) throw new Error("导入文件不能超过 4 MB。");
+      const content = (await file.text()).replace(/^\uFEFF/, "");
+      if (file.name.toLowerCase().endsWith(".txt")) {
+        if (!content.trim() || content.length > 8000) throw new Error("提示词须为 1 到 8000 字符。");
+        updateText(content);
+        templateStatus("已载入提示词文本，可继续编辑或保存为模板。");
+        return;
+      }
+      const data = JSON.parse(content);
+      const result = await bridge.apiPost(templatePath, {
+        version: data.version, templates: data.templates, revision,
+        replace: host.querySelector("[data-h3-templates-replace]").checked,
+      });
+      templateCatalog(result);
+      templateStatus(`已导入 ${result.imported} 项，跳过 ${result.skipped} 项。选择模板并点击加载即可使用。`);
+    });
+  });
   const preferenceLabels = ["默认显示", "自动补全", "补全后添加空格", "默认对白语言", "点击替换标记"];
   const preferences = host.querySelector("[data-h3-prompt-preferences]");
   for (const [index, setting] of H3_PROMPT_IDE_SETTING_DEFINITIONS.entries()) {

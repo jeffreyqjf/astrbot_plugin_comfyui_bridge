@@ -663,7 +663,10 @@ class ComfyUIBridge(Star):
                 positive = parsed[0]
         except WorkflowError:
             return json_response({"workflow": None})
-        return json_response({"workflow": workflow.name, "positive": positive})
+        inputs = self.studio.task_inputs(workflow)
+        if action == "sweep":
+            inputs.update(h3_prompt=False, h3_media=False, presets=bool(workflow.positive))
+        return json_response({"workflow": workflow.name, "positive": positive, "task_inputs": inputs})
 
     async def run_remote_command(
         self, command, account, image_data, *, owner="studio:remote", allow_nsfw=False, controlnets=None,

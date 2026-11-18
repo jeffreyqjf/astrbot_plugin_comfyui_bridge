@@ -109,33 +109,46 @@ class H3Media:
             return error_response("请登录工作台。", status_code=401)
         try:
             raw = await request.body()
-            if len(raw) > 128 * 1024:
+            if len(raw) > WORKFLOW_LIMIT + 128 * 1024:
                 raise WorkflowError("H3 提示词模板数据过大。")
             payload = json.loads(raw)
-            if not isinstance(payload, dict) or "template" not in payload:
+            if not isinstance(payload, dict) or not ({"template", "templates"} & payload.keys()):
                 raise WorkflowError("请指定 H3 提示词模板。")
-            name = payload.get("name")
-            if not isinstance(name, str) or not re.fullmatch(r"[^\x00-\x1f]{1,64}", name.strip()):
-                raise WorkflowError("模板名称须为 1 到 64 个字符。")
-            name = name.strip()
-            template = payload["template"]
-            if template is not None and not valid_prompt_template(template):
-                raise WorkflowError("请填写有效的 H3 提示词和编辑模式，提示词最多 8000 字符。")
+            bulk = "templates" in payload
+            if bulk:
+                if payload.get("version") != 1 or type(payload.get("replace")) is not bool or not isinstance(payload["templates"], dict):
+                    raise WorkflowError("请选择版本 1 的 H3 提示词模板 JSON。")
+                incoming = payload["templates"]
+            else:
+                if len(raw) > 128 * 1024 or not isinstance(payload.get("name"), str):
+                    raise WorkflowError("模板名称或数据大小无效。")
+                incoming = {payload["name"].strip(): payload["template"]}
+            for name, template in incoming.items():
+                if not re.fullmatch(r"[^\x00-\x1f]{1,64}", name) or name != name.strip():
+                    raise WorkflowError("模板名称须为 1 到 64 个字符，首尾不能为空格。")
+                if not (template is None and not bulk) and not valid_prompt_template(template):
+                    raise WorkflowError("请填写有效的 H3 提示词和编辑模式，提示词最多 8000 字符。")
             async with self.service.state_lock:
                 path, revision, data = await asyncio.to_thread(self.read_prompt_templates)
                 if payload.get("revision") != revision:
                     return error_response("模板列表已更新，请刷新模板后重试。", status_code=409)
-                if template is None:
-                    data["templates"].pop(name, None)
-                else:
-                    data["templates"][name] = template
+                imported = 0
+                for name, template in incoming.items():
+                    if bulk and name in data["templates"] and not payload["replace"]:
+                        continue
+                    if template is None:
+                        data["templates"].pop(name, None)
+                    else:
+                        data["templates"][name] = template
+                    imported += 1
                 saved = profile_bytes(data)
                 if len(saved) > WORKFLOW_LIMIT:
                     raise WorkflowError("H3 提示词模板文件超过 4 MB。")
                 path.parent.mkdir(parents=True, exist_ok=True)
                 await asyncio.to_thread(atomic_write, path, saved)
-            return json_response({"revision": workflow_revision(saved), "templates": data["templates"]})
-        except (OSError, ValueError, TypeError) as exc:
+            return json_response({"revision": workflow_revision(saved), "templates": data["templates"],
+                                  **({"imported": imported, "skipped": len(incoming) - imported} if bulk else {})})
+        except (OSError, ValueError, TypeError, RecursionError) as exc:
             return error_response(str(exc), status_code=400)
 
     async def state(self):

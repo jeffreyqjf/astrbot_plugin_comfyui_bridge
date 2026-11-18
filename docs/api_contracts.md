@@ -51,3 +51,10 @@
 - 命令任务可附加 `h3_prompt`，仅用于 H3 工作流。该文本作为本次正向提示词，沿用 8000 字符上限，命令中的种子与选项仍由命令解析器处理。简易任务继续使用 `positive`。
 - `GET studio/h3/prompt-templates` 登录后返回 `{revision, templates: {名称: {prompt, mode}}}`。模板存于插件数据目录 `h3_prompt_templates.json`，桌面与远程工作台共用。
 - `POST studio/h3/prompt-templates` 接收 `{name, template: {prompt, mode}, revision}` 保存或更新同名模板；`template: null` 删除。名称为 1–64 字符，提示词非空且最多 8000 字符，保留原始换行及空白；模式为 `auto/t2va/i2va/fl2va/l2va/ref2va`。原子写入并校验文件版本，过期 `revision` 返回 409，刷新后再保存。总文件上限 4 MB。
+- 同一 POST 还支持 `{version: 1, templates: {名称: {prompt, mode}}, replace: bool, revision}` 批量导入。`replace=false` 跳过同名项，`true` 更新同名项，未列出的模板保留；整批先校验再原子保存，响应额外包含 `imported/skipped`。导出格式为 `{version: 1, templates}`，文本与模式完整保留。
+
+## 按工作流构建任务
+
+`GET studio` 的每条工作流及 `POST studio/queue/command/workflow` 的解析结果附带 `task_inputs`：`simple/positive/negative/presets/reference/mask/h3_prompt/h3_media`。能力来自实际正负提示词映射、参考图字段、遮罩输出连线及专用工作流适配。命令解析返回的能力优先，以当前已保存分支的图为依据。
+
+客户端隐藏不适用的控件，并从提交中省略对应字段，切换工作流后保留的草稿不会泄漏进其他类型任务。服务端拒绝没有映射的显式负向词、单图参考、遮罩和完整版 H3 普通预设；无负向映射的普通工作流使用预设时只采用正向部分。简易添加可为 Anima AIO 和单参考图视频工作流读取图集或本地图片，实际图中上传字段、AIO 图生图转换和 Anima 分支均使用该参考图。详见 [任务输入核对](task_inputs.md)。
