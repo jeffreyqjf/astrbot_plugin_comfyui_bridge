@@ -3,6 +3,7 @@ import { mountPromptLibrary } from "./prompt_library.js";
 import { mountVideos } from "./videos.js";
 import { mountH3Media } from "./h3_media.js";
 import { mountH3Prompt } from "./h3_prompt.js";
+import { mountTaskFeatures } from "./task_features.js";
 
 const remote = !window.AstrBotPluginView;
 const bridge = window.AstrBotPluginView || (await import("./remote.js")).bridge;
@@ -2197,6 +2198,18 @@ let queueLoraFamily;
 let queueLoraRequest = 0;
 let queueLoraEntries;
 const taskControlnets = new Map();
+const taskFeatures = mountTaskFeatures({
+  bridge, host: get("queue-features"),
+  pickGallery: select => imageReviews.pickResource("gallery", select, {useControls: true, gallery: "images/favourite", title: "选择区域绘制参考底图"}),
+  onControlChange(branch, checked) {
+    const settings = taskControlnets.get(branch);
+    if (!settings) return;
+    settings.enabled.value = checked ? "on" : "off";
+    settings.row.hidden = !checked;
+    settings.fields.hidden = !checked;
+    get("queue-controlnets").hidden = ![...taskControlnets.values()].some(item => item.enabled.value === "on");
+  },
+});
 let taskControlWorkflow;
 let taskInputs = {};
 
@@ -2377,7 +2390,7 @@ function renderTaskControlnets(selectedName = queueWorkflow.value, inputs) {
   h3Media.show(taskInputs.h3_media ? selectedName : null);
   field("queue-positive", taskInputs.positive);
   if (taskInputs.h3_prompt) get("queue-positive").closest("label").hidden = true;
-  if (controls.nextElementSibling !== position) position.before(controls);
+  position.before(get("queue-features"));
   if (selectedName === taskControlWorkflow) return;
   taskControlWorkflow = selectedName;
   const branches = get("queue-controlnet-branches");
@@ -2400,7 +2413,9 @@ function renderTaskControlnets(selectedName = queueWorkflow.value, inputs) {
     const file = row.querySelector("input");
     const status = row.querySelector("[data-control-source]");
     const thumbnail = row.querySelector("[data-control-thumbnail]");
-    const settings = { enabled, type, profile, mode, thumbnail, source: null };
+    const settings = { enabled, type, profile, mode, thumbnail, row, fields, source: null };
+    enabled.closest("label").hidden = true;
+    row.hidden = true;
     let sourceVersion = 0;
     taskControlnets.set(branch, settings);
     for (const value of types) type.add(new Option(controlTypeTitle(value), value));
@@ -2485,6 +2500,7 @@ function renderTaskControlnets(selectedName = queueWorkflow.value, inputs) {
     branches.append(row);
   }
   controls.hidden = !taskControlnets.size;
+  taskFeatures.configure(selectedName, taskInputs.features ?? []);
   const status = get("queue-controlnet-config-status");
   status.textContent = studio.controlnet_profile_error || "";
   status.hidden = !status.textContent;
@@ -2779,7 +2795,7 @@ get("queue-form").addEventListener("submit", async (event) => {
       queueControlnetPayload(),
       h3Media.payload(),
     ]);
-    return { ...data, ...reference, ...controlnets, ...media };
+    return { ...data, ...reference, ...controlnets, ...media, ...taskFeatures.payload() };
   }, get("queue-add"), (result) => `已加入 ${result.jobs.length} 项生成任务。`, { create: true, opensQueue: () => true });
 });
 setInterval(refreshQueue, 2500);
@@ -2829,7 +2845,7 @@ get("remote-command-form").addEventListener("submit", async (event) => {
   const file = get("queue-reference-file").files[0];
   const options = { create: true, opensQueue: ({ queued }) => queued === true };
   const hasControls = [...taskControlnets.values()].some(({ enabled }) => enabled.value);
-  if (remote && taskInputs.reference && file?.size && (!taskInputs.mask || !queueMask()) && !hasControls) {
+  if (remote && taskInputs.reference && file?.size && (!taskInputs.mask || !queueMask()) && !hasControls && !taskInputs.features?.some(item => item.kind === "regional")) {
     form.set("image", file);
     changeQueue("command", form, button, (result) => result.message, options);
     return;
@@ -2839,7 +2855,7 @@ get("remote-command-form").addEventListener("submit", async (event) => {
       taskInputs.reference ? queueReferencePayload(taskInputs.mask) : {}, queueControlnetPayload(), h3Media.payload(),
       h3Prompt.payload(),
     ]);
-    return { command: form.get("command"), account: form.get("account") ?? "", ...reference, ...controlnets, ...media, ...prompt };
+    return { command: form.get("command"), account: form.get("account") ?? "", ...reference, ...controlnets, ...media, ...prompt, ...taskFeatures.payload() };
   }, button, (result) => result.message, options);
 });
 

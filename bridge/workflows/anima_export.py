@@ -57,6 +57,11 @@ def export(canvas, schemas):
                 and current not in choices
             ):
                 inputs["Select to add Wildcard"] = choices[0]
+    features = canvas.get("extra", {}).get("astrbot_task_features")
+    if isinstance(features, dict) and features.get("version") == 1:
+        active["510"].setdefault("_meta", {}).update(
+            task_feature_version=1, task_features=deepcopy(features["features"]),
+        )
     return active
 
 

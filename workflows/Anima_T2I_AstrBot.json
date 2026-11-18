@@ -370,7 +370,16 @@
     },
     "class_type": "SaveImage",
     "_meta": {
-      "title": "Save Image · AstrBot 回传"
+      "title": "Save Image · AstrBot 回传",
+      "task_feature_version": 1,
+      "task_features": [
+        {
+          "id": "controlnet.lllite",
+          "kind": "controlnet",
+          "branch": "lllite",
+          "title": "Anima LLLite"
+        }
+      ]
     }
   }
 }

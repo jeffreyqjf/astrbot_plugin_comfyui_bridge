@@ -3923,7 +3923,27 @@
         "filename_prefix": "Advanced_Gemma_V40"
       },
       "_meta": {
-        "title": "保存 AstrBot 结果"
+        "title": "保存 AstrBot 结果",
+        "task_feature_version": 1,
+        "task_features": [
+          {
+            "id": "controlnet.openpose",
+            "kind": "controlnet",
+            "branch": "openpose",
+            "title": "OpenPose"
+          },
+          {
+            "id": "controlnet.any",
+            "kind": "controlnet",
+            "branch": "any",
+            "title": "Any ControlNet"
+          },
+          {
+            "id": "regional",
+            "kind": "regional",
+            "title": "区域提示词 · RGB"
+          }
+        ]
       }
     }
   },
@@ -4776,6 +4796,25 @@
           }
         }
       }
-    }
+    },
+    "task_features": [
+      {
+        "id": "controlnet.openpose",
+        "kind": "controlnet",
+        "branch": "openpose",
+        "title": "OpenPose"
+      },
+      {
+        "id": "controlnet.any",
+        "kind": "controlnet",
+        "branch": "any",
+        "title": "Any ControlNet"
+      },
+      {
+        "id": "regional",
+        "kind": "regional",
+        "title": "区域提示词 · RGB"
+      }
+    ]
   }
 }

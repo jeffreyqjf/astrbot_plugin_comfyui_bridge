@@ -669,6 +669,9 @@
                 <div id="queue-lora-rows"></div>
                 <small id="queue-lora-status" role="status"></small>
               </details>
+              <section id="queue-features" class="wide task-features" hidden>
+                <h3>本次可选功能</h3>
+                <div data-feature-choices class="task-feature-choices" aria-label="选择本次启用的功能"></div>
               <div id="queue-controlnets" hidden>
                 <div class="panel-heading">
                   <h3>ControlNet</h3>
@@ -677,6 +680,8 @@
                 <p id="queue-controlnet-config-status" role="status" hidden></p>
                 <div id="queue-controlnet-branches"></div>
               </div>
+                <div data-regional hidden></div>
+              </section>
               <template id="queue-controlnet-branch">
                 <fieldset class="queue-controlnet-branch">
                   <legend></legend>

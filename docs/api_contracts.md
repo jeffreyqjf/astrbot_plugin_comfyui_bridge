@@ -1,5 +1,14 @@
 # API 契约
 
+## v3 可选任务功能与 Regional Prompt
+
+- `task_inputs.features` 为描述列表，稳定字段 `id/kind/title`，ControlNet 另带 `branch`。已注册 `controlnet.openpose`、`controlnet.any`、`controlnet.lllite`、`regional`。前端按 `kind` 分派面板，后端对应适配器校验；新增功能类型须实现两侧适配。
+- 声明放在 `astrbot.task_features` 或输出节点 `_meta.task_features`，`task_feature_version:1`；画布在 `extra.astrbot_task_features` 保留同一份信息。旧图沿用已注册模型能力。
+- 任务可传 `regional:{mask,regions:[{text,strength},...],base_strength}`，恰好三区。遮罩为 RGB PNG Base64，最多 419 万像素及插件图片上限；每项文字最多 8000 字符，强度 0–10。有遮罩且强度大于 0 的区域必须填写提示词。`regional:null` 关闭分支，省略保持旧 API 行为，其他工作流收到此字段返回 400。
+- RGB 图绑定 V40 #1/#2/#3，#39/#40/#41 分别取通道；#4/#5/#6 使用固定文本，#7/#18/#26 和 #27 设置强度，启用分支 #24。任务使用独立图，相同遮罩在每项任务只上传一次。
+- `GET studio/regional/presets` 返回 `{version:1,presets,revision}`。`POST` 接收 `{name,preset,revision}`，`preset` 为 `{regions,base_strength}`，`null` 删除。名称 1–64 字符，最多 64 套及 2 MB，登录验证和原子写入，旧版本返回 409。文件 `regional_prompt_presets.json` 不包含遮罩或本机路径。
+- v3 网页只启用勾选功能，未勾选 ControlNet 传 `null`。Regional Prompt 支持普通生成和简易 LoRA 遍历，命令遍历入口暂只提供 ControlNet。
+
 以 [main.py](../main.py) 的 AstrBot 路由注册、[studio_settings.py](../bridge/studio/studio_settings.py) 的服务端校验和 [remote_studio.py](../bridge/studio/remote_studio.py) 的远程路由白名单为准。以下路径为相对工作台路由。内嵌入口经 AstrBot 插件 Web API 注册在 `/astrbot_plugin_comfyui_bridge/<route>` 下。独立远程工作台为允许的路由提供 `/api/<route>`，使用会话令牌。
 
 | 方法与相对路由 | 契约 |

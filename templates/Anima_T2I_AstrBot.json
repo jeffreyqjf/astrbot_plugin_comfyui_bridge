@@ -21164,7 +21164,18 @@
       }
     ],
     "qgn_locked": false,
-    "ue_links": []
+    "ue_links": [],
+    "astrbot_task_features": {
+      "version": 1,
+      "features": [
+        {
+          "id": "controlnet.lllite",
+          "kind": "controlnet",
+          "branch": "lllite",
+          "title": "Anima LLLite"
+        }
+      ]
+    }
   },
   "extensions": {
     "seed_widgets": {

@@ -1,5 +1,7 @@
 # 项目架构
 
+v3 任务功能由 `task_inputs.features` 声明、`views/workbench/task_features.js` 渲染。Regional Prompt 的节点契约与验证位于 `bridge/workflows/regional.py`，持久预设位于 `bridge/studio/regional_presets.py`。工作流持有本次节点图片，任务服务统一上传并写入独立执行图；界面不向共享默认图写入草稿。
+
 AstrBot ComfyUI Bridge 将 QQ 和网页创作工作台的请求转换成 ComfyUI 工作流任务，并处理结果回传、图片归档与评价。当前源码版本见 [metadata.yaml](../metadata.yaml)。
 
 | 层 | 入口 | 职责 |

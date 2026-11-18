@@ -71,6 +71,7 @@ from ..workflows.parameter_layout import (
     read_parameter_layout,
     validate_parameter_layout,
 )
+from ..workflows.regional import feature_catalog, prepare_regional
 from ..workflows.svi import (
     check_video_rife,
     parse_stages,
@@ -129,6 +130,7 @@ from .h3_media import H3Media, media_view
 from .input_library import InputLibrary, InputUnavailable
 from .mask_image import apply_mask, reference_body_limit
 from .prompt_library import PromptLibrary
+from .regional_presets import RegionalPresets
 
 WAN_WORKFLOWS = {"WAN22_T2V_AstrBot", "WAN22_I2V_AstrBot"}
 PERSONA_LIMIT = 16000
@@ -229,6 +231,7 @@ class StudioSettings:
         self.anima = anima
         self.input_library = InputLibrary(service, anima.workspace)
         self.h3_media = H3Media(service)
+        self.regional_presets = RegionalPresets(service)
         self.lora_families = {
             "anima": anima,
             "illustrious": LoraSettings(service, "illustrious", "Illustrious"),
@@ -633,6 +636,7 @@ class StudioSettings:
             "reference": reference and not full_h3, "mask": reference and mask and not full_h3,
             "h3_prompt": full_h3 and bool(workflow.positive),
             "h3_media": full_h3 and "416" in workflow.active,
+            "features": feature_catalog(workflow),
         }
 
     async def get(self):
@@ -1379,7 +1383,7 @@ class StudioSettings:
         except (OSError, ValueError) as exc:
             return error_response(str(exc), status_code=400)
 
-    async def _queue_lora_variants(self, workflow, loras, sweep, count, controls, *, has_reference=False):
+    async def _queue_lora_variants(self, workflow, loras, sweep, count, controls, *, has_reference=False, regional=None):
         if workflow.sweep_lora_family is None:
             raise WorkflowError("此工作流未配置 LoRA 目录。")
         family = await self.lora_catalog_for(workflow.sweep_lora_family)
@@ -1402,7 +1406,7 @@ class StudioSettings:
                 for rows in variants
             ]
         if workflow.name == ADVANCED_V40_WORKFLOW:
-            base = await self.v40_generation(workflow.name, {}, controlnets=controls)
+            base = await self.v40_generation(workflow.name, regional or {}, controlnets=controls)
             return [advanced_v40_loras(base, rows, catalog, files) for rows in variants]
         return [workflow_loras(workflow, rows, catalog, files) for rows in variants]
 
@@ -1420,7 +1424,7 @@ class StudioSettings:
             if not self.service.config.get("enabled", True):
                 raise ComfyError("ComfyUI 插件已在面板禁用。")
             body = await request.body()
-            if len(body) > reference_body_limit(self.service.client.max_image_bytes, controls=2):
+            if len(body) > reference_body_limit(self.service.client.max_image_bytes, controls=3):
                 raise WorkflowError("任务数据过大。")
             data = json.loads(body)
             if not isinstance(data, dict):
@@ -1436,6 +1440,9 @@ class StudioSettings:
             if workflow is None:
                 raise WorkflowError("请选择可直接生成的工作流。需要参考图时可用命令表单上传。")
             inputs = self.task_inputs(workflow)
+            regional = {"regional": data["regional"]} if "regional" in data else {}
+            if regional and workflow.name != ADVANCED_V40_WORKFLOW:
+                raise WorkflowError("此工作流不支持区域提示词。")
             if not inputs["simple"]:
                 raise WorkflowError("当前工作流不能用生成任务表单执行。")
             if (prompt.strip() and not inputs["positive"]) or (negative.strip() and not inputs["negative"]):
@@ -1480,7 +1487,7 @@ class StudioSettings:
             if type(count) is not int or not 1 <= count <= self.service.queue_limit:
                 raise WorkflowError(f"生成批次须为 1 到 {self.service.queue_limit} 的整数。")
             if loras or sweep:
-                variants = await self._queue_lora_variants(workflow, loras, sweep, count, controls, has_reference=image is not None)
+                variants = await self._queue_lora_variants(workflow, loras, sweep, count, controls, has_reference=image is not None, regional=regional)
                 settings = {
                     "timeout_seconds": self.service.qq_timeout_for(workflow), "image_data": image,
                     "control_sources": sources, "control_archive": control_archive,
@@ -1511,8 +1518,8 @@ class StudioSettings:
                     workflow = await self.illustrious_generation(options)
                 elif workflow.name in H3_WORKFLOWS and image is not None:
                     workflow = h3_with_reference(workflow)
-                elif controls:
-                    workflow = await self.v40_generation(workflow.name, {}, controlnets=controls)
+                elif controls or regional:
+                    workflow = await self.v40_generation(workflow.name, regional, controlnets=controls)
                 jobs = await self.service.start_batch(
                     owner, prompt, workflow, negative, count,
                     timeout_seconds=self.service.qq_timeout_for(workflow), preset=preset_details, image_data=image,
@@ -2060,13 +2067,21 @@ class StudioSettings:
             if controlnets:
                 raise WorkflowError("请更新 V40 工作流以使用独立 ControlNet。")
             return detailer_workflow(graph, settings, mapping, options) if name == DETAILER_WORKFLOW else workflow
-        allowed = REPAIR_OPTIONS | ({"img2img"} if name == ADVANCED_V40_WORKFLOW else set())
+        allowed = REPAIR_OPTIONS | ({"img2img", "regional"} if name == ADVANCED_V40_WORKFLOW else set())
         if options.keys() - allowed:
             raise WorkflowError("V40 支持单次切换局部修复。Advanced V40 也支持 --img2img on/off。")
         if not allow_nsfw:
             options = {**options, "nsfw_repair": False}
         schemas = await self.service.client.node_schemas(controlnet_node_types(name)) if any((controlnets or {}).values()) else None
-        return v40_workflow(name, graph, settings, mapping, options, controlnets=controlnets, schemas=schemas)
+        images = {}
+        if "regional" in options:
+            graph, branches, images = await asyncio.to_thread(
+                prepare_regional, name, graph, settings, options["regional"], self.service.client.max_image_bytes,
+            )
+            options = {**{key: value for key, value in options.items() if key != "regional"}, **branches}
+        result = v40_workflow(name, graph, settings, mapping, options, controlnets=controlnets, schemas=schemas)
+        result.input_images = images
+        return result
 
     def _local_caption_models(self, schemas):
         pixai = self.anima.workspace / "models/pixai_tagger/pixai-tagger-v1.0"

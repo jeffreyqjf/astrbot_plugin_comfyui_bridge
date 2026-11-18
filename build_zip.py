@@ -36,6 +36,9 @@ def build(target=None):
         "bridge/workflows/detailer.py",
         "bridge/workflows/anima_settings.py",
         "bridge/workflows/controlnet.py",
+        "bridge/workflows/regional.py",
+        "bridge/studio/regional_presets.py",
+        "views/workbench/task_features.js",
         "bridge/workflows/illustrious.py",
         "bridge/workflows/lightning.py",
         "bridge/workflows/minimax_h3.py",
@@ -82,6 +85,7 @@ def build(target=None):
         "user docs/COMMANDS.md",
         "user docs/CONFIGURATION.md",
         "user docs/MINIMAX_H3_SEED_HUNTER.md",
+        "user docs/REGIONAL_PROMPT.md",
         "LICENSE",
     ]
     json.loads((root / "_conf_schema.json").read_text(encoding="utf-8"))

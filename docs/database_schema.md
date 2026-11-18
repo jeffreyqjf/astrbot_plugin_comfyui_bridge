@@ -1,5 +1,7 @@
 # 持久数据结构
 
+v3 新增 `regional_prompt_presets.json`：`{version:1,presets:{名称:{regions:[{text,strength},...],base_strength}}}`。最多 64 套、2 MB，按文件摘要处理并发冲突。遮罩不存入预设，由任务上传到 ComfyUI input，已提交图中记录各 LoadImage 文件名及三区文本。旧持久数据无需迁移。
+
 当前插件使用 JSON、媒体文件和内存任务状态。源码中未发现用于插件记录的关系数据库或 SQL schema。以下路径以 AstrBot 插件数据目录为根，媒体根目录另行说明。
 
 | 存储 | 标识与内容 | 证据 |

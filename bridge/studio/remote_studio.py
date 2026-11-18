@@ -22,7 +22,7 @@ ASSETS = (
     "h3_media.js", "h3_media_transport.js", "h3_media_vendor.js", "h3_media_vendor.css", "h3_media_LICENSE.txt",
     "h3_prompt.js", "h3_prompt_transport.js", "h3_prompt_vendor.js", "h3_prompt_vendor.css", "h3_prompt_LICENSE.txt",
     "h3_prompt_ide_core.mjs", "h3_prompt_completion_core.mjs", "h3_prompt_schema_core.mjs",
-    "h3_prompt_ide_settings_core.mjs", "h3_legacy_widget_width.mjs",
+    "h3_prompt_ide_settings_core.mjs", "h3_legacy_widget_width.mjs", "task_features.js",
 )
 VIEW = PACKAGE_ROOT / "views" / "workbench"
 API_PATHS = frozenset({
@@ -43,6 +43,7 @@ API_PATHS = frozenset({
     "anima/settings", "anima/branches",
     "studio/h3/media", "studio/h3/media/rpc", "studio/h3/media/upload", "studio/h3/media/preview",
     "studio/h3/prompt-templates",
+    "studio/regional/presets",
 })
 PRIVATE_NETWORKS = tuple(map(ipaddress.ip_network, (
     "127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10",
@@ -83,7 +84,7 @@ class RemoteStudio:
         ipaddress.ip_address(host)
         self.token = token
         app = web.Application(middlewares=[self.authorize], client_max_size=max(
-            reference_body_limit(self.plugin.service.client.max_image_bytes, controls=2), WORKFLOW_UPLOAD_LIMIT,
+            reference_body_limit(self.plugin.service.client.max_image_bytes, controls=3), WORKFLOW_UPLOAD_LIMIT,
             self.plugin.service.client.max_video_bytes + 1024 * 1024,
         ))
         app.on_response_prepare.append(self._headers)
@@ -216,7 +217,7 @@ class RemoteStudio:
         limit = 2 * 1024 * 1024
         if request.method == "POST":
             if route in {"studio/queue", "studio/queue/command"}:
-                limit = reference_body_limit(self.plugin.service.client.max_image_bytes, controls=2)
+                limit = reference_body_limit(self.plugin.service.client.max_image_bytes, controls=3)
             elif route in {"studio/workflows/import", "studio/workflows/replace", "studio/workflow/configs/import"}:
                 limit = WORKFLOW_UPLOAD_LIMIT
             elif route == "studio/queue/templates/import":

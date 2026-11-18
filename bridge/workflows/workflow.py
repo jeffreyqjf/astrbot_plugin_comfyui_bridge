@@ -144,6 +144,7 @@ class Workflow:
     def __init__(self, name, data, overrides=None, *, require_prompt=True):
         self.name = name
         self.controlnet_outputs = {}
+        self.input_images = {}
         data, settings = profile_parts(data)
         if not isinstance(settings, dict) or not isinstance(settings.get("positive_prefix", ""), str):
             raise WorkflowError("AstrBot 工作流设置格式无效。")
@@ -151,6 +152,11 @@ class Workflow:
         if not isinstance(data, dict) or not data or "nodes" in data:
             raise WorkflowError("需要 ComfyUI 导出的 API 格式 JSON，不能使用画布格式。")
         self.graph = copy.deepcopy(data)
+        declared = settings.get("task_features")
+        if declared is None:
+            declared = next((node.get("_meta", {}).get("task_features") for node in self.graph.values()
+                             if isinstance(node, dict) and "task_features" in node.get("_meta", {})), [])
+        self.task_features = copy.deepcopy(declared)
         for node in self.graph.values():
             if not isinstance(node, dict) or not isinstance(node.get("class_type"), str):
                 raise WorkflowError("API 工作流节点缺少 class_type。")

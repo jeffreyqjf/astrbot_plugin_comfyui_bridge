@@ -423,6 +423,42 @@ async def check_h3_media(instance, root):
 
     service = instance.service
     source = service.workflows["MiniMax_H3_Seed_Hunter_V3_AstrBot"].graph["416"]["inputs"]["media_state"]
+    response = await call("studio/regional/presets", method="GET")
+    assert response.status_code == 200, response.body
+    preset_catalog = json.loads(response.body)
+    regional = {"base_strength": 1, "regions": [{"text": text, "strength": 1} for text in ("Red fox", "Green tree", "Blue bird")]}
+    response = await call("studio/regional/presets", {"name": "RGB subjects", "preset": regional, "revision": preset_catalog["revision"]})
+    assert response.status_code == 200 and json.loads(response.body)["presets"]["RGB subjects"] == regional, response.body
+    response = await call("studio/regional/presets", {"name": "RGB subjects", "preset": None, "revision": preset_catalog["revision"]})
+    assert response.status_code == 409
+    assert (await call("studio/regional/presets", method="GET", username=None)).status_code == 401
+    preset_path = service.data_dir / "regional_prompt_presets.json"
+    saved_presets = preset_path.read_bytes()
+    invalid_presets = json.dumps({"version": 1, "presets": {"": regional}}).encode()
+    preset_path.write_bytes(invalid_presets)
+    assert (await call("studio/regional/presets", method="GET")).status_code == 400
+    assert preset_path.read_bytes() == invalid_presets
+    preset_path.write_bytes(saved_presets)
+    from PIL import Image
+
+    rgb = io.BytesIO()
+    Image.new("RGB", (12, 8), "white").save(rgb, "PNG")
+    regional = {**regional, "mask": base64.b64encode(rgb.getvalue()).decode()}
+    with patch.object(service, "_run") as regional_run:
+        for route, data in (
+            ("studio/queue", {"workflow": "Advanced_Gemma_V40_AstrBot", "positive": "Three subjects", "count": 2}),
+            ("studio/queue/command", {"command": "/comfy gen --wf v40 --seed 42 Three subjects --raw", "account": ""}),
+        ):
+            response = await call(route, {**data, "regional": regional})
+            assert response.status_code == 200, response.body
+            assert "51" in regional_run.call_args.args[1]
+            assert regional_run.call_args.args[1]["5"]["inputs"]["populated_text"] == "Green tree"
+            assert set(regional_run.call_args.kwargs["input_images"]) == {"1", "2", "3"}
+        response = await call("studio/queue", {"workflow": "Advanced_Gemma_V40_AstrBot", "positive": "No regions", "regional": None})
+        assert response.status_code == 200 and "51" not in regional_run.call_args.args[1], response.body
+        before = regional_run.call_count
+        response = await call("studio/queue", {"workflow": "SDXL_Turbo_T2I_AstrBot", "positive": "Test", "regional": regional})
+        assert response.status_code == 400 and regional_run.call_count == before
     family = type(instance.studio.lora_families["illustrious"])(
         SimpleNamespace(config={"anima_workspace": str(root / "fast-lora")}, data_dir=root), "illustrious", "Test")
     model = family.workspace / "models/loras/illustrious/C/test.safetensors"

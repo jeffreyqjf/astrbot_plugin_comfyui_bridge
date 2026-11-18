@@ -482,7 +482,7 @@ class AnimaSettings(LoraSettings):
         ):
             denoise = IMG2IMG_DENOISE
         schemas = None
-        if switches or controlnets:
+        if switches or any((controlnets or {}).values()):
             schemas = await self.service.client.request("GET", "/object_info")
             _, workflow = await self._prepare(
                 {

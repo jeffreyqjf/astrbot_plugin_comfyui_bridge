@@ -626,6 +626,7 @@ class ComfyService:
                     job, graph, wf.outputs, image_data, wf.image_inputs,
                     image_folder=image_folder, control_sources=control_sources,
                     control_outputs=wf.controlnet_outputs, control_archive=control_archive,
+                    input_images=wf.input_images,
                 )
             )
             self.jobs[job.id] = job
@@ -635,6 +636,7 @@ class ComfyService:
     async def _run(
         self, job, graph, outputs, image_data, image_fields, *, image_folder,
         control_sources=None, control_outputs=None, control_archive=None,
+        input_images=None,
     ):
         acquired = False
         record = None
@@ -662,6 +664,12 @@ class ComfyService:
             for branch, source in (control_sources or {}).items():
                 image_node = CONTROL_BRANCHES[job.workflow][branch].image
                 graph[image_node]["inputs"]["image"] = await self.client.upload_image(source["data"])
+            uploaded = {}
+            for node, data in (input_images or {}).items():
+                digest = hashlib.sha256(data).hexdigest()
+                if digest not in uploaded:
+                    uploaded[digest] = await self.client.upload_image(data)
+                graph[node]["inputs"]["image"] = uploaded[digest]
             if not video:
                 trace["image_loras"] = image_loras(graph, outputs)
             await asyncio.to_thread(self.metadata_dir.mkdir, exist_ok=True)
