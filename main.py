@@ -614,6 +614,7 @@ class ComfyUIBridge(Star):
                 h3_media=data.get("h3_media"),
                 h3_prompt=data.get("h3_prompt"),
                 regional={"regional": data["regional"]} if "regional" in data else None,
+                upscale=data.get("upscale"),
             )
             return json_response(result)
         except (ComfyError, OSError, ValueError) as exc:
@@ -669,7 +670,7 @@ class ComfyUIBridge(Star):
         inputs = self.studio.task_inputs(workflow)
         if action == "sweep":
             inputs.update(h3_prompt=False, h3_media=False, presets=bool(workflow.positive))
-            inputs["features"] = [item for item in inputs["features"] if item["kind"] != "regional"]
+            inputs["features"] = [item for item in inputs["features"] if item["kind"] == "controlnet"]
         return json_response({"workflow": workflow.name, "positive": positive, "task_inputs": inputs})
 
     async def run_remote_command(
@@ -677,6 +678,7 @@ class ComfyUIBridge(Star):
         h3_media=None,
         h3_prompt=None,
         regional=None,
+        upscale=None,
     ):
         if not self.config.get("enabled", True):
             raise WorkflowError("ComfyUI 插件已在面板禁用。")
@@ -686,6 +688,8 @@ class ComfyUIBridge(Star):
         await self.service.initialize()
         if regional is not None and action in {"help", "lora", "sweep"}:
             raise WorkflowError("区域提示词请使用普通生成命令或简易添加。")
+        if upscale is not None and action in {"help", "lora", "sweep"}:
+            raise WorkflowError("放大开关请使用普通生成命令或简易添加。")
         if (h3_media is not None or h3_prompt is not None) and action in {"help", "lora", "sweep"}:
             raise WorkflowError("H3 素材和提示词设置仅用于生成任务。")
         if controlnets not in (None, {}) and action in {"help", "lora"}:
@@ -718,6 +722,10 @@ class ComfyUIBridge(Star):
                 raise WorkflowError("当前工作流不支持区域提示词。")
             options = {**options, **regional}
         prompt, _, negative, seed, preset, *_ = parsed
+        if upscale is not None:
+            if workflow.name != ADVANCED_V40_WORKFLOW:
+                raise WorkflowError("当前工作流不支持前后两段放大。")
+            options = {**options, "upscale": upscale}
         if h3_prompt is not None:
             if workflow.name not in H3_WORKFLOWS or not isinstance(h3_prompt, str) or len(h3_prompt) > 8000:
                 raise WorkflowError("H3 提示词须为不超过 8000 字符的文本。")

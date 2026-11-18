@@ -3942,6 +3942,18 @@
             "id": "regional",
             "kind": "regional",
             "title": "区域提示词 · RGB"
+          },
+          {
+            "id": "upscale.pre",
+            "kind": "branch",
+            "branch": "pre",
+            "title": "Ultimate 放大 · Detailer 前"
+          },
+          {
+            "id": "upscale.post",
+            "kind": "branch",
+            "branch": "post",
+            "title": "Ultimate 放大 · Detailer 后"
           }
         ]
       }
@@ -4814,6 +4826,18 @@
         "id": "regional",
         "kind": "regional",
         "title": "区域提示词 · RGB"
+      },
+      {
+        "id": "upscale.pre",
+        "kind": "branch",
+        "branch": "pre",
+        "title": "Ultimate 放大 · Detailer 前"
+      },
+      {
+        "id": "upscale.post",
+        "kind": "branch",
+        "branch": "post",
+        "title": "Ultimate 放大 · Detailer 后"
       }
     ]
   }

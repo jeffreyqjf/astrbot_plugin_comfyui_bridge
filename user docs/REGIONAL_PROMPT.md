@@ -4,7 +4,7 @@
 
 | 工作流 | 本次可选功能 |
 | --- | --- |
-| Advanced Gemma V40 | OpenPose、Any ControlNet、区域提示词 RGB |
+| Advanced Gemma V40 | OpenPose、Any ControlNet、区域提示词 RGB、Ultimate 放大（Detailer 前／后） |
 | Anima T2I | Anima LLLite |
 | 其他工作流 | 保留各自提示词、参考图和 H3 等专用输入；没有对应节点时不显示空开关 |
 
@@ -30,3 +30,7 @@ ControlNet 勾选后选择模型预设、控制类型、直用或预处理以及
 ## 工作流文件
 
 原始画布保留。Advanced Gemma V40 与 Anima T2I 的 AstrBot 画布、API 导出及随包工作流已更新功能声明，原有节点、连接及布局保留。正式开发顺序仍为 AstrBot 画布、API 导出、同步插件。安装包不会自动覆盖独立编辑过的运行图，运行实例需另行同步和重载。
+
+## V40 前后放大
+
+勾选「Ultimate 放大 · Detailer 前」或「Ultimate 放大 · Detailer 后」，可独立或同时启用。模型、倍率、采样等沿用保存的工作流；仅影响本次任务。普通生成命令与简易添加支持这两个开关，单次遍历使用简易添加。

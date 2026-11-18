@@ -1,5 +1,13 @@
 # 开发状态
 
+## v3.1.0 · V40 前后放大任务开关
+
+- 将用户已验证的 Advanced Gemma V40 Ultimate SD Upscale Pre Detailer（43）和 Post Detailer（upscale_post）加入新建任务，可分别勾选，参数沿用保存的工作流。支持简易添加、普通命令和简易 LoRA 遍历，仅覆盖本次构图。Detailer V40 没有这对分支，不添加无效选项。
+- 覆盖前／后四种组合的实际节点 #126/#130 和输出连线。同步能力声明到 AstrBot 画布、API 与随包图；保留本机画布布局和 API 当前参数。Minor v3.1.0。
+- 15 项工作流适配测试、隔离 AstrBot 的四种组合及命令提交、1200px／360px 界面勾选与提交检查通过，Ruff、JS 语法和 Git 差异检查通过。
+- Git Commit Message：`feat: expose V40 pre and post detailer upscale task switches`。运行副本未同步，GPU 放大沿用用户已验证结果，本轮不重复生成。
+
+
 ## v3.0.0 · 可选任务功能与 RGB 区域提示词
 
 - 按用户要求发布 Major v3.0.0。全部 14 条工作流通过统一能力接口，任务只显示已适配的常用功能：Advanced Gemma V40 的 OpenPose、Any ControlNet 与 RGB Regional Prompt，Anima T2I 的 LLLite。不加入其他低频修复或放大节点；既有工作流参数保持入口。v3 网页未勾选功能显式关闭，旧客户端省略字段仍沿用工作流默认值。

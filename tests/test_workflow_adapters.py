@@ -25,7 +25,7 @@ from bridge.workflows.minimax_h3 import (
     h3_with_reference,
     save_h3_v3_field,
 )
-from bridge.workflows.regional import prepare_regional, regional_text
+from bridge.workflows.regional import prepare_regional, regional_text, upscale_options
 from bridge.workflows.v40 import advanced_v40_loras, upgrade_detailer, v40_workflow
 from bridge.workflows.workflow import (
     ADVANCED_V40_WORKFLOW,
@@ -403,3 +403,22 @@ class RegionalPromptTests(unittest.TestCase):
             prepare_regional(ANIMA_WORKFLOW, source["prompt"], source["astrbot"], self.payload(), 1024 * 1024)
         with self.assertRaises(WorkflowError):
             regional_text({"regions": [], "base_strength": 1})
+
+
+class V40TaskUpscaleTests(unittest.TestCase):
+    def test_independent_pre_post_switches(self):
+        data = profile(ADVANCED_V40_WORKFLOW)
+        for pre, post in product([False, True], repeat=2):
+            workflow = v40_workflow(ADVANCED_V40_WORKFLOW, data["prompt"], data["astrbot"],
+                                   options=upscale_options(ADVANCED_V40_WORKFLOW, {"pre": pre, "post": post}))
+            self.assertEqual("125" in workflow.active, pre)
+            self.assertEqual("130" in workflow.active, post)
+            for key, row in workflow.graph.items():
+                for value in row["inputs"].values():
+                    if isinstance(value, list) and len(value) == 2 and isinstance(value[0], str):
+                        self.assertIn(value[0], workflow.graph, key)
+        for invalid in ({"pre": 1, "post": False}, {"pre": True}, None):
+            with self.assertRaises(WorkflowError):
+                upscale_options(ADVANCED_V40_WORKFLOW, invalid)
+        with self.assertRaises(WorkflowError):
+            upscale_options(DETAILER_WORKFLOW, {"pre": True, "post": True})

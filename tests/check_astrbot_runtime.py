@@ -445,6 +445,13 @@ async def check_h3_media(instance, root):
     Image.new("RGB", (12, 8), "white").save(rgb, "PNG")
     regional = {**regional, "mask": base64.b64encode(rgb.getvalue()).decode()}
     with patch.object(service, "_run") as regional_run:
+        for pre, post in ((False, False), (True, False), (False, True), (True, True)):
+            response = await call("studio/queue", {"workflow": "Advanced_Gemma_V40_AstrBot", "positive": "Scene", "upscale": {"pre": pre, "post": post}})
+            assert response.status_code == 200, response.body
+            graph = regional_run.call_args.args[1]
+            assert ("126" in graph) == pre and ("130" in graph) == post
+        response = await call("studio/queue/command", {"command": "/comfy gen --wf v40 Scene --raw", "upscale": {"pre": True, "post": True}})
+        assert response.status_code == 200 and "130" in regional_run.call_args.args[1], response.body
         for route, data in (
             ("studio/queue", {"workflow": "Advanced_Gemma_V40_AstrBot", "positive": "Three subjects", "count": 2}),
             ("studio/queue/command", {"command": "/comfy gen --wf v40 --seed 42 Three subjects --raw", "account": ""}),

@@ -75,3 +75,7 @@
 新建任务的参考图复用图集筛选、分页和预览，可选择收藏、Pass、待评价以及控制图集。受理前读取原图填入当前参考图字段，沿用图片及遮罩校验。
 
 `GET studio/queue/loras` 改用文件头目录列表，保留分类编号、排序和默认强度，不在列出选项时计算完整权重哈希。正式提交、附带词和管理功能仍用完整校验目录。
+
+## V40 放大任务选项（v3.1.0）
+
+功能描述新增 `upscale.pre/upscale.post`，`kind:branch`，`branch:pre/post`。普通命令与简易任务传 `upscale:{pre:bool,post:bool}`，仅 Advanced Gemma V40 接受，分别映射 43 和 upscale_post。省略沿用工作流；网页明确传两个状态，简易 LoRA 遍历共用本次构图。
