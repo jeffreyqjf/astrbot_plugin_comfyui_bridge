@@ -70,39 +70,44 @@
             </footer>
             <small class="section-note">选择后直接加载。保存设置时会同步更新选中的配置。</small>
           </section>
-          <section>
-            <h2>命令简称</h2>
-            <label class="field">工作流简称
-              <input id="workflow-alias" maxlength="32" placeholder="留空使用默认简称">
-            </label>
-            <footer><button type="button" id="workflow-alias-save">保存简称</button></footer>
-            <small id="workflow-alias-example"></small>
-          </section>
-      <section>
-        <h2 id="prompt-settings-title">提示词与种子</h2>
-        <label id="prefix-setting" class="field">正向提示词前缀
-          <textarea id="prefix" rows="2" maxlength="4000" placeholder="可留空，或填写常用风格标签"></textarea>
-        </label>
-        <label class="toggle"><input type="checkbox" id="fixed"> 使用面板里的固定种子</label>
-        <small id="seed-note">随机模式每次生成使用新种子。负向提示词与种子数值可在下方调整。</small>
-        <div class="grid" id="sweep-lora-setting" hidden>
-          <label class="field">人物 LoRA 扫图目录
-            <select id="sweep-lora-family"></select>
-          </label>
-        </div>
-      </section>
-      <section id="reference-settings">
-        <h2>图生图参考图</h2>
-        <p>默认从 QQ 读取图生图和 ControlNet 参考图。同时启用时共用所选图片。</p>
-        <label class="field">图片来源
-          <select id="reference-source">
-            <option value="auto">优先 QQ 附图，没图时用面板参考图</option>
-            <option value="qq">仅用 QQ 当前消息或引用图片</option>
-            <option value="local">仅用面板参考图</option>
-          </select>
-        </label>
-        <small>同一条消息附图，或回复图片并发送指令。选择本机素材时，可调整节点 #21 和 #129。</small>
-      </section>
+          <details id="workflow-basics" class="compact-disclosure workflow-basics">
+            <summary>基础配置<span>命令、提示词、种子与参考图</span></summary>
+            <div class="workflow-basic-grid">
+              <div class="workflow-basic-group">
+                <h2>命令简称</h2>
+                <label class="field">工作流简称
+                  <input id="workflow-alias" maxlength="32" placeholder="留空使用默认简称">
+                </label>
+                <footer><button type="button" id="workflow-alias-save">保存简称</button></footer>
+                <small id="workflow-alias-example"></small>
+              </div>
+              <div class="workflow-basic-group workflow-basic-prompt">
+                <h2 id="prompt-settings-title">提示词与种子</h2>
+                <label id="prefix-setting" class="field">正向提示词前缀
+                  <textarea id="prefix" rows="2" maxlength="4000" placeholder="可留空，或填写常用风格标签"></textarea>
+                </label>
+                <label class="toggle"><input type="checkbox" id="fixed"> 使用面板里的固定种子</label>
+                <small id="seed-note">随机模式每次生成使用新种子。负向提示词与种子数值可在下方调整。</small>
+                <div class="grid" id="sweep-lora-setting" hidden>
+                  <label class="field">人物 LoRA 扫图目录
+                    <select id="sweep-lora-family"></select>
+                  </label>
+                </div>
+              </div>
+              <div id="reference-settings" class="workflow-basic-group">
+                <h2>图生图参考图</h2>
+                <p>默认从 QQ 读取图生图和 ControlNet 参考图。同时启用时共用所选图片。</p>
+                <label class="field">图片来源
+                  <select id="reference-source">
+                    <option value="auto">优先 QQ 附图，没图时用面板参考图</option>
+                    <option value="qq">仅用 QQ 当前消息或引用图片</option>
+                    <option value="local">仅用面板参考图</option>
+                  </select>
+                </label>
+                <small>同一条消息附图，或回复图片并发送指令。选择本机素材时，可调整节点 #21 和 #129。</small>
+              </div>
+            </div>
+          </details>
       <section id="anima-branches">
         <h2>工作流分支</h2>
         <p>勾选后点「保存设置」，下次打开会保留已保存的分支。关闭分支时会保留它的参数。</p>

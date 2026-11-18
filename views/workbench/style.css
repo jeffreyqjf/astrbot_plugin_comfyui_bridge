@@ -84,6 +84,19 @@ summary { cursor: pointer; font-weight: 650; }
 .compact-disclosure[open] > summary::after { transform: rotate(90deg); }
 .compact-disclosure[open] { padding-bottom: 12px; }
 .compact-disclosure[open] > :not(summary) { margin-inline: 12px; }
+.workflow-basics > summary { flex-wrap: wrap; }
+.workflow-basics > summary > span { font-size: 12px; font-weight: 400; }
+.workflow-basics { container-type: inline-size; }
+.workflow-basic-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; align-items: start; }
+.workflow-basic-prompt { grid-column: 2; grid-row: 1 / span 2; }
+@container (max-width: 560px) {
+  .workflow-basic-grid { grid-template-columns: minmax(0, 1fr); }
+  .workflow-basic-prompt { grid-column: auto; grid-row: auto; }
+}
+.workflow-basic-group { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 9px; }
+.workflow-basic-group h2 { font-size: 15px; margin-bottom: 10px; }
+.workflow-basic-group > p { margin: 0 0 10px; font-size: 12px; }
+.workflow-basic-group > small { display: block; margin-top: 6px; }
 .queue-mode { max-width: 16rem; margin-block: 12px; }
 .queue-reference { margin-block: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--soft); }
 .task-image-selection { display: flex; align-items: center; gap: 10px; }
