@@ -42,6 +42,7 @@ MiniMax H3 用 `/comfy gen --wf h3 --seed 1000 描述` 生成三个候选。选�
 | `/comfy gen --wf t2i 一只猫` | 强制使用 Anima 文生图 |
 | `/comfy gen --wf i2i 改成水彩 --denoise 0.55` | Anima 重绘，需要参考图 |
 | `/comfy gen --wf v40 --feet on 1girl, full body --raw` | Advanced Gemma V40 文生图，临时开启修脚 |
+| `/comfy gen --wf anima-detailer --face on detailed face --raw` | Anima Detailer 参考图细化，支持 Anima LoRA 与消息参考图 |
 | `/comfy gen --wf detailer --feet on detailed feet --raw` | Detailer V40 局部重绘并临时开启修脚，需要参考图 |
 | `/comfy gen --wf wai 一只猫 --face on` | WAI-Illustrious 文生图 |
 | `/comfy gen --wf sdxl 一只猫` | SDXL Turbo 文生图 |

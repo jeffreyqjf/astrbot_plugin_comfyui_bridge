@@ -1,6 +1,6 @@
 """Apply the optional feet pass in legacy Detailer V40 API graphs."""
 
-from copy import deepcopy
+from copy import copy, deepcopy
 
 from .workflow import DETAILER_WORKFLOW, Workflow, WorkflowError, is_link
 
@@ -12,6 +12,53 @@ def detailer_options(value):
             or any(type(enabled) is not bool for enabled in value.values())):
         raise WorkflowError("Detailer 任务功能须包含 hires、inpaint、outpaint、mask、upscale 五个布尔开关。")
     return {branch: value[key] for key, branch in DETAILER_TASK_BRANCHES.items()}
+
+
+ANIMA_DETAILER_TASK_BRANCHES = {"hires_pre": "13", "hires_post": "14", "inoutpaint": "126", "mask": "mask", "upscale": "19"}
+ANIMA_DETAILER_FEATURES = [
+    {"id": f"anima_detailer.{key}", "kind": "branch", "branch": key, "title": title}
+    for key, title in (("hires_pre", "Hires PreDetailer"), ("hires_post", "Hires PostDetailer"),
+                       ("inoutpaint", "In/Outpaint"), ("mask", "Mask Detailer"), ("upscale", "Ultimate SD Upscaler"))
+]
+
+
+def anima_detailer_options(value):
+    if (not isinstance(value, dict) or value.keys() != ANIMA_DETAILER_TASK_BRANCHES.keys()
+            or any(type(enabled) is not bool for enabled in value.values())):
+        raise WorkflowError("Anima Detailer 任务功能须包含 hires_pre、hires_post、inoutpaint、mask、upscale 五个布尔开关。")
+    return {branch: value[key] for key, branch in ANIMA_DETAILER_TASK_BRANCHES.items()}
+
+
+def anima_detailer_loras(workflow, rows, catalog, files):
+    loader = workflow.graph.get("5")
+    if not loader or "5" not in workflow.active or loader["class_type"] != "Lora Loader (LoraManager)":
+        if rows:
+            raise WorkflowError("当前 Anima Detailer 分支没有使用 LoRA 模型，请先启用细化或采样分支。")
+        return workflow
+    candidate = copy(workflow)
+    candidate.graph = graph = deepcopy(workflow.graph)
+    inputs = graph["5"]["inputs"]
+    inputs.update(text="", loras={"__value__": []})
+    tags = [workflow.positive_prefix]
+    for index, row in enumerate(rows, 1):
+        entry = catalog[row["id"]]
+        filename = files.get(entry["filename"])
+        if filename is None:
+            raise WorkflowError(f"ComfyUI 未找到 LoRA「{entry['title']}」。")
+        key = f"astrbot_anima_detailer_lora_{index}"
+        if key in graph:
+            raise WorkflowError("Anima Detailer 已使用 LoRA 保留节点。")
+        graph[key] = {"class_type": "LoraLoaderModelOnly", "inputs": {
+            "model": inputs["model"], "lora_name": filename, "strength_model": row["strength"],
+        }}
+        inputs["model"] = [key, 0]
+        if row["strength"]:
+            tags.append(entry["tag"])
+    if "57" in graph:
+        graph["57"]["inputs"]["toggle_trigger_words"] = {"__value__": []}
+    candidate.active = workflow.active | (graph.keys() - workflow.graph.keys())
+    candidate.positive_prefix = ", ".join(dict.fromkeys(filter(None, tags)))
+    return candidate
 
 
 FEET_NODES = ("497", "498", "499")

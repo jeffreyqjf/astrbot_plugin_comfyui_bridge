@@ -34,7 +34,11 @@ from .bridge.studio.remote_studio import API_PATHS, RemoteStudio
 from .bridge.studio.studio_settings import StudioSettings
 from .bridge.workflows.anima_aio import AIO_WORKFLOW
 from .bridge.workflows.anima_settings import ANIMA_RUN_BRANCHES, BRANCH_CATEGORIES, AnimaSettings
-from .bridge.workflows.detailer import detailer_options
+from .bridge.workflows.detailer import (
+    anima_detailer_loras,
+    anima_detailer_options,
+    detailer_options,
+)
 from .bridge.workflows.illustrious import lora_loader_files, workflow_loras
 from .bridge.workflows.minimax_h3 import h3_with_reference
 from .bridge.workflows.svi import NUMERIC_RUN_OPTIONS, parse_stage_loras, parse_stages
@@ -42,6 +46,7 @@ from .bridge.workflows.svi import RUN_OPTIONS as VIDEO_RUN_OPTIONS
 from .bridge.workflows.v40 import V40_WORKFLOWS, advanced_v40_lora_sweep, advanced_v40_loras
 from .bridge.workflows.workflow import (
     ADVANCED_V40_WORKFLOW,
+    ANIMA_DETAILER_WORKFLOW,
     DETAILER_WORKFLOW,
     H3_WORKFLOWS,
     LIGHTNING_WORKFLOW,
@@ -551,19 +556,20 @@ class ComfyUIBridge(Star):
         allow_nsfw = can_use_nsfw(event) if allow_nsfw is None else allow_nsfw
         if workflow.name in V40_WORKFLOWS:
             rows = anima_options.get("loras")
-            if workflow.name == ADVANCED_V40_WORKFLOW:
+            if workflow.name in {ADVANCED_V40_WORKFLOW, ANIMA_DETAILER_WORKFLOW}:
                 anima_options = {key: value for key, value in anima_options.items() if key != "loras"}
             candidate = await self.studio.v40_generation(
                 workflow.name, anima_options, allow_nsfw=allow_nsfw, controlnets=controlnets,
             )
-            if rows is not None and workflow.name == ADVANCED_V40_WORKFLOW:
+            if rows is not None and workflow.name in {ADVANCED_V40_WORKFLOW, ANIMA_DETAILER_WORKFLOW}:
                 catalog, files = {}, {}
                 if rows:
                     family = await self.studio.lora_catalog_for(workflow.sweep_lora_family)
                     catalog = await asyncio.to_thread(family.lora_catalog)
                     rows = family.parse_loras(rows, catalog)
                     files = await lora_loader_files(self.service.client)
-                candidate = advanced_v40_loras(candidate, rows, catalog, files)
+                apply = anima_detailer_loras if workflow.name == ANIMA_DETAILER_WORKFLOW else advanced_v40_loras
+                candidate = apply(candidate, rows, catalog, files)
             return candidate, await read_image(candidate.image_required) if candidate.image_inputs else None
         anima = self._anima_settings(workflow.name)
         if not anima and workflow.sweep_lora_family is not None and set(anima_options) <= {"loras"}:
@@ -607,6 +613,8 @@ class ComfyUIBridge(Star):
                 raise WorkflowError("Ultimate SD Upscaler 开关须为布尔值。")
             if "detailer" in data:
                 detailer_options(data["detailer"])
+            if "anima_detailer" in data:
+                anima_detailer_options(data["anima_detailer"])
             command, account = data.get("command", ""), data.get("account")
             if account is None:
                 account = ""
@@ -624,6 +632,7 @@ class ComfyUIBridge(Star):
                 sampling=data.get("sampling"),
                 anima_upscale=data.get("anima_upscale"),
                 detailer=data.get("detailer"),
+                anima_detailer=data.get("anima_detailer"),
             )
             return json_response(result)
         except (ComfyError, OSError, ValueError) as exc:
@@ -691,6 +700,7 @@ class ComfyUIBridge(Star):
         sampling=None,
         anima_upscale=None,
         detailer=None,
+        anima_detailer=None,
     ):
         if not self.config.get("enabled", True):
             raise WorkflowError("ComfyUI 插件已在面板禁用。")
@@ -698,7 +708,7 @@ class ComfyUIBridge(Star):
             raise WorkflowError("请填写不超过 16000 字符的任务命令。")
         action, argument = route_command(command)
         await self.service.initialize()
-        if detailer is not None and action in {"help", "lora", "sweep"}:
+        if (detailer is not None or anima_detailer is not None) and action in {"help", "lora", "sweep"}:
             raise WorkflowError("Detailer 可选功能请使用普通生成命令或简易添加。")
         if regional is not None and action in {"help", "lora", "sweep"}:
             raise WorkflowError("区域提示词请使用普通生成命令或简易添加。")
@@ -754,6 +764,10 @@ class ComfyUIBridge(Star):
             if workflow.name != DETAILER_WORKFLOW:
                 raise WorkflowError("当前工作流不支持 Detailer 任务功能。")
             options = {**options, "detailer": detailer}
+        if anima_detailer is not None:
+            if workflow.name != ANIMA_DETAILER_WORKFLOW:
+                raise WorkflowError("当前工作流不支持 Anima Detailer 任务功能。")
+            options = {**options, "anima_detailer": anima_detailer}
         if h3_prompt is not None:
             if workflow.name not in H3_WORKFLOWS or not isinstance(h3_prompt, str) or len(h3_prompt) > 8000:
                 raise WorkflowError("H3 提示词须为不超过 8000 字符的文本。")
@@ -1145,7 +1159,7 @@ class ComfyUIBridge(Star):
         workflow = self.service.resolve(owner, name)
         if workflow.sweep_lora_family is None:
             raise WorkflowError("此工作流未配置人物 LoRA 扫图目录，请在参数页选择可用目录。")
-        is_v40 = workflow.name == ADVANCED_V40_WORKFLOW
+        is_v40 = workflow.name in {ADVANCED_V40_WORKFLOW, ANIMA_DETAILER_WORKFLOW}
         from_web = image_data is not QQ_REFERENCE
         if from_web and image_index != 1:
             raise WorkflowError("网页一次上传一张参考图，--image 只能为 1。")
@@ -1189,7 +1203,10 @@ class ComfyUIBridge(Star):
             if reference is not None:
                 image_suffix(reference)
             files = await lora_loader_files(self.service.client)
-            workflows = advanced_v40_lora_sweep(candidate, characters, files)
+            if workflow.name == ANIMA_DETAILER_WORKFLOW:
+                workflows = [anima_detailer_loras(candidate, [{"id": entry["id"], "strength": entry["default_strength"]}], catalog, files) for entry in characters]
+            else:
+                workflows = advanced_v40_lora_sweep(candidate, characters, files)
         elif workflow.name == ANIMA_WORKFLOW:
             state = await self.anima.session_state(owner)
             workflows = await self.anima.lora_sweep(

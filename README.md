@@ -1,6 +1,6 @@
 # ComfyUI 工作台
 
-AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v3.4.0。
+AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v3.5.0。
 
 v3 新建任务按工作流选择本次启用的功能，支持 Advanced Gemma V40 的 RGB 区域遮罩与整套区域提示词预设。见[使用教程](user%20docs/REGIONAL_PROMPT.md)。
 
@@ -37,6 +37,8 @@ v3 新建任务按工作流选择本次启用的功能，支持 Advanced Gemma V
 
 ## 内置工作流
 
+Anima Detailer 已独立接入，支持图集参考图、遮罩、新建任务可选功能和 Anima LoRA。详见 [使用说明](user%20docs/ANIMA_DETAILER.md)。
+
 MiniMax H3 的 `h3-v3` 是独立的 Seed Hunter v3 完整版，可在工作台配置原版采样、模型和生成分支。`h3` 和 `h3-final` 继续提供搜种与放大定稿。详见 [Seed Hunter 使用教程](user%20docs/MINIMAX_H3_SEED_HUNTER.md)。
 
 | 简称 | 工作流 | 随包用途 |
@@ -44,6 +46,7 @@ MiniMax H3 的 `h3-v3` 是独立的 Seed Hunter v3 完整版，可在工作台�
 | `t2i` | Anima T2I | 文生图，支持修手、修脚、修脸、修眼及会话参数 |
 | `i2i` | Anima I2I AIO | QQ 重绘、透明 PNG 遮罩和工作台增强分支 |
 | `v40` | Advanced Gemma V40 | Illustrious 文生图、Gemma 提示词扩写、局部修复和后处理 |
+| `anima-detailer` | Anima Detailer | Anima 参考图遮罩细化、手脸眼修复、Hires、In/Outpaint 和放大 |
 | `detailer` | Detailer V40 | 参考图局部重绘、面部细化、可选修脚和网页遮罩编辑 |
 | `wai` | WAI-Illustrious T2I | 文生图、独立 LoRA、放大重采样和 Union ControlNet |
 | `sdxl` | SDXL Turbo | 单步文生图 |

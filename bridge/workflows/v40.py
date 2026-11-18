@@ -11,6 +11,7 @@ from .controlnet import (
 from .detailer import LEGACY_FEET_LINKS
 from .workflow import (
     ADVANCED_V40_WORKFLOW,
+    ANIMA_DETAILER_WORKFLOW,
     DETAILER_WORKFLOW,
     Workflow,
     WorkflowError,
@@ -18,7 +19,8 @@ from .workflow import (
     profile_parts,
 )
 
-V40_WORKFLOWS = {ADVANCED_V40_WORKFLOW, DETAILER_WORKFLOW}
+V40_WORKFLOWS = {ADVANCED_V40_WORKFLOW, DETAILER_WORKFLOW, ANIMA_DETAILER_WORKFLOW}
+DETAILER_WORKFLOWS = {DETAILER_WORKFLOW, ANIMA_DETAILER_WORKFLOW}
 REPAIR_OPTIONS = {"hands", "face", "eyes", "feet", "nsfw_repair"}
 V40_FBCNN_SCHEMA = {
     "input": {"required": {
@@ -140,7 +142,7 @@ def v40_workflow(name, graph, settings, mapping=None, options=None, *, controlne
         reference_field = f"{reference}.image"
         if image == "load_image.png" and name == ADVANCED_V40_WORKFLOW:
             settings = {**settings, "reference_source": "qq"}
-        elif name == DETAILER_WORKFLOW and image != "load_image.png":
+        elif name in DETAILER_WORKFLOWS and image != "load_image.png":
             node_mapping = settings.get("node_mapping", {})
             if node_mapping.get("image") == [reference_field]:
                 settings = {**settings, "reference_source": "auto", "node_mapping": {
@@ -148,7 +150,7 @@ def v40_workflow(name, graph, settings, mapping=None, options=None, *, controlne
                 }}
     source_mapping = without_controlnet_images({**(mapping or {}), **settings.get("node_mapping", {})}, replaced)
     execution_mapping = source_mapping.copy()
-    if name == DETAILER_WORKFLOW:
+    if name in DETAILER_WORKFLOWS:
         for role in ("positive", "negative", "seed"):
             if role in source_mapping:
                 execution_mapping[role] = [
@@ -156,7 +158,7 @@ def v40_workflow(name, graph, settings, mapping=None, options=None, *, controlne
                 ]
     workflow = Workflow(
         name, {"prompt": rendered, "astrbot": {**settings, "node_mapping": execution_mapping}},
-        require_prompt=name != DETAILER_WORKFLOW,
+        require_prompt=name not in DETAILER_WORKFLOWS,
     )
     workflow.mapping = source_mapping
     workflow.active.update(rendered)

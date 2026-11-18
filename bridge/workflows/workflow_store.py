@@ -14,6 +14,7 @@ from .v40 import V40_WORKFLOWS, upgrade_detailer, v40_workflow
 from .workflow import (
     ADVANCED_V40_WORKFLOW,
     AIO_WORKFLOW,
+    ANIMA_DETAILER_WORKFLOW,
     ANIMA_WORKFLOW,
     DETAILER_WORKFLOW,
     H3_SEED_FINAL,
@@ -38,6 +39,7 @@ RENAMED_WORKFLOWS = {
 RETIRED_WORKFLOWS = {"Anima_I2I_QQ", "AnimaAdvancedV10_Image_AstrBot"}
 WORKFLOW_SHORT_NAMES = {
     ANIMA_WORKFLOW: "t2i",
+    ANIMA_DETAILER_WORKFLOW: "anima-detailer",
     AIO_WORKFLOW: "i2i",
     DETAILER_WORKFLOW: "detailer",
     ADVANCED_V40_WORKFLOW: "v40",
@@ -57,6 +59,8 @@ WORKFLOW_ALIASES = {
     **{old.casefold(): AIO_WORKFLOW for old in RETIRED_WORKFLOWS},
     **{short: name for name, short in WORKFLOW_SHORT_NAMES.items()},
     "advanced-v40": ADVANCED_V40_WORKFLOW,
+    "animadetailer": ANIMA_DETAILER_WORKFLOW,
+    "adetailer": ANIMA_DETAILER_WORKFLOW,
     "illustrious": WAI_WORKFLOW,
     "wai-illustrious t2i": WAI_WORKFLOW,
 }

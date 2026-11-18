@@ -97,3 +97,10 @@
 - 简易 `POST studio/queue` 和普通 `POST studio/queue/command` 接受 `detailer:{hires:bool,inpaint:bool,outpaint:bool,mask:bool,upscale:bool}`，必须包含五项且不带额外字段；分别映射 V40 分支 `15/27/28/mask/30`。仅 Detailer V40 接受，省略沿用已有默认。网页显式提交五项，普通命令添加有可选功能时通过 JSON 提交，避免文件上传捷径丢失开关。
 - Detailer 输入能力按包含可选分支的图计算提示词／负向词／遮罩支持；不受保存分支关闭状态影响。图片和遮罩复用 `image/reference_id/mask`、`apply_mask` 和 `2.image`，Outpaint 遮罩来自 #50。任务仅重构执行图，不写入保存设置；模型等节点参数仍由工作流参数管理。
 - 提交新 Detailer 功能时，仅在 Inpaint／Outpaint 对应加载器实际可达时读取 ControlNetLoader schema，验证 #35／#36 的模型下拉项。缺失返回 400，任务不入队；不自动更换或下载模型。其他已保存的修复分支保持原逻辑。
+
+## Anima Detailer（v3.5.0）
+
+- 新增独立 `Anima_Detailer_AstrBot`，简称 `anima-detailer`，别名 `animadetailer/adetailer`。复用图片任务、参考图遮罩、归档、评价和参数布局，内部使用现有 V40 分支协议，避免新增并行的持久格式。
+- `task_inputs.features` 为 `anima_detailer.hires_pre/hires_post/inoutpaint/mask/upscale`。任务和普通命令接受 `anima_detailer:{hires_pre:bool,hires_post:bool,inoutpaint:bool,mask:bool,upscale:bool}`，严格五项且仅该工作流接受，映射 `13/14/126/mask/19`。省略沿用保存值，网页显式提交选择；不接受 Detailer V40 的 `detailer` 参数。
+- 输入 `image/reference_id/mask` 复用既有结构。始终需要参考图，支持普通提示词预设、负向词、批次、Anima LoRA 叠加及遍历。命令支持手脸眼和 NSFW 单次开关；原版没有 feet，传入会拒绝。#103 仅在实际可达时按 ModelPatchLoader schema 校验模型；缺失返回 400 且不入队。
+- 参数页暴露所有分支的字面输入和本机下拉项，关闭的分支仍可编辑；手动参数布局保留。原 Image Saver 文件名／元数据专用节点不进入插件执行参数。API 图和配套模板加入打包白名单，生产实例同步与重载另行授权。

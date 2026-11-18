@@ -20,3 +20,11 @@
 运行位置以实际实例为准。AstrBot Launcher 实例入口位于 `%USERPROFILE%\.astrbot_launcher\instances\`。通常在实例 `core\data\plugins\` 安装插件，在 `core\data\plugin_data\` 保存实际工作流和插件数据。ComfyUI 画布和手动导出在 `user\default\workflows\`。在本机写入前先核对运行实例、配置和适用维护说明。
 
 初始化基线见 [开发状态](development_status.md)。当前检出里用户文档位于 `user docs/`，README 中已有的 `docs/` 用户文档链接待随获批文档变更修订。
+
+## Anima Detailer
+
+- `workflows/Anima_Detailer_AstrBot.json`：独立工作流、原版全部可用分支与参数，简称 `anima-detailer`。
+- `templates/Anima_Detailer_AstrBot.json`：保留布局的配套 AstrBot 画布。
+- `bridge/workflows/detailer.py`：任务功能及 Anima ModelOnly LoRA 注入；分支执行及参数面板复用 `v40.py` 和 `studio_settings.py`。
+- `scripts/export_anima_detailer.py`：使用 ComfyUI 环境已有转换器进行受控导出；不加入运行安装包。
+- `user docs/ANIMA_DETAILER.md`：新建任务、QQ、节点参数和本机模型条件。

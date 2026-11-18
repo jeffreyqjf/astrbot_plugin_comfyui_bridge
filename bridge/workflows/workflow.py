@@ -11,6 +11,7 @@ WAI_MAPPING = {"positive": ["98.text"], "negative": ["100.text"]}
 ANIMA_WORKFLOW = "Anima_T2I_AstrBot"
 AIO_WORKFLOW = "Anima_I2I_AIO_AstrBot"
 DETAILER_WORKFLOW = "Detailer_V40_AstrBot"
+ANIMA_DETAILER_WORKFLOW = "Anima_Detailer_AstrBot"
 ADVANCED_V40_WORKFLOW = "Advanced_Gemma_V40_AstrBot"
 REVERSE_WORKFLOW = "Anima_Reverse_AstrBot"
 SDXL_WORKFLOW = "SDXL_Turbo_T2I_AstrBot"
@@ -19,6 +20,7 @@ LIGHTNING_WORKFLOW = "WAN22_Lightning_Long_I2V_AstrBot"
 SEGMENTED_VIDEO_WORKFLOWS = {SVI_WORKFLOW, LIGHTNING_WORKFLOW}
 SWEEP_LORA_DEFAULTS = {
     ANIMA_WORKFLOW: "anima",
+    ANIMA_DETAILER_WORKFLOW: "anima",
     WAI_WORKFLOW: "illustrious",
     ADVANCED_V40_WORKFLOW: "illustrious",
 }

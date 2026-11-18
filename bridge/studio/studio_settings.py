@@ -50,8 +50,11 @@ from ..workflows.controlnet import (
     validate_controlnet_profile_choices,
 )
 from ..workflows.detailer import (
+    ANIMA_DETAILER_TASK_BRANCHES,
     DETAILER_TASK_BRANCHES,
     FEET_NODES,
+    anima_detailer_loras,
+    anima_detailer_options,
     detailer_options,
     detailer_workflow,
     feet_switch,
@@ -95,6 +98,7 @@ from ..workflows.svi import (
     validate_stage_loras,
 )
 from ..workflows.v40 import (
+    DETAILER_WORKFLOWS,
     REPAIR_OPTIONS,
     V40_FBCNN_SCHEMA,
     V40_WORKFLOWS,
@@ -105,6 +109,7 @@ from ..workflows.v40 import (
 )
 from ..workflows.workflow import (
     ADVANCED_V40_WORKFLOW,
+    ANIMA_DETAILER_WORKFLOW,
     DETAILER_WORKFLOW,
     H3_SEED_FULL,
     H3_WORKFLOWS,
@@ -637,17 +642,17 @@ class StudioSettings:
         if workflow.name == AIO_WORKFLOW:
             _, _, graph, settings, _, mapping = self._read(AIO_WORKFLOW)
             image_workflow = aio_workflow(graph, settings, True, mapping=mapping)
-        if workflow.name == DETAILER_WORKFLOW:
-            _, _, graph, settings, _, mapping = self._read(DETAILER_WORKFLOW)
+        if workflow.name in DETAILER_WORKFLOWS:
+            _, _, graph, settings, _, mapping = self._read(workflow.name)
             if "v40" in settings:
-                image_workflow = v40_workflow(DETAILER_WORKFLOW, graph, settings, mapping,
-                                              {branch: True for branch in DETAILER_TASK_BRANCHES.values()})
+                branches = ANIMA_DETAILER_TASK_BRANCHES if workflow.name == ANIMA_DETAILER_WORKFLOW else DETAILER_TASK_BRANCHES
+                image_workflow = v40_workflow(workflow.name, graph, settings, mapping, {branch: True for branch in branches.values()})
         mask = any(
             value == [field.node, 1]
             for key in image_workflow.active for value in image_workflow.graph[key]["inputs"].values()
             for field in image_workflow.image_inputs
         )
-        prompt_workflow = image_workflow if workflow.name == DETAILER_WORKFLOW else workflow
+        prompt_workflow = image_workflow if workflow.name in DETAILER_WORKFLOWS else workflow
         return {
             "simple": simple, "positive": bool(prompt_workflow.positive), "negative": bool(prompt_workflow.negative),
             "presets": bool(prompt_workflow.positive) and not full_h3,
@@ -1426,8 +1431,10 @@ class StudioSettings:
         if workflow.name == ADVANCED_V40_WORKFLOW:
             base = await self.v40_generation(workflow.name, regional or {}, controlnets=controls)
             return [advanced_v40_loras(base, rows, catalog, files) for rows in variants]
-        if workflow.name == DETAILER_WORKFLOW:
+        if workflow.name in DETAILER_WORKFLOWS:
             workflow = await self.v40_generation(workflow.name, regional or {})
+        if workflow.name == ANIMA_DETAILER_WORKFLOW:
+            return [anima_detailer_loras(workflow, rows, catalog, files) for rows in variants]
         return [workflow_loras(workflow, rows, catalog, files) for rows in variants]
 
     @staticmethod
@@ -1469,8 +1476,14 @@ class StudioSettings:
                 regional["anima_upscale"] = data["anima_upscale"]
             if "detailer" in data:
                 regional["detailer"] = data["detailer"]
-            if regional and workflow.name not in {ADVANCED_V40_WORKFLOW, ANIMA_WORKFLOW, DETAILER_WORKFLOW}:
+            if "anima_detailer" in data:
+                regional["anima_detailer"] = data["anima_detailer"]
+            if regional and workflow.name not in {ADVANCED_V40_WORKFLOW, ANIMA_WORKFLOW, *DETAILER_WORKFLOWS}:
                 raise WorkflowError("此工作流不支持所选任务功能。")
+            if "anima_detailer" in regional and workflow.name != ANIMA_DETAILER_WORKFLOW:
+                raise WorkflowError("此工作流不支持 Anima Detailer 任务功能。")
+            if workflow.name == ANIMA_DETAILER_WORKFLOW and regional.keys() - {"anima_detailer"}:
+                raise WorkflowError("Anima Detailer 不支持所选任务功能。")
             if "detailer" in regional and workflow.name != DETAILER_WORKFLOW:
                 raise WorkflowError("此工作流不支持 Detailer 任务功能。")
             if workflow.name == DETAILER_WORKFLOW and regional.keys() - {"detailer"}:
@@ -1542,12 +1555,21 @@ class StudioSettings:
             catalog = self.anima if workflow.name == ANIMA_WORKFLOW else (
                 self.lora_families["illustrious"] if workflow.name == WAI_WORKFLOW else None
             )
-            lock = catalog.submission_locks.setdefault(owner, asyncio.Lock()) if catalog else nullcontext()
+            if workflow.name == ANIMA_DETAILER_WORKFLOW:
+                family = workflow.sweep_lora_family
+                catalog = self.lora_families.get(family) or self.extra_lora_catalogs.get(family)
+            reservation = (owner, workflow.name) if workflow.name == ANIMA_DETAILER_WORKFLOW else owner
+            lock = catalog.submission_locks.setdefault(reservation, asyncio.Lock()) if catalog else nullcontext()
             async with lock:
-                pending = catalog.pending_loras.get(owner) if catalog else None
+                pending = catalog.pending_loras.get(reservation) if catalog else None
                 options = {"loras": pending} if pending is not None else {}
                 if workflow.name == ANIMA_WORKFLOW:
                     workflow = await self.anima.for_generation(workflow, {**options, **regional}, image is not None, {}, controlnets=controls)
+                elif workflow.name == ANIMA_DETAILER_WORKFLOW:
+                    if pending is not None:
+                        workflow = (await self._queue_lora_variants(workflow, pending, False, count, controls, regional=regional))[0]
+                    else:
+                        workflow = await self.v40_generation(workflow.name, regional)
                 elif workflow.name == AIO_WORKFLOW:
                     workflow = await asyncio.to_thread(self.aio_generation, image is not None)
                 elif workflow.name == WAI_WORKFLOW:
@@ -1561,8 +1583,8 @@ class StudioSettings:
                     timeout_seconds=self.service.qq_timeout_for(workflow), preset=preset_details, image_data=image,
                     control_sources=sources, control_archive=control_archive,
                 )
-                if pending is not None and catalog.pending_loras.get(owner) is pending:
-                    catalog.pending_loras.pop(owner)
+                if pending is not None and catalog.pending_loras.get(reservation) is pending:
+                    catalog.pending_loras.pop(reservation)
             return json_response({"jobs": [self._queue_row(job) for job in jobs]})
         except (ComfyError, OSError, ValueError) as exc:
             return error_response(str(exc), status_code=400)
@@ -2103,7 +2125,7 @@ class StudioSettings:
             if controlnets:
                 raise WorkflowError("请更新 V40 工作流以使用独立 ControlNet。")
             return detailer_workflow(graph, settings, mapping, options) if name == DETAILER_WORKFLOW else workflow
-        allowed = REPAIR_OPTIONS | ({"img2img", "regional", "upscale", "sampling"} if name == ADVANCED_V40_WORKFLOW else {"detailer"})
+        allowed = REPAIR_OPTIONS | ({"img2img", "regional", "upscale", "sampling"} if name == ADVANCED_V40_WORKFLOW else {"anima_detailer"} if name == ANIMA_DETAILER_WORKFLOW else {"detailer"})
         if options.keys() - allowed:
             raise WorkflowError("V40 支持单次切换局部修复。Advanced V40 也支持 --img2img on/off。")
         if not allow_nsfw:
@@ -2114,6 +2136,9 @@ class StudioSettings:
         if detailer_task:
             branches = detailer_options(options["detailer"])
             options = {**{key: value for key, value in options.items() if key != "detailer"}, **branches}
+        if "anima_detailer" in options:
+            branches = anima_detailer_options(options["anima_detailer"])
+            options = {**{key: value for key, value in options.items() if key != "anima_detailer"}, **branches}
         if "sampling" in options:
             branches = sampling_options(name, options["sampling"])
             options = {**{key: value for key, value in options.items() if key != "sampling"}, **branches}
@@ -2126,6 +2151,8 @@ class StudioSettings:
             )
             options = {**{key: value for key, value in options.items() if key != "regional"}, **branches}
         result = v40_workflow(name, graph, settings, mapping, options, controlnets=controlnets, schemas=schemas)
+        if name == ANIMA_DETAILER_WORKFLOW and "103" in result.active:
+            validate_graph({"103": result.graph["103"]}, await self.service.client.node_schemas({"ModelPatchLoader"}))
         if detailer_task:
             loaders = {key: result.graph[key] for key in ("35", "36") if key in result.active}
             if loaders:

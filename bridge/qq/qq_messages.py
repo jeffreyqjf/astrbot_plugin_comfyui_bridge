@@ -7,6 +7,7 @@ from ..workflows.detailer import FEET_DETAILER
 from ..workflows.workflow import (
     ADVANCED_V40_WORKFLOW,
     AIO_WORKFLOW,
+    ANIMA_DETAILER_WORKFLOW,
     ANIMA_WORKFLOW,
     DETAILER_WORKFLOW,
     LIGHTNING_WORKFLOW,
@@ -51,6 +52,7 @@ QQ_WORKFLOW_NAMES = {
     ANIMA_WORKFLOW: "Anima T2I",
     AIO_WORKFLOW: "Anima I2I AIO",
     DETAILER_WORKFLOW: "Detailer V40",
+    ANIMA_DETAILER_WORKFLOW: "Anima Detailer",
     ADVANCED_V40_WORKFLOW: "Advanced Gemma V40",
     WAI_WORKFLOW: "WAI-Illustrious T2I",
     "WAN22_T2V_AstrBot": "WAN 2.2 T2V",
@@ -162,6 +164,8 @@ def qq_generation_parameters(workflow):
         repairs = [label for node, label in branches if node in graph]
     elif workflow.name == WAI_WORKFLOW:
         repairs = [label for node, label in (("211", "修脸"), ("174", "修眼")) if node in graph]
+    elif workflow.name == ANIMA_DETAILER_WORKFLOW:
+        repairs = [label for node, label in (("43", "修手"), ("44", "NSFW 修复"), ("45", "修脸"), ("46", "修眼"), ("36", "遮罩细化")) if node in graph]
     elif workflow.name == DETAILER_WORKFLOW:
         repairs = [label for node, label in (
             ("55", "修手"), ("56", "NSFW 修复"), ("57", "修脸"), ("58", "修眼"), (FEET_DETAILER, "修脚"),

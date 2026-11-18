@@ -390,6 +390,7 @@ async def check(root, archive, core, *, anima_workspace=None, anima_schemas=None
         await check_controlnet_profiles(instance, root, module.ADVANCED_V40_WORKFLOW)
         await check_h3_media(instance, root)
         await check_detailer_features(instance)
+        await check_anima_detailer(instance)
         if anima_workspace and anima_schemas:
             await check_anima_features(instance, anima_workspace, anima_schemas)
         assert (plugin / "user docs" / "MINIMAX_H3_SEED_HUNTER.md").is_file()
@@ -677,6 +678,86 @@ async def check_h3_media(instance, root):
                 assert json.loads(response.body)["kind"] == "picture"
         finally:
             await upload.close()
+
+
+async def check_anima_detailer(instance):
+    from astrbot.api.web import PluginRequest, bind_request_context
+    from PIL import Image
+    from starlette.requests import Request
+
+    async def call(route, payload=None, *, method="POST", query=b""):
+        async def receive():
+            return {"type": "http.request", "body": json.dumps(payload).encode()}
+        incoming = Request({"type": "http", "method": method, "path": "/api/" + route,
+                            "headers": [], "query_string": query}, receive)
+        with bind_request_context(PluginRequest(incoming, username="anima-detailer-check")):
+            return await instance.remote_studio.routes[method, route]()
+
+    name = "Anima_Detailer_AstrBot"
+    service, studio = instance.service, instance.studio
+    assert service.resolve("test", "anima-detailer").name == name
+    assert service.resolve("test", "animadetailer").name == name
+    assert service.workflows[name].sweep_lora_family == "anima"
+    path = service.workflow_dir / (name + ".json")
+    defaults = path.read_bytes()
+    family = studio.anima
+    (family.workspace / "models/loras/anima").mkdir(parents=True, exist_ok=True)
+    catalog = {key: {"id": key, "title": key, "filename": f"anima/{key}.safetensors", "tag": key,
+                     "category": "C", "number": f"C{index}", "default_strength": 0.7}
+               for index, key in enumerate(("alpha", "beta"), 1)}
+    schemas = {"ModelPatchLoader": {"input": {"required": {"name": [["anima-lllite-inpainting-v2.safetensors"]]}}},
+               "LoraLoader": {"input": {"required": {"lora_name": [[row["filename"] for row in catalog.values()]]}}}}
+    pixels, painted = io.BytesIO(), io.BytesIO()
+    Image.new("RGB", (16, 12), "white").save(pixels, "PNG")
+    Image.new("RGBA", (16, 12), (255, 255, 255, 200)).save(painted, "PNG")
+    images = {"image": base64.b64encode(pixels.getvalue()).decode(), "mask": base64.b64encode(painted.getvalue()).decode()}
+    keys = ("hires_pre", "hires_post", "inoutpaint", "mask", "upscale")
+    with patch.object(service, "_run") as run, patch.object(service.client, "node_schemas", return_value=schemas) as node_schemas, patch.object(
+        service.client, "request", return_value=schemas
+    ), patch.object(family, "lora_catalog", return_value=catalog):
+        response = await call("studio/workflow", method="GET", query=f"name={name}".encode())
+        assert response.status_code == 200, response.body
+        description = json.loads(response.body)
+        assert len(description["branches"]) == 32
+        assert any(row["node"] == "103" and row["kind"] == "select" for row in description["fields"])
+        assert description["requires_image"]
+        for flags in product([False, True], repeat=5):
+            choices = dict(zip(keys, flags, strict=True))
+            response = await call("studio/queue", {"workflow": name, "positive": "Scene", "anima_detailer": choices, **images})
+            assert response.status_code == 200, response.body
+            graph = run.call_args.args[1]
+            for node, enabled in zip(("79", "80", "87", "36", "48"), flags, strict=True):
+                assert (node in graph) == enabled, (node, choices)
+            assert run.call_args.args[2] == ["15"]
+        response = await call("studio/queue/command", {
+            "command": "/comfy gen --wf anima-detailer --face off --lora C1:0.4 Scene --raw", **images,
+        })
+        assert response.status_code == 200, response.body
+        assert "45" not in run.call_args.args[1]
+        assert "astrbot_anima_detailer_lora_1" in run.call_args.args[1]
+        response = await call("studio/queue", {"workflow": name, "positive": "Scene", **images,
+                                              "loras": [{"id": "alpha"}, {"id": "beta"}]})
+        assert response.status_code == 200 and "astrbot_anima_detailer_lora_2" in run.call_args.args[1], response.body
+        response = await call("studio/queue", {"workflow": name, "positive": "Scene", "lora_sweep": True, **images})
+        assert response.status_code == 200 and len(json.loads(response.body)["jobs"]) == 2, response.body
+        pending_key = ("studio:anima-detailer-check", name)
+        family.pending_loras[pending_key] = [{"id": "alpha", "strength": 0.5}]
+        response = await call("studio/queue", {"workflow": name, "positive": "Scene", **images})
+        assert response.status_code == 200 and pending_key not in family.pending_loras, response.body
+        assert "astrbot_anima_detailer_lora_1" in run.call_args.args[1]
+        response = await call("studio/queue/command", {"command": "/comfy sweep lora --wf anima-detailer Scene --raw", **images})
+        assert response.status_code == 200, response.body
+        before = run.call_count
+        node_schemas.return_value = {"ModelPatchLoader": {"input": {"required": {"name": [["other.safetensors"]]}}}}
+        response = await call("studio/queue", {"workflow": name, "positive": "Scene", **images,
+                                              "anima_detailer": {**dict.fromkeys(keys, False), "inoutpaint": True}})
+        assert response.status_code == 400 and b"103" in response.body and run.call_count == before
+        response = await call("studio/queue", {"workflow": name, "positive": "Scene", "anima_detailer": {}})
+        assert response.status_code == 400 and run.call_count == before
+        response = await call("studio/queue", {"workflow": name, "positive": "Scene"})
+        assert response.status_code == 400 and run.call_count == before
+    assert defaults == path.read_bytes()
+    print("PASS: Anima Detailer 32 combinations, parameter panel, command, LoRA stack/sweep/reservation, masks and missing model")
 
 
 async def check_detailer_features(instance):

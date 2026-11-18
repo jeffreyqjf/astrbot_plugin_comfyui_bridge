@@ -63,3 +63,15 @@
 本机实际节点 schema 核对：HiresFix、Mask Detailer、Ultimate SD Upscale 的默认图可校验；Inpaint／Outpaint 默认 #35／#36 的 `noobaiInpainting_v10.safetensors` 缺失，需用户通过工作流参数选择可用的匹配模型。未替换或下载模型，提交时明确拒绝缺失项。测试中的该模型使用隔离 schema 验证构图，不能据此认定本机模型已就绪。
 
 本机 AstrBot 画布先补能力声明并实际导出至检查产物，现有手动 API 与当前画布已有参数／分支差异，保留各自值，仅同步声明。随包 API 保留全部可选分支和原参数，由 V40 适配器按本次选择裁剪；原版工作流未修改。
+
+## Anima Detailer 接入（v3.5.0）
+
+来源为 `main/AnimaDetailer.json`。独立保存 AstrBot 画布、随包模板、默认 API 和保留全部分支的插件 API 配置。保留原版节点 ID、坐标、尺寸、分组与默认分支；#2 改任务占位，#15 由 Image Saver Simple 改 SaveImage，移除 metadata 连线。旧 Image Saver 专用元数据／文件名不作为可执行插件参数，图片归档复用插件服务。
+
+默认主线为 `2 → 36（Mask Detailer）→ 43（手）→ 44（NSFW）→ 45（脸）→ 46（眼）→ 15`；#79 位于遮罩细化前，#48 位于修眼后，#80 位于 Ultimate 后。#126 In/Outpaint 分支开启时，参考图先经 #95 扩展、#77 编码，#91 合并扩展遮罩与参考图遮罩，再经 #78/#87/#90 与 LLLite #89（模型 #103）采样解码，送入后续细化。按实际连接核对，不按节点标题猜测。
+
+模型路径为 `1 UNETLoader → 5 LoRA → 42 DifferentialDiffusion`，分别供 ToDetailerPipe #25、DetailerForEach、LLLite 和 Ultimate 使用。单次／遍历 LoRA 在原 #5 上游串联 ModelOnly 加载器，清空原版 LoRA 列表，附带词进入提示词前缀；不会仅覆盖部分细化节点。提示词映射 #3/#41、种子 #49、参考图 #2、输出 #15。LoRA 目录为 Anima。
+
+复用 V40 的分支裁剪及参数面板协议，独立配置 32 个有效分组，前端可选功能仅包含 Hires Pre/PostDetailer、In/Outpaint、Mask Detailer、Ultimate SD Upscaler。没有原版修脚、Regional Prompt 或独立 2ndSampler，因此不加入这些选项。旁路映射依据实际端口类型及连线生成，子图按已安装转换器展开，动态输入保留 RTX／GLSL 分支定义。
+
+默认 38 个输出可达节点通过本机 schema 检查；32 种可选功能组合均通过节点及连线检查。In/Outpaint 原模型 `anima-lllite-inpainting-v2.safetensors` 在当前 ModelPatchLoader 列表中缺失，保留原值并在启用提交时明确报错。尚未执行 GPU 或 QQ 投递验证。

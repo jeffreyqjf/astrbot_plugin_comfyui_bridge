@@ -18,7 +18,14 @@ from bridge.workflows.controlnet import (
     normalize_controlnet_profiles,
     without_controlnet_images,
 )
-from bridge.workflows.detailer import DETAILER_TASK_BRANCHES, LEGACY_FEET_LINKS, detailer_options
+from bridge.workflows.detailer import (
+    ANIMA_DETAILER_TASK_BRANCHES,
+    DETAILER_TASK_BRANCHES,
+    LEGACY_FEET_LINKS,
+    anima_detailer_loras,
+    anima_detailer_options,
+    detailer_options,
+)
 from bridge.workflows.minimax_h3 import (
     H3_V3_DEFAULT,
     h3_v3_fields,
@@ -36,6 +43,7 @@ from bridge.workflows.v40 import advanced_v40_loras, upgrade_detailer, v40_workf
 from bridge.workflows.workflow import (
     ADVANCED_V40_WORKFLOW,
     AIO_WORKFLOW,
+    ANIMA_DETAILER_WORKFLOW,
     ANIMA_WORKFLOW,
     DETAILER_WORKFLOW,
     H3_SEED_FINAL,
@@ -507,3 +515,57 @@ class DetailerTaskFeatureTests(unittest.TestCase):
         for value in (None, {}, {**off, "other": False}, {**off, "hires": 1}, {**off, "mask": "off"}):
             with self.subTest(value=value), self.assertRaises(WorkflowError):
                 detailer_options(value)
+
+
+class AnimaDetailerTests(unittest.TestCase):
+    def test_task_switches_and_raw_profile_remain_independent(self):
+        data = profile(ANIMA_DETAILER_WORKFLOW)
+        original = deepcopy(data)
+        for flags in product([False, True], repeat=5):
+            options = anima_detailer_options(dict(zip(ANIMA_DETAILER_TASK_BRANCHES, flags, strict=True)))
+            workflow = v40_workflow(ANIMA_DETAILER_WORKFLOW, data["prompt"], data["astrbot"], options=options)
+            for key, enabled in zip(("79", "80", "87", "36", "48"), flags, strict=True):
+                self.assertEqual(key in workflow.active, enabled)
+            graph, _ = workflow.prepare("red hair", negative="blurry", seed=123, image_filename="mask.png")
+            self.assertEqual(graph["3"]["inputs"]["text"], "red hair")
+            self.assertEqual(graph["41"]["inputs"]["text"], "blurry")
+            self.assertEqual(graph["49"]["inputs"]["seed"], 123)
+            self.assertEqual(graph["2"]["inputs"]["image"], "mask.png")
+            if flags[2]:
+                self.assertEqual(graph["78"]["inputs"]["mask"], ["91", 0])
+                self.assertEqual(graph["91"]["inputs"]["destination"], ["95", 1])
+                self.assertEqual(graph["91"]["inputs"]["source"], ["2", 1])
+            for key, row in graph.items():
+                for value in row["inputs"].values():
+                    if isinstance(value, list) and len(value) == 2 and isinstance(value[0], str):
+                        self.assertIn(value[0], graph, key)
+        self.assertEqual(original, data)
+        for invalid in ({}, None, dict.fromkeys(ANIMA_DETAILER_TASK_BRANCHES, 1)):
+            with self.assertRaises(WorkflowError):
+                anima_detailer_options(invalid)
+
+    def test_loras_feed_all_detailers_through_original_loader(self):
+        base = workflow_from_profile(ANIMA_DETAILER_WORKFLOW, profile(ANIMA_DETAILER_WORKFLOW))
+        original = deepcopy(base.graph)
+        catalog = {key: {"filename": f"anima/{key}.safetensors", "title": key, "tag": key} for key in ("alpha", "beta")}
+        selected = anima_detailer_loras(base, [{"id": "alpha", "strength": 0.4}, {"id": "beta", "strength": 0.7}],
+                                         catalog, {row["filename"]: row["filename"] for row in catalog.values()})
+        graph = selected.graph
+        self.assertEqual(graph["5"]["inputs"]["model"], ["astrbot_anima_detailer_lora_2", 0])
+        self.assertEqual(graph["astrbot_anima_detailer_lora_2"]["inputs"]["model"], ["astrbot_anima_detailer_lora_1", 0])
+        self.assertEqual(graph["25"]["inputs"]["model"], ["42", 0])
+        self.assertEqual(graph["42"]["inputs"]["model"], ["5", 0])
+        self.assertEqual(graph["5"]["inputs"]["loras"], {"__value__": []})
+        self.assertEqual(base.graph, original)
+        self.assertTrue(selected.positive_prefix.endswith("alpha, beta"))
+
+    def test_canvas_keeps_original_geometry_and_real_optional_branches(self):
+        canvas = json.loads((ROOT / "templates/Anima_Detailer_AstrBot.json").read_bytes())
+        data = profile(ANIMA_DETAILER_WORKFLOW)
+        workflow = workflow_from_profile(ANIMA_DETAILER_WORKFLOW, data)
+        self.assertEqual(workflow.sweep_lora_family, "anima")
+        self.assertTrue(workflow.image_required)
+        self.assertEqual({row["id"] for row in feature_catalog(workflow)}, {f"anima_detailer.{key}" for key in ANIMA_DETAILER_TASK_BRANCHES})
+        self.assertEqual(next(n for n in canvas["nodes"] if n["id"] == 15)["type"], "SaveImage")
+        self.assertEqual(data["astrbot"]["v40"]["branches"]["126"]["title"], "In/Outpaint")
+        self.assertNotIn("feet", data["astrbot"]["v40"]["branches"])

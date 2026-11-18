@@ -33,6 +33,7 @@ const kinds = { auto_image: "文生图 / 图生图", text_to_image: "文生图",
 const loraCategories = { C: "人物", S: "风格", O: "其他" };
 const waiWorkflow = "WAI-Illustrious_T2I_AstrBot";
 const detailerWorkflow = "Detailer_V40_AstrBot";
+const animaDetailerWorkflow = "Anima_Detailer_AstrBot";
 const advancedV40 = "Advanced_Gemma_V40_AstrBot";
 const sviWorkflow = "WAN22_SVI_I2V_AstrBot";
 const lightningWorkflow = "WAN22_Lightning_Long_I2V_AstrBot";
@@ -41,6 +42,7 @@ const names = {
   Anima_T2I_AstrBot: "Anima T2I",
   [waiWorkflow]: "WAI-Illustrious T2I",
   [detailerWorkflow]: "Detailer V40",
+  [animaDetailerWorkflow]: "Anima Detailer",
   [advancedV40]: "Advanced Gemma V40",
   Anima_I2I_AIO_AstrBot: "Anima I2I AIO",
   Anima_Reverse_AstrBot: "Anima 反推流",
@@ -644,7 +646,7 @@ function render(data, workflow = selected) {
     get(id).hidden = !anima;
   }
   get("anima-branches").hidden = !data.branches.length;
-  const v40 = data.workflow === advancedV40 || data.workflow === detailerWorkflow;
+  const v40 = [advancedV40, detailerWorkflow, animaDetailerWorkflow].includes(data.workflow);
   if (v40 && data.image_inputs) {
     const summary = studio.workflows.find((item) => item.name === data.workflow);
     if (summary) Object.assign(summary, { requires_image: data.requires_image, image_inputs: data.image_inputs });
@@ -2762,7 +2764,7 @@ get("queue-form").addEventListener("submit", async (event) => {
   const preset = taskInputs.presets ? get("queue-preset").value : "";
   const positive = taskInputs.positive ? get("queue-positive").value : "";
   const workflow = queueWorkflow.value;
-  if (taskInputs.positive && !preset && !positive.trim() && workflow !== advancedV40 && workflow !== detailerWorkflow) {
+  if (taskInputs.positive && !preset && !positive.trim() && ![advancedV40, detailerWorkflow, animaDetailerWorkflow].includes(workflow)) {
     createTaskMessage("请填写正向提示词或选择预设。", true);
     return;
   }

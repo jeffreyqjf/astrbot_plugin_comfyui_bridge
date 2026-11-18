@@ -1,5 +1,15 @@
 # 开发状态
 
+## v3.5.0 · Anima Detailer 独立工作流
+
+- 将用户新增 `main/AnimaDetailer.json` 复制为 AstrBot 版并导出 API，接入独立 `Anima_Detailer_AstrBot`，简称 `anima-detailer`，兼容 `animadetailer/adetailer`。原版不变；保留节点、分组、坐标及模型参数，改参考图占位和输出 SaveImage，旧 Saver 元数据由插件归档替代。原有 Detailer V40 继续保留。
+- 参数面板复用 V40 分支协议，提供 32 个分组及其旁路参数、本机模型下拉项和可调整布局。任务提供真实的 Hires Pre/PostDetailer、In/Outpaint、Mask Detailer、Ultimate SD Upscaler 五项勾选；不虚构独立 Inpaint/Outpaint、修脚、Regional Prompt 或二次采样。
+- 新建任务支持图集／本地参考图、遮罩、提示词预设及批次。QQ 支持 `--wf anima-detailer`、手脸眼／NSFW 开关、Anima LoRA 叠加与遍历；ModelOnly LoRA 通过原 #5 供所有修复分支共用。保留单次预约的成功受理后消耗语义，无 LoRA 目录时普通任务不被阻挡。
+- 48 项回归检查、32 种任务功能组合、隔离 AstrBot 的参数面板、命令、LoRA 叠加／遍历／预约及错误检查通过；1200px／360px 浏览器验证新工作流的参考图、遮罩入口、LoRA 控件和功能提交。15 条工作流加载正常。Ruff、JS 语法及 Git 差异检查通过。
+- 默认 38 个执行节点通过本机节点及参数检查；原 In/Outpaint #103 指定的 `anima-lllite-inpainting-v2.safetensors` 当前未安装，启用前需配置有效模型；不自动下载或换成其他版本。该分支隔离测试使用虚拟模型列表，仅证明构图和接口，不代表本机生成已就绪。
+- Minor v3.5.0；教程和安装包已更新，源码、随包图及 ComfyUI AstrBot/API 已完成。未同步或重载生产 AstrBot，未执行 GPU 生成、QQ 实际投递或手机真机测试，未自动提交。
+- Git Commit Message：`feat: integrate Anima Detailer workflow and task features`。
+
 ## v3.4.0 · Detailer V40 新建任务可选功能
 
 - 添加 HiresFix、Inpaint、Outpaint、Mask Detailer、Ultimate SD Upscale 五项独立勾选，沿用英文原名且不带 Enable。映射原有分支 15/27/28/mask/30，仅影响本次执行图，保留默认参数、其他修复分支及节点顺序。

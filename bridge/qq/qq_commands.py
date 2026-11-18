@@ -117,6 +117,13 @@ WORKFLOW_HELP = {
 附图或回复图片，加 --img2img on 可重绘。
 人物 LoRA 扫图用 /comfy sweep lora --wf v40。
 例：/comfy gen --wf v40 --feet on 1girl, full body --raw""",
+    "anima-detailer": """Anima Detailer · Anima 局部重绘和细节修复
+附图或回复图片，--image 2 选择第 2 张，PNG 透明区域作为遮罩。工作台支持从图集选图及编辑遮罩。
+--hands / --face / --eyes / --nsfw-repair 接 on 或 off。原图没有修脚分支。
+--lora C1:0.8,S1:0.6 使用 Anima 编号，--lora off 本次清空；省略沿用工作流。
+新建任务可选 Hires Pre/PostDetailer、In/Outpaint、Mask Detailer、Ultimate SD Upscaler。
+In/Outpaint 共用原版分支，四边扩展量、模型及采样参数在工作流参数中保存。
+例：/comfy gen --wf anima-detailer --face on detailed face --raw""",
     "detailer": """Detailer V40 · 局部重绘和细节修复
 附图或回复图片。--image 2 选择第 2 张。PNG 透明区域作为局部重绘遮罩。
 在工作台的任务队列可选本地或收藏图片，再点击「编辑遮罩」。

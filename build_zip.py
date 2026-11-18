@@ -51,6 +51,7 @@ def build(target=None):
         "bridge/workflows/workflow_store.py",
         "templates/drawing_persona.txt",
         "templates/Anima_T2I_AstrBot.json",
+        "templates/Anima_Detailer_AstrBot.json",
         "templates/Anima_I2I_AIO_AstrBot.json",
         "templates/Anima_WD14_Caption_AstrBot.json",
         "views/workbench/index.html",
@@ -86,6 +87,7 @@ def build(target=None):
         "user docs/CONFIGURATION.md",
         "user docs/MINIMAX_H3_SEED_HUNTER.md",
         "user docs/REGIONAL_PROMPT.md",
+        "user docs/ANIMA_DETAILER.md",
         "LICENSE",
     ]
     json.loads((root / "_conf_schema.json").read_text(encoding="utf-8"))
