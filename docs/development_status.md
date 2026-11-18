@@ -1,5 +1,12 @@
 # 开发状态
 
+## v3.2.1 · 可选功能英文名称
+
+- 新建任务的已适配功能沿用 ComfyUI 开关英文，包含 Enable OpenPose、Enable Any ControlNet、Enable Regional Prompting、Enable Ultimate SD Upscale Pre/Post Detailer、Enable Hires Pre/PostDetailer、Enable 2ndSampler。Anima LLLite 同样保留英文。只调整显示名称，稳定 ID、分支、元数据和提交参数不变，不增加其他功能。
+- 1200px／360px 浏览器检查通过：八个标签逐项匹配截图英文，页面无横向溢出，原有勾选与任务提交正常；JS 语法及 Git 差异检查通过。
+- Patch v3.2.1；运行副本未同步，本轮不重复 GPU 生成。Git Commit Message：`fix: match optional feature labels to ComfyUI English names`。
+
+
 ## v3.2.0 · Hires 与二次采样任务开关
 
 - Advanced Gemma V40 新建任务新增 Hires PreDetailer（18／#109）、Hires PostDetailer（40／#110）和 2ndSampler（second_sampler／#81），独立勾选，仅覆盖本次构图，参数沿用已保存工作流。支持简易添加、普通命令与简易 LoRA 遍历，未添加到没有对应分支的其他工作流。

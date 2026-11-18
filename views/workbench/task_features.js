@@ -1,4 +1,9 @@
 export function mountTaskFeatures({bridge, host, onControlChange, pickGallery}) {
+  const featureNames = {
+    regional: "Regional Prompting",
+    "upscale.pre": "Ultimate SD Upscale Pre Detailer",
+    "upscale.post": "Ultimate SD Upscale Post Detailer",
+  };
   const choices = host.querySelector("[data-feature-choices]");
   const regionHost = host.querySelector("[data-regional]");
   const selected = new Map();
@@ -20,7 +25,8 @@ export function mountTaskFeatures({bridge, host, onControlChange, pickGallery}) 
         input.type = "checkbox";
         input.checked = active.has(feature.id);
         input.dataset.feature = feature.id;
-        label.append(input, document.createTextNode(feature.title));
+        const title = featureNames[feature.id] || feature.title;
+        label.append(input, document.createTextNode(title.startsWith("Enable ") ? title : `Enable ${title}`));
         const apply = () => {
           if (feature.kind === "controlnet") onControlChange(feature.branch, input.checked);
           if (feature.kind === "regional") {
