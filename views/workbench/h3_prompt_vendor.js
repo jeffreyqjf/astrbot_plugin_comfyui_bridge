@@ -1,0 +1,1806 @@
+/* H3 Prompt IDE 0.8.25, GPL-3.0. See h3_prompt_LICENSE.txt.
+ * AstrBot adaptation: standalone mounting, authenticated media transport, external CSS. */
+import {app, api} from "./h3_prompt_transport.js";
+import {
+    canAutoReplaceEditInstruction,
+    downstreamH3EditContext,
+    editInstructionTemplate,
+    isLineLeadingOffset,
+    isWorkflowSaveShortcut,
+    PromptUndoHistory,
+    referenceFromInputName,
+    tokenizePrompt,
+    undoDirection,
+} from "./h3_prompt_ide_core.mjs?v=0.8.25";
+import {
+    createPromptCompletionController,
+    promptBracketReplacementQuery,
+    promptRetentionReplacementQuery,
+    promptTokenReplacementQuery,
+} from "./h3_prompt_completion_core.mjs?v=0.8.25";
+import {repairLegacyWidgetWidth} from "./h3_legacy_widget_width.mjs?v=0.8.25";
+import {
+    H3_PROMPT_IDE_SETTING_DEFINITIONS,
+    h3PromptIdePreferences,
+} from "./h3_prompt_ide_settings_core.mjs?v=0.8.25";
+import {
+    analyzeH3Prompt,
+    effectiveH3Mode,
+    ensureH3Structure,
+    H3_MODES,
+    h3ModeLabel,
+    insertH3Section,
+} from "./h3_prompt_schema_core.mjs?v=0.8.25";
+
+// Standalone adaptation of the Rich Scene Prompt Editor originally authored
+// for ethanfel/ComfyUI-MiniMaxH3-Contex-Loop. Its rich reference presentation
+// and compact authoring interactions were inspired by
+// nkxx188/ComfyUI-MiniMaxH3-Easy (MIT).
+
+const EDITOR_NODE = "H3PromptIDE";
+const REFERENCES_NODE = "H3PromptReferenceInputs";
+const FONT_PROPERTY = "h3_prompt_ide_font_size";
+const TRAY_PROPERTY = "h3_prompt_ide_references_open";
+const STRUCTURE_PROPERTY = "h3_prompt_ide_structure_open";
+const MODE_PROPERTY = "h3_prompt_ide_mode";
+const DURATION_PROPERTY = "h3_prompt_ide_duration";
+const FINAL_SHOT_PROPERTY = "h3_prompt_ide_final_shot";
+const RICH_TEXT_PROPERTY = "h3_prompt_ide_rich_text";
+const TASK_TEMPLATE_PROPERTY = "h3_prompt_ide_last_task_template";
+const DEFAULT_FONT = 17;
+const MIN_FONT = 12;
+const MAX_FONT = 32;
+const CARET_SENTINEL = "\u200B";
+const SUPPORTS_DECLARATIVE_SETTINGS = typeof app.extensionManager?.setting?.get === "function";
+
+function settingValue(id, fallback) {
+    if (SUPPORTS_DECLARATIVE_SETTINGS) {
+        const value = app.extensionManager.setting.get(id);
+        if (value !== undefined) return value;
+    }
+    return app.ui?.settings?.getSettingValue?.(id, fallback) ?? fallback;
+}
+
+function promptIdePreferences() {
+    return h3PromptIdePreferences(settingValue);
+}
+
+function refreshPromptIdeSettings() {
+    for (const node of app.graph?._nodes ?? []) node._h3PromptIdeSettingsChanged?.();
+}
+
+const PROMPT_IDE_SETTINGS = H3_PROMPT_IDE_SETTING_DEFINITIONS.map((definition) => ({
+    ...definition,
+    category:[...definition.category],
+    options:definition.options?.map((option) => typeof option === "object" ? {...option} : option),
+    onChange() {
+        refreshPromptIdeSettings();
+    },
+}));
+
+const ICONS = Object.freeze({
+    picture: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9" r="1.5"/><path d="m5 17 4.5-4.5 3.2 3.2 2.3-2.3 4 3.6"/></svg>',
+    video: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="13" height="14" rx="2"/><path d="m16 10 5-3v10l-5-3z"/></svg>',
+    audio: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13v-2M8 17V7M12 20V4M16 16V8M20 13v-2"/></svg>',
+    subject: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M5 21c.8-4.2 3.1-6.3 7-6.3s6.2 2.1 7 6.3"/></svg>',
+    dialogue: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v11H9l-4 3z"/><path d="M8 9h8M8 12h6"/></svg>',
+    reference: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/></svg>',
+    section: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14M5 12h14M5 19h14"/><path d="M8 3v4M12 10v4M16 17v4"/></svg>',
+    flow: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h11M12 4l3 3-3 3M20 17H9M12 14l-3 3 3 3"/></svg>',
+    speaker: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10z"/><path d="M16 9c1.5 1.5 1.5 4.5 0 6M18.5 6.5c3 3 3 8 0 11"/></svg>',
+    lyrics: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="16" cy="16" r="3"/></svg>',
+    caption: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h4M7 14h7"/></svg>',
+});
+
+function injectStyles() {
+    if (document.getElementById("h3-prompt-bridge-style")) return;
+    const link = document.createElement("link");
+    link.id = "h3-prompt-bridge-style";
+    link.rel = "stylesheet";
+    link.href = new URL("./h3_prompt_vendor.css", import.meta.url).href;
+    document.head.append(link);
+}
+
+function element(tag, className = "", text) {
+    const item = document.createElement(tag);
+    if (className) item.className = className;
+    if (text !== undefined) item.textContent = text;
+    return item;
+}
+
+function icon(kind) {
+    const item = element("span", "h3ide-icon");
+    item.innerHTML = ICONS[kind] ?? ICONS.reference;
+    return item;
+}
+
+function button(label, title, action, iconKind = null) {
+    const item = element("button");
+    item.type = "button";
+    item.title = title;
+    if (iconKind) item.append(icon(iconKind));
+    if (label) item.append(document.createTextNode(label));
+    item.addEventListener("pointerdown", (event) => event.preventDefault());
+    item.addEventListener("click", action);
+    return item;
+}
+
+function isEditableEventTarget(target) {
+    const item = target?.nodeType === Node.TEXT_NODE ? target.parentElement : target;
+    return Boolean(item?.closest?.("input, textarea, [contenteditable='true']"));
+}
+
+function nodeType(node) {
+    return node?.comfyClass ?? node?.type ?? null;
+}
+
+function inputConnection(node, name) {
+    const input = node?.inputs?.find((item) => item.name === name);
+    const link = input?.link == null ? null : node.graph?.links?.[input.link];
+    const source = link ? node.graph?.getNodeById?.(link.origin_id) ?? null : null;
+    return source ? {source, link, input} : null;
+}
+
+function inputSource(node, name) {
+    return inputConnection(node, name)?.source ?? null;
+}
+
+function referencesNode(editorNode) {
+    if (editorNode._h3BridgeReferences) return {inputs:[]};
+    const source = inputSource(editorNode, "references");
+    return nodeType(source) === REFERENCES_NODE ? source : null;
+}
+
+function mediaAsset(widgetValue) {
+    if (widgetValue && typeof widgetValue === "object" && widgetValue.filename) {
+        return {
+            filename:String(widgetValue.filename),
+            subfolder:String(widgetValue.subfolder ?? ""),
+            type:String(widgetValue.type ?? "input"),
+        };
+    }
+    let text = typeof widgetValue === "string" ? widgetValue.trim() : "";
+    if (!text) return null;
+    if (/^(?:blob:|data:|https?:|\/api\/view\?|\/view\?)/i.test(text)) return {url:text};
+    let type = "input";
+    const annotated = text.match(/\s+\[(input|output|temp)\]\s*$/i);
+    if (annotated) {
+        type = annotated[1].toLowerCase();
+        text = text.slice(0, annotated.index).trim();
+    }
+    text = text.replaceAll("\\", "/").replace(/^\/+/, "");
+    if (!/\.(?:avif|bmp|gif|jpe?g|png|webp)$/i.test(text)) return null;
+    const slash = text.lastIndexOf("/");
+    return {
+        filename:slash >= 0 ? text.slice(slash + 1) : text,
+        subfolder:slash >= 0 ? text.slice(0, slash) : "",
+        type,
+    };
+}
+
+function assetUrl(asset) {
+    if (!asset) return null;
+    if (asset.url) return asset.url;
+    const query = new URLSearchParams({
+        filename:asset.filename,
+        subfolder:asset.subfolder ?? "",
+        type:asset.type ?? "input",
+    });
+    return api.apiURL(`/view?${query.toString()}`);
+}
+
+function previewFromNode(node) {
+    const rendered = node?.imgs?.[0];
+    const renderedUrl = typeof rendered === "string" ? rendered : rendered?.src;
+    if (renderedUrl) return renderedUrl;
+    for (const widget of node?.widgets ?? []) {
+        const asset = mediaAsset(widget.value);
+        if (asset) return assetUrl(asset);
+    }
+    return null;
+}
+
+function findImagePreview(start) {
+    const queue = [start];
+    const seen = new Set();
+    while (queue.length) {
+        const candidate = queue.shift();
+        if (!candidate || seen.has(candidate)) continue;
+        seen.add(candidate);
+        const url = previewFromNode(candidate);
+        if (url) return url;
+        for (const input of candidate.inputs ?? []) {
+            const parent = inputSource(candidate, input.name);
+            if (parent) queue.push(parent);
+        }
+    }
+    return null;
+}
+
+function referenceRecords(editorNode) {
+    if (editorNode._h3BridgeReferences) return editorNode._h3BridgeReferences;
+    const container = referencesNode(editorNode);
+    if (!container) return [];
+    const records = [];
+    for (const input of container.inputs ?? []) {
+        const reference = referenceFromInputName(input.name);
+        if (!reference || input.link == null) continue;
+        const source = inputSource(container, input.name);
+        records.push({
+            ...reference,
+            source,
+            preview:reference.kind === "audio" ? null : findImagePreview(source),
+        });
+    }
+    const kindOrder = {picture:0, video:1, audio:2};
+    records.sort((left, right) => kindOrder[left.kind] - kindOrder[right.kind]
+        || left.ordinal - right.ordinal);
+    return records;
+}
+
+function referenceSignature(editorNode) {
+    if (editorNode._h3BridgeReferences) return JSON.stringify(editorNode._h3BridgeReferences);
+    const container = referencesNode(editorNode);
+    if (!container) return "";
+    return (container.inputs ?? []).map((input) => {
+        const reference = referenceFromInputName(input.name);
+        if (!reference) return "";
+        const source = inputSource(container, input.name);
+        const widgets = (source?.widgets ?? []).map((item) => String(item.value ?? "")).join("|");
+        return `${reference.token}:${input.link ?? ""}:${source?.id ?? ""}:${widgets}`;
+    }).join(";");
+}
+
+function labelReferenceSockets(node) {
+    if (nodeType(node) !== REFERENCES_NODE) return;
+    for (const input of node.inputs ?? []) {
+        const reference = referenceFromInputName(input.name);
+        if (reference) input.label = reference.token;
+    }
+    node.graph?.setDirtyCanvas?.(true, false);
+}
+
+function editorPlainText(editor, {trimFinalNewline = true} = {}) {
+    function read(node, root) {
+        if (node.nodeType === Node.TEXT_NODE) {
+            return (node.textContent ?? "").replaceAll(CARET_SENTINEL, "");
+        }
+        if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+            let text = "";
+            for (const child of node.childNodes) text += read(child, root);
+            return text;
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return "";
+        if (node.classList?.contains("h3ide-token")) {
+            return node.dataset.token ?? node.textContent ?? "";
+        }
+        if (node.tagName === "BR") return "\n";
+        let text = "";
+        for (const child of node.childNodes) text += read(child, root);
+        if (["DIV", "P"].includes(node.tagName) && node !== root && !text.endsWith("\n")) text += "\n";
+        return text;
+    }
+    const text = read(editor, editor);
+    return trimFinalNewline ? text.replace(/\n$/, "") : text;
+}
+
+function selectedPlainText(editor) {
+    const selection = globalThis.getSelection?.();
+    if (!selection?.rangeCount || selection.isCollapsed) return null;
+    if (!editor.contains(selection.anchorNode) || !editor.contains(selection.focusNode)) return null;
+    return editorPlainText(selection.getRangeAt(0).cloneContents());
+}
+
+function copySelection(editor, event, cut = false) {
+    const text = selectedPlainText(editor);
+    if (text == null || !event.clipboardData) return false;
+    event.clipboardData.setData("text/plain", text);
+    event.preventDefault();
+    if (cut) {
+        const selection = globalThis.getSelection?.();
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        editor.dispatchEvent(new InputEvent("input", {bubbles:true, inputType:"deleteByCut"}));
+    }
+    return true;
+}
+
+function selectionTextOffset(editor) {
+    const selection = globalThis.getSelection?.();
+    if (!selection?.rangeCount || !editor.contains(selection.anchorNode)) {
+        return editorPlainText(editor).length;
+    }
+    const range = selection.getRangeAt(0).cloneRange();
+    range.selectNodeContents(editor);
+    range.setEnd(selection.anchorNode, selection.anchorOffset);
+    return editorPlainText(range.cloneContents(), {trimFinalNewline:false}).length;
+}
+
+function selectionRangeTextOffset(editor) {
+    const selection = globalThis.getSelection?.();
+    if (!selection?.rangeCount || selection.isCollapsed) return null;
+    if (!editor.contains(selection.anchorNode) || !editor.contains(selection.focusNode)) return null;
+    const anchorRange = selection.getRangeAt(0).cloneRange();
+    anchorRange.selectNodeContents(editor);
+    anchorRange.setEnd(selection.anchorNode, selection.anchorOffset);
+    const anchor = editorPlainText(anchorRange.cloneContents(), {trimFinalNewline:false}).length;
+    const focusRange = selection.getRangeAt(0).cloneRange();
+    focusRange.selectNodeContents(editor);
+    focusRange.setEnd(selection.focusNode, selection.focusOffset);
+    const focus = editorPlainText(focusRange.cloneContents(), {trimFinalNewline:false}).length;
+    return anchor <= focus ? [anchor, focus] : [focus, anchor];
+}
+
+const MULTI_WORD_CHAR = /[\p{L}\p{N}_]/u;
+
+function wordRangeAt(text, offset) {
+    const value = String(text ?? "");
+    const position = Math.max(0, Math.min(value.length, Number(offset) || 0));
+    let start = position;
+    let end = position;
+    while (start > 0 && MULTI_WORD_CHAR.test(value[start - 1])) start -= 1;
+    while (end < value.length && MULTI_WORD_CHAR.test(value[end])) end += 1;
+    return start === end ? null : [start, end];
+}
+
+function isWholeWordRange(text, start, end) {
+    const value = String(text ?? "");
+    const before = start > 0 ? value[start - 1] : "";
+    const after = end < value.length ? value[end] : "";
+    return !MULTI_WORD_CHAR.test(before) && !MULTI_WORD_CHAR.test(after);
+}
+
+function wordBoundaryBackward(text, position) {
+    const value = String(text ?? "");
+    let point = Math.max(0, Number(position) || 0);
+    while (point > 0 && /\s/.test(value[point - 1])) point -= 1;
+    if (point > 0 && MULTI_WORD_CHAR.test(value[point - 1])) {
+        while (point > 0 && MULTI_WORD_CHAR.test(value[point - 1])) point -= 1;
+    } else {
+        while (point > 0 && !MULTI_WORD_CHAR.test(value[point - 1]) && !/\s/.test(value[point - 1])) point -= 1;
+    }
+    return point;
+}
+
+function wordBoundaryForward(text, position) {
+    const value = String(text ?? "");
+    const length = value.length;
+    let point = Math.min(length, Math.max(0, Number(position) || 0));
+    while (point < length && /\s/.test(value[point])) point += 1;
+    if (point < length && MULTI_WORD_CHAR.test(value[point])) {
+        while (point < length && MULTI_WORD_CHAR.test(value[point])) point += 1;
+    } else {
+        while (point < length && !MULTI_WORD_CHAR.test(value[point]) && !/\s/.test(value[point])) point += 1;
+    }
+    return point;
+}
+
+function lineBoundsAt(text, position) {
+    const value = String(text ?? "");
+    const point = Math.max(0, Math.min(value.length, Number(position) || 0));
+    const start = value.lastIndexOf("\n", Math.max(0, point - 1)) + 1;
+    let end = value.indexOf("\n", point);
+    if (end === -1) end = value.length;
+    return [start, end];
+}
+
+function moveVertical(text, position, down) {
+    const value = String(text ?? "");
+    const [lineStart, lineEnd] = lineBoundsAt(value, position);
+    const column = position - lineStart;
+    if (!down) {
+        if (lineStart === 0) return 0;
+        const previousStart = value.lastIndexOf("\n", lineStart - 2) + 1;
+        return Math.min(previousStart + column, lineStart - 1);
+    }
+    if (lineEnd >= value.length) return value.length;
+    const nextStart = lineEnd + 1;
+    let nextEnd = value.indexOf("\n", nextStart);
+    if (nextEnd === -1) nextEnd = value.length;
+    return Math.min(nextStart + column, nextEnd);
+}
+
+function moveMultiRanges(text, ranges, key, byWord) {
+    const value = String(text ?? "");
+    const backwards = key === "ArrowLeft" || key === "ArrowUp" || key === "Home";
+    const moved = [];
+    for (const range of ranges) {
+        const expanded = range.start !== range.end;
+        // collapse any selection span to a cursor first, like VS Code:
+        // ←/↑ collapse to the left edge, →/↓ to the right edge, no extra move.
+        // the anchor stays on the far edge so the occurrence keeps its highlight
+        let position = backwards ? Math.min(range.start, range.end) : Math.max(range.start, range.end);
+        if (expanded) {
+            const far = backwards ? Math.max(range.start, range.end, range.anchor ?? 0)
+                : Math.min(range.start, range.end, range.anchor ?? value.length);
+            moved.push({start:position, end:position, anchor:far});
+            continue;
+        }
+        switch (key) {
+            case "ArrowLeft":
+                position = byWord ? wordBoundaryBackward(value, position) : Math.max(0, position - 1);
+                break;
+            case "ArrowRight":
+                position = byWord ? wordBoundaryForward(value, position) : Math.min(value.length, position + 1);
+                break;
+            case "Home":
+                position = byWord ? 0 : lineBoundsAt(value, position)[0];
+                break;
+            case "End":
+                position = byWord ? value.length : lineBoundsAt(value, position)[1];
+                break;
+            case "ArrowUp":
+                position = moveVertical(value, position, false);
+                break;
+            case "ArrowDown":
+                position = moveVertical(value, position, true);
+                break;
+        }
+        moved.push({start:position, end:position, anchor:Math.max(0, Math.min(range.anchor ?? position, value.length))});
+    }
+    const unique = [];
+    for (const range of moved.sort((a, b) => a.start - b.start)) {
+        if (!unique.length || unique[unique.length - 1].start !== range.start) unique.push(range);
+    }
+    return unique;
+}
+
+function applyMultiRanges(text, ranges, {insertion = null, direction = null} = {}) {
+    const value = String(text ?? "");
+    const replacement = insertion == null ? "" : String(insertion);
+    const inserting = insertion != null;
+    let result = "";
+    let read = 0;    // read position in the old text
+    let out = 0;     // write position in the new text
+    let caret = null;
+    const newRanges = [];
+    for (const range of [...ranges].sort((a, b) => a.start - b.start)) {
+        let start = range.start;
+        let end = range.end;
+        let anchor = Math.min(Math.max(range.anchor ?? start, 0), start);
+        if (!inserting && start === end) {
+            if (direction === "backward" && start > 0) start -= 1;
+            else if (direction === "forward" && end < value.length) end += 1;
+        }
+        result += value.slice(read, start);
+        const anchorOut = out + (anchor - read);
+        out += start - read;
+        if (inserting) result += replacement;
+        const position = out + replacement.length;
+        newRanges.push({start:position, end:position, anchor:Math.min(anchorOut, position)});
+        if (caret == null) caret = position;
+        out = position;
+        read = Math.max(end, start);
+    }
+    result += value.slice(read);
+    return {text:result, ranges:newRanges, caret};
+}
+
+function findOccurrences(text, query, wholeWord) {
+    const value = String(text ?? "");
+    const needle = String(query ?? "");
+    const results = [];
+    if (!needle) return results;
+    let index = value.indexOf(needle);
+    while (index !== -1) {
+        if (!wholeWord || isWholeWordRange(value, index, index + needle.length)) {
+            results.push([index, index + needle.length]);
+        }
+        index = value.indexOf(needle, index + needle.length);
+    }
+    return results;
+}
+
+function nodeTextOffset(editor, node) {
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.setEndBefore(node);
+    return editorPlainText(range.cloneContents(), {trimFinalNewline:false}).length;
+}
+
+function pointerTextOffset(editor, event) {
+    const point = document.caretPositionFromPoint?.(event.clientX, event.clientY);
+    const fallback = point ? null : document.caretRangeFromPoint?.(event.clientX, event.clientY);
+    const node = point?.offsetNode ?? fallback?.startContainer;
+    const offset = point?.offset ?? fallback?.startOffset;
+    if (!node || offset == null || !editor.contains(node)) return selectionTextOffset(editor);
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.setEnd(node, offset);
+    return editorPlainText(range.cloneContents(), {trimFinalNewline:false}).length;
+}
+
+function lineStartTokenCaretOffsetAtPoint(editor, event) {
+    const x = Number(event?.clientX);
+    const y = Number(event?.clientY);
+    if (!editor || !Number.isFinite(x) || !Number.isFinite(y)) return null;
+    const text = editorPlainText(editor);
+    const editorRect = editor.getBoundingClientRect();
+    let nearest = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (const token of editor.querySelectorAll(".h3ide-token")) {
+        const offset = nodeTextOffset(editor, token);
+        if (!isLineLeadingOffset(text, offset)) continue;
+        const rect = token.getBoundingClientRect();
+        const verticalSlop = Math.min(4, rect.height * 0.2);
+        if (y < rect.top - verticalSlop || y > rect.bottom + verticalSlop) continue;
+        const leadingEdge = rect.left + Math.min(8, Math.max(4, rect.width * 0.12));
+        if (x < editorRect.left || x > leadingEdge) continue;
+        const distance = Math.abs(x - rect.left);
+        if (distance < nearestDistance) {
+            nearest = offset;
+            nearestDistance = distance;
+        }
+    }
+    return nearest;
+}
+
+function textPoint(editor, requested) {
+    const target = Math.max(0, Number(requested) || 0);
+    let consumed = 0;
+    let point = null;
+    function visit(node) {
+        if (point) return;
+        if (node.nodeType === Node.TEXT_NODE) {
+            const raw = node.textContent ?? "";
+            const length = raw.replaceAll(CARET_SENTINEL, "").length;
+            if (target <= consumed + length) {
+                let remaining = Math.max(0, target - consumed);
+                let offset = 0;
+                while (offset < raw.length && remaining > 0) {
+                    if (raw[offset] !== CARET_SENTINEL) remaining -= 1;
+                    offset += 1;
+                }
+                point = {node, offset};
+                return;
+            }
+            consumed += length;
+            return;
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        if (node.classList?.contains("h3ide-token")) {
+            const length = String(node.dataset.token ?? "").length;
+            if (target <= consumed + length) {
+                const siblings = [...(node.parentNode?.childNodes ?? [])];
+                const index = Math.max(0, siblings.indexOf(node));
+                point = {
+                    node:node.parentNode ?? editor,
+                    offset:index + (target <= consumed ? 0 : 1),
+                };
+                return;
+            }
+            consumed += length;
+            return;
+        }
+        for (const child of node.childNodes) visit(child);
+    }
+    visit(editor);
+    return point ?? {node:editor, offset:editor.childNodes.length};
+}
+
+function restoreSelection(editor, requestedStart, requestedEnd = requestedStart) {
+    const start = textPoint(editor, requestedStart);
+    const end = textPoint(editor, Math.max(Number(requestedStart) || 0, Number(requestedEnd) || 0));
+    const range = document.createRange();
+    const selection = globalThis.getSelection?.();
+    range.setStart(start.node, start.offset);
+    range.setEnd(end.node, end.offset);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+}
+
+function restoreCaret(editor, requested) {
+    restoreSelection(editor, requested, requested);
+}
+
+function insertPlainText(editor, text) {
+    editor.focus();
+    const selection = globalThis.getSelection?.();
+    const hasSelection = selection?.rangeCount && editor.contains(selection.anchorNode);
+    const range = hasSelection ? selection.getRangeAt(0) : document.createRange();
+    if (!hasSelection) range.selectNodeContents(editor), range.collapse(false);
+    range.deleteContents();
+    const textNode = document.createTextNode(String(text ?? ""));
+    range.insertNode(textNode);
+    range.setStartAfter(textNode);
+    range.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    editor.dispatchEvent(new InputEvent("input", {bubbles:true, inputType:"insertText", data:String(text ?? "")}));
+}
+
+function clampFont(value) {
+    const number = Number(value);
+    if (!Number.isFinite(number)) return DEFAULT_FONT;
+    return Math.max(MIN_FONT, Math.min(MAX_FONT, Math.round(number)));
+}
+
+function hidePromptWidget(widget) {
+    if (!widget || widget._h3PromptIdeHidden) return;
+    widget._h3PromptIdeHidden = true;
+    widget.hidden = true;
+    widget.computeSize = () => [0, -4];
+}
+
+function mountEditor(node) {
+    if (node._h3PromptIdeMounted || typeof node.addDOMWidget !== "function") return;
+    const promptWidget = node.widgets?.find((item) => item.name === "prompt");
+    if (!promptWidget) return;
+    node._h3PromptIdeMounted = true;
+    injectStyles();
+    hidePromptWidget(promptWidget);
+    node.properties ??= {};
+
+    const root = element("div", "h3ide-root");
+    root.title = "Standalone rich editor; the output is ordinary text. Start typing or press Ctrl/Cmd+Space after a retention-analysis colon to insert a marker. Ctrl/Cmd-click a retention value or bracket marker such as [Shot 2] to replace it.";
+    for (const eventName of ["pointerdown", "pointerup", "mousedown", "mouseup", "click", "dblclick"]) {
+        root.addEventListener(eventName, (event) => event.stopPropagation());
+    }
+    for (const eventName of ["keydown", "keyup", "keypress"]) {
+        root.addEventListener(eventName, (event) => {
+            // ComfyUI owns Ctrl/Cmd+S even while a text field is focused. Let
+            // its keybinding handler prevent the browser's Save Page action.
+            if (isWorkflowSaveShortcut(event)) return;
+            // Text fields keep native undo/redo. Elsewhere in the node, let the
+            // workflow-level shortcut reach ComfyUI instead of swallowing it.
+            if (undoDirection(event) && !isEditableEventTarget(event.target)) return;
+            event.stopPropagation();
+        });
+    }
+    for (const eventName of ["copy", "cut", "paste"]) {
+        root.addEventListener(eventName, (event) => event.stopPropagation());
+    }
+    root.addEventListener("wheel", (event) => event.stopPropagation());
+
+    const storedMode = H3_MODES.some(
+        (item) => !item.contextOnly && item.id === node.properties[MODE_PROPERTY],
+    ) ? node.properties[MODE_PROPERTY] : "auto";
+    const hasRichTextOverride = Object.prototype.hasOwnProperty.call(
+        node.properties, RICH_TEXT_PROPERTY,
+    );
+    const initialPreferences = promptIdePreferences();
+
+    const state = {
+        editor:null,
+        plainEditor:null,
+        tray:null,
+        structure:null,
+        counts:null,
+        status:null,
+        completionHint:null,
+        records:[],
+        signature:"",
+        lastWidgetValue:String(promptWidget.value ?? ""),
+        history:new PromptUndoHistory(String(promptWidget.value ?? "")),
+        fontSize:clampFont(node.properties[FONT_PROPERTY]),
+        trayOpen:Boolean(node.properties[TRAY_PROPERTY]),
+        structureOpen:Boolean(node.properties[STRUCTURE_PROPERTY]),
+        manualMode:storedMode,
+        mode:storedMode,
+        editContext:null,
+        editSignature:"",
+        editContextObserved:false,
+        lastTaskTemplate:String(node.properties[TASK_TEMPLATE_PROPERTY] ?? ""),
+        duration:Math.max(0.01, Number(node.properties[DURATION_PROPERTY]) || 6),
+        finalShot:Math.max(1, Math.min(99, Math.trunc(Number(node.properties[FINAL_SHOT_PROPERTY]) || 1))),
+        richText:hasRichTextOverride
+            ? node.properties[RICH_TEXT_PROPERTY] !== false
+            : initialPreferences.defaultRichText,
+        analysis:null,
+        completion:null,
+        multi:null,
+        multiRendering:false,
+        pollTimer:null,
+    };
+    node._h3PromptIdeState = state;
+    let shell;
+    let presentationButton;
+    let modeSelect;
+    let templateButton;
+
+    function updateInteractionHelp() {
+        const preferences = promptIdePreferences();
+        const suggestionHelp = preferences.automaticSuggestions
+            ? "Suggestions appear while typing; Ctrl/Cmd+Space opens all options."
+            : "Automatic suggestions are disabled; Ctrl/Cmd+Space opens options.";
+        const replacementHelp = preferences.markerReplacement
+            ? "Click styled tokens or Ctrl/Cmd-click unstyled bracket and retention markers to replace them."
+            : "Marker replacement interactions are disabled in ComfyUI Settings.";
+        root.title = `Standalone rich editor; the output is ordinary text. ${suggestionHelp} ${replacementHelp}`;
+        if (state.completionHint) {
+            state.completionHint.textContent = preferences.markerReplacement
+                ? "Type <, [, (, a section, or a retention marker · Ctrl/Cmd+Space: options · Ctrl/Cmd+click bracket/retention marker: replace"
+                : "Type <, [, (, a section, or a retention marker · Ctrl/Cmd+Space: options · marker replacement disabled in Settings";
+        }
+    }
+
+    updateInteractionHelp();
+
+    function dirty() {
+        node.graph?.setDirtyCanvas?.(true, true);
+        app.graph?.setDirtyCanvas?.(true, true);
+    }
+
+    function currentText() {
+        if (!state.richText && state.plainEditor) return state.plainEditor.value;
+        return state.editor ? editorPlainText(state.editor) : state.lastWidgetValue;
+    }
+
+    function focusCurrentEditor(caret = null, selectionEnd = caret) {
+        if (!state.richText && state.plainEditor) {
+            const position = caret == null ? state.plainEditor.value.length
+                : Math.max(0, Math.min(state.plainEditor.value.length, Number(caret) || 0));
+            const end = selectionEnd == null ? position
+                : Math.max(position, Math.min(state.plainEditor.value.length, Number(selectionEnd) || 0));
+            state.plainEditor.focus();
+            state.plainEditor.setSelectionRange(position, end);
+            return;
+        }
+        state.editor?.focus();
+        if (state.editor && caret != null) restoreSelection(state.editor, caret, selectionEnd);
+    }
+
+    function selectedCurrentText() {
+        if (!state.richText && state.plainEditor) {
+            const {selectionStart:start, selectionEnd:end, value} = state.plainEditor;
+            return start === end ? null : value.slice(start, end);
+        }
+        return selectedPlainText(state.editor);
+    }
+
+    function setRichText(enabled, {focus = true, persist = true} = {}) {
+        if (state.multi) clearMultiSelection();
+        const value = currentText();
+        const caret = state.richText
+            ? selectionTextOffset(state.editor)
+            : state.plainEditor?.selectionStart ?? value.length;
+        state.richText = Boolean(enabled);
+        if (persist) node.properties[RICH_TEXT_PROPERTY] = state.richText;
+        shell?.classList.toggle("h3ide-plain", !state.richText);
+        if (state.plainEditor) state.plainEditor.value = value;
+        if (state.richText && state.editor) renderText(value, caret);
+        if (presentationButton) {
+            presentationButton.textContent = state.richText ? "Rich text" : "Plain text";
+            presentationButton.title = state.richText
+                ? "Disable rich text and show the base prompt"
+                : "Enable H3 syntax highlighting and reference previews";
+            presentationButton.classList.toggle("h3ide-presentation-active", state.richText);
+        }
+        updateFooter(state.richText ? "Rich text enabled" : "Showing base prompt");
+        if (focus) focusCurrentEditor(caret);
+        if (persist) dirty();
+    }
+
+    function updateFooter(message = "Plain STRING ready") {
+        const text = currentText();
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        state.analysis = analyzeH3Prompt(text, state.mode, {
+            duration:state.duration,
+            finalShot:state.finalShot,
+            connectedReferences:state.records,
+        });
+        const errors = state.analysis.problems.filter((item) => item.severity === "error").length;
+        const warnings = state.analysis.problems.length - errors;
+        const errorKind = state.analysis.mode === "edit" ? "instruction" : "structure";
+        const health = errors ? `${errors} ${errorKind} error${errors === 1 ? "" : "s"}`
+            : warnings ? `${warnings} warning${warnings === 1 ? "" : "s"}`
+                : state.analysis.mode === "edit" ? "Edit instruction valid" : "H3 structure valid";
+        if (state.counts) state.counts.textContent = `${words} words · ${text.length} chars`;
+        if (state.status) state.status.textContent = `${message} · ${health}`;
+        if (state.structure) renderStructurePanel();
+        updateHeader();
+    }
+
+    function makeToken(part) {
+        if (part.type === "text") return document.createTextNode(part.text);
+        const token = element("span", `h3ide-token h3ide-token-${part.kind}`);
+        token.contentEditable = "false";
+        token.dataset.token = part.text;
+        const replaceable = promptIdePreferences().markerReplacement
+            && Boolean(promptTokenReplacementQuery(part.text, 0, part.text.length));
+        if (replaceable) token.classList.add("h3ide-token-replaceable");
+        const record = part.type === "reference"
+            ? state.records.find((item) => item.kind === part.kind && item.ordinal === part.ordinal)
+            : null;
+        if (part.unresolved) token.classList.add("h3ide-token-unresolved");
+        if (part.type === "section") {
+            token.append(element("span", "h3ide-token-label", part.text));
+        } else {
+            if (record?.preview) {
+                const thumb = element(record.kind === "video" ? "video" : "img", "h3ide-token-thumb");
+                if (record.kind === "video") { thumb.muted = true; thumb.playsInline = true; thumb.preload = "metadata"; }
+                thumb.src = record.preview;
+                thumb.alt = "";
+                token.append(thumb);
+            } else token.append(icon(part.kind));
+            token.append(element("span", "h3ide-token-label", part.text));
+        }
+        const title = part.unresolved
+            ? part.type === "reference"
+                ? `${part.text} is not connected on H3 Reference Inputs`
+                : `Use the exact H3 spelling and capitalization for ${part.text}`
+            : part.kind === "section" ? `H3 section · ${part.section}` : part.text;
+        token.title = replaceable ? `${title} · Click to replace` : title;
+        return token;
+    }
+
+    function renderText(text, caret = null) {
+        clearMultiSelection();
+        const fragment = document.createDocumentFragment();
+        let offset = 0;
+        for (const part of tokenizePrompt(text, state.records)) {
+            if (part.type !== "text" && isLineLeadingOffset(text, offset)) {
+                const previous = fragment.lastChild;
+                if (previous?.nodeType === Node.TEXT_NODE) previous.textContent += CARET_SENTINEL;
+                else fragment.append(document.createTextNode(CARET_SENTINEL));
+            }
+            fragment.append(makeToken(part));
+            offset += part.text.length;
+        }
+        state.editor.replaceChildren(fragment);
+        if (caret != null) restoreCaret(state.editor, caret);
+        updateFooter();
+    }
+
+    function writeWidget(text, event = null, message = "Saved") {
+        const value = String(text ?? "");
+        if (["historyUndo", "historyRedo"].includes(event?.inputType)) {
+            state.history.align(value);
+        } else state.history.record(value, {inputType:event?.inputType});
+        state.lastWidgetValue = value;
+        promptWidget.value = value;
+        promptWidget.callback?.(value);
+        if (state.plainEditor && state.plainEditor.value !== value) state.plainEditor.value = value;
+        updateFooter(message);
+        dirty();
+        refreshHistoryButtons();
+    }
+
+    function replaceEditorText(text, caret = null, message = "Updated") {
+        const value = String(text ?? "");
+        state.history.record(value, {inputType:"insertReplacementText"});
+        state.lastWidgetValue = value;
+        promptWidget.value = value;
+        promptWidget.callback?.(value);
+        if (state.plainEditor) state.plainEditor.value = value;
+        renderText(value, caret == null ? value.length : caret);
+        updateFooter(message);
+        refreshHistoryButtons();
+        focusCurrentEditor(caret == null ? value.length : caret);
+        dirty();
+    }
+
+    function clearMultiSelection(message) {
+        if (state.multiRendering) return;
+        state.multi = null;
+        try { globalThis.CSS?.highlights?.delete("h3ide-multi"); } catch (error) { /* unsupported */ }
+        if (state.plainBackdrop?.hasChildNodes()) state.plainBackdrop.replaceChildren();
+        if (message) updateFooter(message);
+    }
+
+    function applyMultiHighlight() {
+        const registry = globalThis.CSS?.highlights;
+        if (registry) {
+            try { registry.delete("h3ide-multi"); } catch (error) { /* unsupported */ }
+        }
+        const ranges = state.multi?.ranges;
+        if (!ranges?.length || typeof globalThis.Highlight !== "function" || !state.editor) return;
+        const highlight = new globalThis.Highlight();
+        for (const item of ranges) {
+            const anchor = item.anchor ?? item.start;
+            const start = Math.min(anchor, item.start, item.end);
+            const end = Math.max(anchor, item.start, item.end);
+            if (end <= start) continue;
+            const from = textPoint(state.editor, start);
+            const to = textPoint(state.editor, end);
+            if (!from || !to) continue;
+            const domRange = document.createRange();
+            try {
+                domRange.setStart(from.node, from.offset);
+                domRange.setEnd(to.node, to.offset);
+                highlight.add(domRange);
+            } catch (error) { /* offset inside a token; skip */ }
+        }
+        try { registry?.set("h3ide-multi", highlight); } catch (error) { /* unsupported */ }
+    }
+
+    function plainRefreshMultiBackdrop() {
+        const backdrop = state.plainBackdrop;
+        const editor = state.plainEditor;
+        if (!backdrop || !editor) return;
+        const ranges = state.multi?.ranges;
+        if (!ranges?.length) { backdrop.replaceChildren(); return; }
+        const text = editor.value;
+        const marks = ranges
+            .map((range) => ({
+                lo:Math.min(range.anchor ?? range.start, range.start, range.end),
+                hi:Math.max(range.anchor ?? range.start, range.start, range.end),
+            }))
+            .filter((mark) => mark.hi > mark.lo)
+            .sort((a, b) => a.lo - b.lo);
+        const fragment = document.createDocumentFragment();
+        let cursor = 0;
+        for (const {lo, hi} of marks) {
+            if (lo < cursor) continue;
+            fragment.append(text.slice(cursor, lo));
+            const mark = element("mark");
+            mark.textContent = text.slice(lo, hi);
+            fragment.append(mark);
+            cursor = hi;
+        }
+        fragment.append(text.slice(cursor), "\n");
+        backdrop.replaceChildren(fragment);
+        backdrop.scrollTop = editor.scrollTop;
+        backdrop.scrollLeft = editor.scrollLeft;
+    }
+
+    function addNextOccurrencePlain() {
+        const editor = state.plainEditor;
+        if (!editor) return;
+        const text = editor.value;
+        let multi = state.multi;
+        if (!multi || multi.query == null) {
+            const selectedStart = editor.selectionStart;
+            const selectedEnd = editor.selectionEnd;
+            let start;
+            let end;
+            let wholeWord;
+            if (selectedEnd > selectedStart) {
+                start = selectedStart;
+                end = selectedEnd;
+                wholeWord = isWholeWordRange(text, start, end);
+            } else {
+                const word = wordRangeAt(text, selectedStart);
+                if (!word) { updateFooter("Multi-select: place the caret on a word or select text first"); return; }
+                [start, end] = word;
+                wholeWord = true;
+            }
+            const query = text.slice(start, end);
+            if (!query || /\n/.test(query)) { updateFooter("Multi-select: the query cannot span lines"); return; }
+            multi = state.multi = {query, wholeWord, ranges:[{start, end, anchor:start}]};
+        }
+        const occurrences = findOccurrences(text, multi.query, multi.wholeWord);
+        if (!occurrences.length) { clearMultiSelection("Multi-select: no occurrences found"); return; }
+        const taken = new Set(multi.ranges.map((range) => range.start));
+        const next = occurrences.find(([start]) => !taken.has(start));
+        if (next) {
+            multi.ranges.push({start:next[0], end:next[1], anchor:next[0]});
+            multi.ranges.sort((a, b) => a.start - b.start);
+        }
+        plainRefreshMultiBackdrop();
+        const active = next ?? multi.ranges[0];
+        editor.focus();
+        editor.setSelectionRange(active.start, active.end);
+        const count = multi.ranges.length;
+        updateFooter(next
+            ? `Multi-select: ${count} of ${occurrences.length} occurrences · Ctrl/Cmd+Shift+D: next · type to edit all · Esc: cancel`
+            : `Multi-select: all ${occurrences.length} occurrences selected · type to edit all · Esc: cancel`);
+    }
+
+    function moveMultiCursorsPlain(event) {
+        const editor = state.plainEditor;
+        const multi = state.multi;
+        if (!editor || !multi?.ranges?.length) return;
+        multi.ranges = moveMultiRanges(editor.value, multi.ranges, event.key, event.ctrlKey || event.metaKey);
+        plainRefreshMultiBackdrop();
+        editor.focus();
+        editor.setSelectionRange(multi.ranges[0].start, multi.ranges[0].start);
+        updateFooter(`Multi-select: ${multi.ranges.length} cursor${multi.ranges.length === 1 ? "" : "s"} moved · type to edit all · Esc: cancel`);
+    }
+
+    function applyMultiEditPlain({insertion = null, direction = null, label = "Multi-select edit"}) {
+        const editor = state.plainEditor;
+        const multi = state.multi;
+        if (!editor || !multi?.ranges?.length) return;
+        const count = multi.ranges.length;
+        const outcome = applyMultiRanges(editor.value, multi.ranges, {insertion, direction});
+        editor.value = outcome.text;
+        state.multi = {query:null, wholeWord:false, ranges:outcome.ranges};
+        writeWidget(outcome.text, {inputType:insertion != null ? "insertText" : "deleteContentBackward"},
+            `${label} · ${count} cursor${count === 1 ? "" : "s"} · Esc: cancel`);
+        plainRefreshMultiBackdrop();
+        editor.focus();
+        editor.setSelectionRange(outcome.caret, outcome.caret);
+    }
+
+    function addNextOccurrence() {
+        if (!state.richText || !state.editor) { addNextOccurrencePlain(); return; }
+        const text = editorPlainText(state.editor);
+        let multi = state.multi;
+        if (!multi || multi.query == null) {
+            const current = selectionRangeTextOffset(state.editor);
+            let start;
+            let end;
+            let wholeWord;
+            if (current) {
+                [start, end] = current;
+                wholeWord = isWholeWordRange(text, start, end);
+            } else {
+                const caret = selectionTextOffset(state.editor);
+                const word = wordRangeAt(text, caret);
+                if (!word) { updateFooter("Multi-select: place the caret on a word or select text first"); return; }
+                [start, end] = word;
+                wholeWord = true;
+            }
+            const query = text.slice(start, end);
+            if (!query || /\n/.test(query)) {
+                updateFooter("Multi-select: the query cannot span lines");
+                return;
+            }
+            multi = state.multi = {query, wholeWord, ranges:[{start, end, anchor:start}]};
+        }
+        const occurrences = findOccurrences(text, multi.query, multi.wholeWord);
+        if (!occurrences.length) { clearMultiSelection("Multi-select: no occurrences found"); return; }
+        const taken = new Set(multi.ranges.map((range) => range.start));
+        const next = occurrences.find(([start]) => !taken.has(start));
+        if (next) {
+            multi.ranges.push({start:next[0], end:next[1], anchor:next[0]});
+            multi.ranges.sort((a, b) => a.start - b.start);
+        }
+        applyMultiHighlight();
+        const active = next ?? multi.ranges[0];
+        focusCurrentEditor(active.start, active.end);
+        const count = multi.ranges.length;
+        updateFooter(next
+            ? `Multi-select: ${count} of ${occurrences.length} occurrences · Ctrl/Cmd+Shift+D: next · type to edit all · Esc: cancel`
+            : `Multi-select: all ${occurrences.length} occurrences selected · type to edit all · Esc: cancel`);
+    }
+
+    function moveMultiCursors(event) {
+        const multi = state.multi;
+        if (!multi?.ranges?.length) return;
+        const unique = moveMultiRanges(editorPlainText(state.editor), multi.ranges, event.key, event.ctrlKey || event.metaKey);
+        multi.ranges = unique;
+        applyMultiHighlight();
+        focusCurrentEditor(unique[0].start);
+        updateFooter(`Multi-select: ${unique.length} cursor${unique.length === 1 ? "" : "s"} moved · type to edit all · Esc: cancel`);
+    }
+
+    function applyMultiEdit({insertion = null, direction = null, label = "Multi-select edit"}) {
+        const multi = state.multi;
+        if (!multi?.ranges?.length) return;
+        const count = multi.ranges.length;
+        const outcome = applyMultiRanges(editorPlainText(state.editor), multi.ranges, {insertion, direction});
+        state.multi = {query:null, wholeWord:false, ranges:outcome.ranges};
+        state.multiRendering = true;
+        try {
+            replaceEditorText(outcome.text, outcome.caret, `${label} · ${count} cursor${count === 1 ? "" : "s"} · Esc: cancel`);
+        } finally {
+            state.multiRendering = false;
+        }
+        applyMultiHighlight();
+        focusCurrentEditor(outcome.caret);
+        state.completion?.refresh();
+    }
+
+    function applyMultiBeforeInput(event) {
+        const multi = state.multi;
+        if (!multi?.ranges?.length) { clearMultiSelection(); return false; }
+        let insertion = null;
+        let direction = null;
+        let label = "Multi-select edit";
+        switch (event.inputType) {
+            case "insertText":
+            case "insertReplacementText":
+                insertion = event.data ?? "";
+                label = "Multi-select typed";
+                break;
+            case "insertParagraph":
+            case "insertLineBreak":
+                insertion = "\n";
+                label = "Multi-select line break";
+                break;
+            case "deleteContentBackward":
+                direction = "backward";
+                label = "Multi-select delete";
+                break;
+            case "deleteContentForward":
+                direction = "forward";
+                label = "Multi-select delete";
+                break;
+            case "deleteByCut":
+                direction = "none";
+                label = "Multi-select delete";
+                break;
+            default:
+                clearMultiSelection("Multi-select cancelled");
+                return false;
+        }
+        event.preventDefault();
+        applyMultiEdit({insertion, direction, label});
+        return true;
+    }
+
+    function insertDecorated(text, caret = null) {
+        if (!state.richText && state.plainEditor) {
+            const editor = state.plainEditor;
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            const inserted = String(text ?? "");
+            const value = editor.value.slice(0, start) + inserted + editor.value.slice(end);
+            const position = start + (caret == null ? inserted.length : caret);
+            editor.value = value;
+            writeWidget(value, {inputType:"insertText"});
+            editor.focus();
+            editor.setSelectionRange(position, position);
+            return;
+        }
+        const start = selectionTextOffset(state.editor);
+        insertPlainText(state.editor, text);
+        renderText(editorPlainText(state.editor), caret == null ? start + String(text).length : start + caret);
+        state.editor.focus();
+    }
+
+    function renderTray() {
+        state.tray.replaceChildren();
+        if (!referencesNode(node)) {
+            state.tray.append(element(
+                "div", "h3ide-ref-help",
+                "在媒体加载器中添加参考图片、视频和音频，即可插入对应标签。",
+            ));
+            return;
+        }
+        if (!state.records.length) {
+            state.tray.append(element(
+                "div", "h3ide-ref-help",
+                "在媒体加载器中添加并启用素材，引用标签会自动同步。",
+            ));
+            return;
+        }
+        state.tray.append(element(
+            "div", "h3ide-ref-help",
+            "点击素材，插入对应的 MiniMax H3 引用标签。",
+        ));
+        for (const record of state.records) {
+            const card = button("", `Insert ${record.token}`, () => insertDecorated(record.token));
+            card.className = "h3ide-ref-card";
+            if (record.preview) {
+                const image = element(record.kind === "video" ? "video" : "img");
+                if (record.kind === "video") { image.muted = true; image.playsInline = true; image.preload = "metadata"; }
+                image.src = record.preview;
+                image.alt = "";
+                card.append(image);
+            } else card.append(icon(record.kind));
+            const copy = element("span", "h3ide-ref-copy");
+            copy.append(
+                element("div", "h3ide-ref-name", record.token),
+                element("div", "h3ide-ref-source", record.source?.title || nodeType(record.source) || `Connected ${record.kind}`),
+            );
+            card.append(copy);
+            state.tray.append(card);
+        }
+    }
+
+    function structureOptions() {
+        return {duration:state.duration, finalShot:state.finalShot};
+    }
+
+    function addSection(section) {
+        const text = currentText();
+        const mode = effectiveH3Mode(text, state.mode);
+        const result = insertH3Section(text, section, mode);
+        if (result.added) replaceEditorText(result.text, result.caret, `Added ${section}:`);
+        else {
+            if (state.richText) renderText(text, result.caret);
+            focusCurrentEditor(result.caret);
+        }
+    }
+
+    function addMissingStructure() {
+        const text = currentText();
+        const mode = effectiveH3Mode(text, state.mode);
+        const result = ensureH3Structure(text, mode, structureOptions());
+        const message = result.added.length
+            ? `Added ${result.added.length} missing section${result.added.length === 1 ? "" : "s"}`
+            : `Normalized ${h3ModeLabel(result.mode)} alignment`;
+        replaceEditorText(result.text, result.caret, message);
+    }
+
+    function optionInput(label, value, {min, max, step}, onChange) {
+        const host = element("label");
+        host.append(document.createTextNode(label));
+        const input = element("input");
+        input.type = "number";
+        input.min = String(min);
+        input.max = String(max);
+        input.step = String(step);
+        input.value = String(value);
+        input.addEventListener("change", () => onChange(input.value));
+        host.append(input);
+        return host;
+    }
+
+    function renderStructurePanel() {
+        if (!state.structure) return;
+        const text = currentText();
+        const analysis = state.analysis ?? analyzeH3Prompt(text, state.mode, {
+            ...structureOptions(),
+            connectedReferences:state.records,
+        });
+        state.structure.replaceChildren();
+        if (analysis.mode === "edit") {
+            const label = state.editContext?.label ?? "Edit instruction";
+            const head = element("div", "h3ide-structure-head");
+            head.append(element("strong", "", label));
+            state.structure.append(
+                head,
+                element(
+                    "div", "h3ide-ref-help",
+                    "Write only the requested change, or use Task template to load a task-specific starting instruction. The connected Edit encoder adds its full H3 timing and task wrapper downstream.",
+                ),
+            );
+            const problems = element("div", "h3ide-problems");
+            if (!analysis.problems.length) {
+                problems.append(element("div", "", "✓ Instruction syntax and connected reference tokens pass."));
+            } else {
+                for (const problem of analysis.problems) {
+                    problems.append(element("div", `h3ide-problem-${problem.severity}`,
+                        `${problem.severity === "error" ? "×" : "!"} ${problem.message}`));
+                }
+            }
+            state.structure.append(problems);
+            return;
+        }
+        const head = element("div", "h3ide-structure-head");
+        head.append(
+            element("strong", "", `${h3ModeLabel(analysis.mode)} strict section order`),
+            button(
+                analysis.missing.length ? "Add missing" : "Normalize",
+                "Add absent categories in H3 order and write the exact mode alignment line",
+                addMissingStructure,
+                "section",
+            ),
+        );
+        state.structure.append(head);
+
+        if (["i2va", "fl2va", "l2va"].includes(analysis.mode)) {
+            const options = element("div", "h3ide-structure-options");
+            if (["fl2va", "l2va"].includes(analysis.mode)) {
+                options.append(optionInput("Duration (s)", state.duration,
+                    {min:0.01, max:999, step:0.01}, (value) => {
+                        state.duration = Math.max(0.01, Number(value) || 6);
+                        node.properties[DURATION_PROPERTY] = state.duration;
+                        updateFooter("Duration changed; normalize alignment");
+                        dirty();
+                    }));
+                options.append(optionInput("Final shot", state.finalShot,
+                    {min:1, max:99, step:1}, (value) => {
+                        state.finalShot = Math.max(1, Math.min(99, Math.trunc(Number(value) || 1)));
+                        node.properties[FINAL_SHOT_PROPERTY] = state.finalShot;
+                        updateFooter("Final shot changed; normalize alignment");
+                        dirty();
+                    }));
+            } else {
+                options.append(element("span", "h3ide-muted", "I2VA uses <Picture 1> at 0.00 seconds in [Shot 1]."));
+            }
+            state.structure.append(options);
+        }
+
+        const list = element("div", "h3ide-section-list");
+        for (const section of analysis.required) {
+            const record = analysis.records.find((item) => item.name === section);
+            const row = element("div", `h3ide-section-row${record ? "" : " h3ide-missing"}`);
+            row.append(
+                element("span", "h3ide-section-mark", record ? "✓" : "+"),
+                element("span", "h3ide-section-name", `${section}:`),
+                button(record ? "Go" : "Add", record ? `Go to ${section}:` : `Add ${section}: in H3 order`, () => {
+                    if (record) {
+                        if (state.richText) renderText(currentText(), record.contentStart);
+                        focusCurrentEditor(record.contentStart);
+                    } else addSection(section);
+                }),
+            );
+            list.append(row);
+        }
+        state.structure.append(list);
+
+        const problems = element("div", "h3ide-problems");
+        if (!analysis.problems.length) {
+            problems.append(element("div", "", "✓ Exact section names, ordering, alignment, and dialogue balance pass."));
+        } else {
+            for (const problem of analysis.problems) {
+                problems.append(element("div", `h3ide-problem-${problem.severity}`,
+                    `${problem.severity === "error" ? "×" : "!"} ${problem.message}`));
+            }
+        }
+        state.structure.append(problems);
+    }
+
+    function refreshReferences(force = false) {
+        const signature = referenceSignature(node);
+        if (!force && signature === state.signature) return;
+        state.signature = signature;
+        state.records = referenceRecords(node);
+        if (state.tray) renderTray();
+        if (state.editor) {
+            const text = currentText();
+            const caret = state.richText && document.activeElement === state.editor
+                ? selectionTextOffset(state.editor) : null;
+            renderText(text, caret);
+        }
+        updateHeader();
+    }
+
+    function synchronizeWidget() {
+        const value = String(promptWidget.value ?? "");
+        if (value === state.lastWidgetValue) return;
+        state.lastWidgetValue = value;
+        state.history.align(value);
+        if (state.plainEditor && state.plainEditor.value !== value) state.plainEditor.value = value;
+        const caret = state.richText && document.activeElement === state.editor
+            ? Math.min(selectionTextOffset(state.editor), value.length) : null;
+        renderText(value, caret);
+        refreshHistoryButtons();
+    }
+
+    let undoButton;
+    let redoButton;
+    function refreshHistoryButtons() {
+        if (undoButton) undoButton.disabled = !state.history.undoStack.length;
+        if (redoButton) redoButton.disabled = !state.history.redoStack.length;
+    }
+
+    function applyHistory(direction) {
+        const text = state.history[direction]?.();
+        if (text == null) return;
+        state.lastWidgetValue = text;
+        promptWidget.value = text;
+        promptWidget.callback?.(text);
+        if (state.plainEditor) state.plainEditor.value = text;
+        renderText(text, text.length);
+        updateFooter(direction === "undo" ? "Undo" : "Redo");
+        refreshHistoryButtons();
+        focusCurrentEditor(text.length);
+        dirty();
+    }
+
+    let context;
+    function updateHeader() {
+        if (!context) return;
+        const text = currentText();
+        const mode = state.analysis?.mode ?? effectiveH3Mode(text, state.mode);
+        const health = state.analysis?.valid
+            ? mode === "edit" ? "instruction valid" : "schema valid"
+            : `${state.analysis?.problems.filter((item) => item.severity === "error").length ?? 0} errors`;
+        const references = referencesNode(node)
+            ? ["picture", "video", "audio"].map((kind) => {
+                const count = state.records.filter((item) => item.kind === kind).length;
+                return count ? `${count} ${kind}${count === 1 ? "" : "s"}` : null;
+            }).filter(Boolean).join(" · ") || "0 refs"
+            : "no refs";
+        const modeLabel = mode === "edit" && state.editContext
+            ? state.editContext.label : h3ModeLabel(mode);
+        context.textContent = `${modeLabel} · ${health} · ${references} · STRING`;
+    }
+
+    function configureModeSelect() {
+        if (!modeSelect) return;
+        modeSelect.replaceChildren();
+        for (const mode of H3_MODES.filter((item) => !item.contextOnly)) {
+            const option = element("option", "", mode.label);
+            option.value = mode.id;
+            modeSelect.append(option);
+        }
+        if (state.mode === "edit") {
+            const option = element("option", "", `Edit · ${state.editContext?.label ?? "Instruction"}`);
+            option.value = "edit";
+            modeSelect.append(option);
+        }
+        modeSelect.value = state.mode;
+        modeSelect.disabled = state.mode === "edit";
+        modeSelect.title = state.mode === "edit"
+            ? "Selected automatically from the connected TextEncodeH3Edit task"
+            : state.editContext?.verbatim
+                ? "The connected TextEncodeH3Edit is in verbatim mode; choose the complete H3 schema here"
+                : "Choose the strict H3 prompt schema; Auto detects it from the prompt";
+        const placeholder = state.editContext?.placeholder
+            ?? "Write a prompt. Use References to insert <Picture 1>, <Video 1>, or <Audio 1>.";
+        if (state.editor) state.editor.dataset.placeholder = placeholder;
+        if (state.plainEditor) state.plainEditor.placeholder = placeholder;
+        if (templateButton) {
+            const template = editInstructionTemplate(state.editContext);
+            templateButton.disabled = !template;
+            templateButton.title = template
+                ? `Load the ${state.editContext.label} starting instruction`
+                : "A task template is available for directed Edit tasks";
+        }
+    }
+
+    function applyEditTaskTemplate({askBeforeReplacing = true} = {}) {
+        const template = editInstructionTemplate(state.editContext);
+        if (!template) return false;
+        const current = currentText();
+        if (current.trim() === template.trim()) return false;
+        if (askBeforeReplacing
+            && !canAutoReplaceEditInstruction(current, state.lastTaskTemplate)) {
+            const accepted = globalThis.confirm?.(
+                `Switch the instruction to “${state.editContext.label}”? This replaces the current prompt text.`,
+            ) ?? false;
+            if (!accepted) {
+                updateFooter(`${state.editContext.label} detected; current prompt kept`);
+                return false;
+            }
+        }
+        state.lastTaskTemplate = template;
+        node.properties[TASK_TEMPLATE_PROPERTY] = template;
+        replaceEditorText(template, template.length, `${state.editContext.label} template loaded`);
+        return true;
+    }
+
+    function refreshEditContext(force = false, {allowTemplatePrompt = true} = {}) {
+        const next = downstreamH3EditContext(node);
+        const signature = next?.signature ?? "";
+        const contextChanged = signature !== state.editSignature;
+        if (!force && !contextChanged) return;
+        const mayPrompt = allowTemplatePrompt && state.editContextObserved;
+        const previousMode = state.mode;
+        const previousTemplate = editInstructionTemplate(state.editContext);
+        const nextTemplate = editInstructionTemplate(next);
+        state.editSignature = signature;
+        state.editContext = next;
+        state.editContextObserved ||= Boolean(next);
+        state.mode = next && !next.verbatim ? "edit" : state.manualMode;
+        configureModeSelect();
+        state.completion?.hide();
+        if (mayPrompt && contextChanged && nextTemplate && nextTemplate !== previousTemplate
+            && applyEditTaskTemplate({askBeforeReplacing:true})) return;
+        const message = next
+            ? next.verbatim
+                ? "Connected Edit encoder uses the prompt verbatim"
+                : `${next.label} detected from connected Edit encoder`
+            : previousMode === "edit" ? "Edit encoder disconnected" : "Prompt context refreshed";
+        updateFooter(message);
+        dirty();
+    }
+
+    const head = element("div", "h3ide-head");
+    context = element("span", "h3ide-context");
+    head.append(element("span", "h3ide-title", "H3 Prompt IDE"), context);
+
+    const toolbar = element("div", "h3ide-toolbar");
+    modeSelect = element("select");
+    configureModeSelect();
+    modeSelect.addEventListener("change", () => {
+        state.manualMode = modeSelect.value;
+        state.mode = state.manualMode;
+        node.properties[MODE_PROPERTY] = state.manualMode;
+        updateFooter("Schema mode changed");
+        state.completion?.hide();
+        dirty();
+    });
+    templateButton = button(
+        "Task template",
+        "A task template is available for directed Edit tasks",
+        () => applyEditTaskTemplate({askBeforeReplacing:true}),
+    );
+    configureModeSelect();
+    const sectionsButton = button("Sections", "Show strict H3 categories and validation", () => {
+        state.structureOpen = !state.structureOpen;
+        node.properties[STRUCTURE_PROPERTY] = state.structureOpen;
+        state.structure.classList.toggle("h3ide-open", state.structureOpen);
+        state.completion?.hide();
+        if (state.structureOpen) renderStructurePanel();
+        dirty();
+    }, "section");
+    const refsButton = button("References", "Show H3 picture, video, and audio references", () => {
+        state.trayOpen = !state.trayOpen;
+        node.properties[TRAY_PROPERTY] = state.trayOpen;
+        state.tray.classList.toggle("h3ide-open", state.trayOpen);
+        if (state.trayOpen) renderTray();
+        dirty();
+    }, "reference");
+    const dialogueButton = button("Dialogue", "Wrap the selection in <d> tags", () => {
+        const selected = selectedCurrentText();
+        if (selected == null) insertDecorated("<d></d>", 3);
+        else insertDecorated(`<d>${selected}</d>`);
+    }, "dialogue");
+    presentationButton = button(
+        state.richText ? "Rich text" : "Plain text",
+        state.richText
+            ? "Disable rich text and show the base prompt"
+            : "Enable H3 syntax highlighting and reference previews",
+        () => setRichText(!state.richText),
+    );
+    presentationButton.classList.toggle("h3ide-presentation-active", state.richText);
+    undoButton = button("↶", "Undo prompt change", () => applyHistory("undo"));
+    redoButton = button("↷", "Redo prompt change", () => applyHistory("redo"));
+    const smaller = button("A−", "Decrease editor font", () => {
+        state.fontSize = clampFont(state.fontSize - 1);
+        node.properties[FONT_PROPERTY] = state.fontSize;
+        root.style.setProperty("--h3ide-font-size", `${state.fontSize}px`);
+        dirty();
+    });
+    const larger = button("A+", "Increase editor font", () => {
+        state.fontSize = clampFont(state.fontSize + 1);
+        node.properties[FONT_PROPERTY] = state.fontSize;
+        root.style.setProperty("--h3ide-font-size", `${state.fontSize}px`);
+        dirty();
+    });
+    state.completionHint = element("span", "h3ide-completion-hint");
+    toolbar.append(
+        modeSelect,
+        templateButton,
+        sectionsButton,
+        refsButton,
+        dialogueButton,
+        presentationButton,
+        undoButton,
+        redoButton,
+        element("span", "h3ide-spacer"),
+        smaller,
+        larger,
+        state.completionHint,
+    );
+    updateInteractionHelp();
+
+    state.tray = element("div", "h3ide-ref-tray");
+    state.tray.classList.toggle("h3ide-open", state.trayOpen);
+    state.structure = element("div", "h3ide-structure");
+    state.structure.classList.toggle("h3ide-open", state.structureOpen);
+
+    shell = element("div", "h3ide-editor-shell");
+    shell.classList.toggle("h3ide-plain", !state.richText);
+    state.editor = element("div", "h3ide-editor");
+    state.editor.contentEditable = "true";
+    state.editor.spellcheck = true;
+    state.editor.tabIndex = 0;
+    state.editor.setAttribute("role", "textbox");
+    state.editor.setAttribute("aria-multiline", "true");
+    state.editor.dataset.placeholder = "Write a prompt. Use References to insert <Picture 1>, <Video 1>, or <Audio 1>.";
+    state.editor.addEventListener("input", (event) => {
+        if (state.multi) clearMultiSelection();
+        writeWidget(editorPlainText(state.editor), event);
+        state.completion?.refresh();
+    });
+    state.editor.addEventListener("beforeinput", (event) => {
+        if (state.multi && applyMultiBeforeInput(event)) return;
+        if (["insertParagraph", "insertLineBreak"].includes(event.inputType)) {
+            event.preventDefault();
+            insertPlainText(state.editor, "\n");
+        }
+    });
+    state.editor.addEventListener("paste", (event) => {
+        event.preventDefault();
+        if (state.multi?.ranges?.length) {
+            applyMultiEdit({insertion:event.clipboardData?.getData("text/plain") ?? "", label:"Multi-select paste"});
+            return;
+        }
+        insertPlainText(state.editor, event.clipboardData?.getData("text/plain") ?? "");
+        const caret = selectionTextOffset(state.editor);
+        renderText(editorPlainText(state.editor), caret);
+        state.completion?.refresh();
+    });
+    state.editor.addEventListener("copy", (event) => copySelection(state.editor, event));
+    state.editor.addEventListener("cut", (event) => copySelection(state.editor, event, true));
+    state.editor.addEventListener("keydown", (event) => {
+        if (state.completion?.handleKeydown(event)) return;
+        if (state.multi?.ranges?.length
+                && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)
+                && !event.shiftKey && !event.altKey) {
+            event.preventDefault();
+            state.completion?.hide();
+            moveMultiCursors(event);
+            return;
+        }
+        if (state.multi?.ranges?.length
+                && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"].includes(event.key)) {
+            clearMultiSelection("Multi-select cancelled");
+        }
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey && !event.altKey && event.code === "KeyD") {
+            event.preventDefault();
+            state.completion?.hide();
+            addNextOccurrence();
+            return;
+        }
+        if (event.key === "Escape" && state.multi) {
+            event.preventDefault();
+            clearMultiSelection("Multi-select cancelled");
+            return;
+        }
+        if (event.key === "Escape") {
+            state.trayOpen = false;
+            node.properties[TRAY_PROPERTY] = false;
+            state.tray.classList.remove("h3ide-open");
+            state.structureOpen = false;
+            node.properties[STRUCTURE_PROPERTY] = false;
+            state.structure.classList.remove("h3ide-open");
+        }
+    });
+    state.editor.addEventListener("blur", () => {
+        if (state.multi) clearMultiSelection();
+        renderText(editorPlainText(state.editor));
+    });
+    state.editor.addEventListener("mousedown", () => {
+        if (state.multi) clearMultiSelection();
+    });
+    state.plainEditor = element("textarea", "h3ide-plain-editor");
+    state.plainEditor.value = state.lastWidgetValue;
+    state.plainEditor.placeholder = "Base H3 prompt text";
+    state.plainEditor.spellcheck = true;
+    state.plainEditor.setAttribute("aria-label", "Base H3 prompt text");
+    state.plainEditor.addEventListener("keydown", (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.shiftKey && !event.altKey && event.code === "KeyD") {
+            event.preventDefault();
+            addNextOccurrencePlain();
+            return;
+        }
+        if (!state.multi?.ranges?.length) return;
+        if (event.key === "Escape") {
+            event.preventDefault();
+            clearMultiSelection("Multi-select cancelled");
+            return;
+        }
+        if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)
+                && !event.shiftKey && !event.altKey) {
+            event.preventDefault();
+            moveMultiCursorsPlain(event);
+            return;
+        }
+        if (event.ctrlKey || event.metaKey || event.altKey || event.key === "Tab") {
+            clearMultiSelection("Multi-select cancelled");
+            return;
+        }
+        if (event.key === "Backspace" || event.key === "Delete") {
+            event.preventDefault();
+            applyMultiEditPlain({direction:event.key === "Backspace" ? "backward" : "forward", label:"Multi-select delete"});
+            return;
+        }
+        if (event.key === "Enter") {
+            event.preventDefault();
+            applyMultiEditPlain({insertion:"\n", label:"Multi-select line break"});
+            return;
+        }
+        if (event.key.length === 1) {
+            event.preventDefault();
+            applyMultiEditPlain({insertion:event.key, label:"Multi-select typed"});
+            return;
+        }
+        if (event.shiftKey) clearMultiSelection("Multi-select cancelled");
+    });
+    state.plainEditor.addEventListener("input", (event) => {
+        if (state.multi) clearMultiSelection();
+        writeWidget(state.plainEditor.value, event, "Base prompt saved");
+    });
+    state.plainEditor.addEventListener("paste", (event) => {
+        if (!state.multi?.ranges?.length) return;
+        event.preventDefault();
+        applyMultiEditPlain({insertion:event.clipboardData?.getData("text/plain") ?? "", label:"Multi-select paste"});
+    });
+    state.plainEditor.addEventListener("mousedown", () => {
+        if (state.multi) clearMultiSelection();
+    });
+    state.plainEditor.addEventListener("blur", () => {
+        if (state.multi) clearMultiSelection();
+        updateFooter("Base prompt saved");
+    });
+    state.plainEditor.addEventListener("scroll", () => {
+        if (state.plainBackdrop) {
+            state.plainBackdrop.scrollTop = state.plainEditor.scrollTop;
+            state.plainBackdrop.scrollLeft = state.plainEditor.scrollLeft;
+        }
+    });
+    state.plainBackdrop = element("div", "h3ide-plain-backdrop");
+    state.plainBackdrop.setAttribute("aria-hidden", "true");
+    state.plainWrap = element("div", "h3ide-plain-wrap");
+    state.plainWrap.append(state.plainBackdrop, state.plainEditor);
+    shell.append(state.editor, state.plainWrap);
+    state.completion = createPromptCompletionController({
+        input:state.editor,
+        getText:() => editorPlainText(state.editor),
+        getCaret:() => selectionTextOffset(state.editor),
+        getRecords:() => state.records,
+        getMode:() => state.mode,
+        getAutomaticSuggestions:() => promptIdePreferences().automaticSuggestions,
+        getAppendCompletionSpace:() => promptIdePreferences().appendCompletionSpace,
+        getPreferredDialogueLanguage:() => promptIdePreferences().preferredDialogueLanguage,
+        replaceText:(result) => {
+            replaceEditorText(result.text, result.caret, "H3 completion inserted");
+            if (result.selectionStart != null && result.selectionEnd != null) {
+                focusCurrentEditor(result.selectionStart, result.selectionEnd);
+            }
+        },
+    });
+    state.editor.addEventListener("click", (event) => {
+        const lineStartCaret = lineStartTokenCaretOffsetAtPoint(state.editor, event);
+        if (lineStartCaret != null) {
+            event.preventDefault();
+            state.completion?.hide();
+            focusCurrentEditor(lineStartCaret);
+            return;
+        }
+        if (!promptIdePreferences().markerReplacement) return;
+        const token = event.target?.closest?.(".h3ide-token-replaceable");
+        const text = editorPlainText(state.editor);
+        let query = null;
+        if (token && state.editor.contains(token)) {
+            const start = nodeTextOffset(state.editor, token);
+            query = promptTokenReplacementQuery(
+                text, start, start + String(token.dataset.token ?? "").length,
+            );
+        } else if (event.ctrlKey || event.metaKey) {
+            const position = pointerTextOffset(state.editor, event);
+            query = promptBracketReplacementQuery(text, position)
+                ?? promptRetentionReplacementQuery(text, position);
+        }
+        if (!query) return;
+        event.preventDefault();
+        restoreCaret(state.editor, query.end);
+        state.completion?.open(query);
+    });
+
+    const footer = element("div", "h3ide-footer");
+    state.counts = element("span", "h3ide-counts");
+    state.status = element("span", "h3ide-status", "Plain STRING ready");
+    footer.append(state.counts, state.status);
+
+    root.style.setProperty("--h3ide-font-size", `${state.fontSize}px`);
+    root.append(head, toolbar, state.structure, state.tray, shell, footer);
+    const domWidget = node.addDOMWidget(
+        "h3_prompt_ide_editor", "h3-prompt-ide", root,
+        {serialize:false, hideOnZoom:false, getMinHeight:() => 500},
+    );
+    repairLegacyWidgetWidth(domWidget);
+    domWidget.serialize = false;
+    node.setSize?.([
+        Math.max(Number(node.size?.[0]) || 700, 700),
+        Math.max(Number(node.size?.[1]) || 650, 650),
+    ]);
+
+    const connectionsChanged = node.onConnectionsChange;
+    node.onConnectionsChange = function () {
+        const result = connectionsChanged?.apply(this, arguments);
+        setTimeout(() => {
+            refreshReferences(true);
+            refreshEditContext(true, {allowTemplatePrompt:false});
+        }, 0);
+        return result;
+    };
+    const removed = node.onRemoved;
+    node.onRemoved = function () {
+        if (state.pollTimer != null) window.clearInterval(state.pollTimer);
+        state.completion?.destroy();
+        state.completion = null;
+        delete node._h3PromptIdeSettingsChanged;
+        return removed?.apply(this, arguments);
+    };
+    node._h3PromptIdeSettingsChanged = () => {
+        const preferences = promptIdePreferences();
+        state.completion?.hide();
+        const hasOverride = Object.prototype.hasOwnProperty.call(
+            node.properties, RICH_TEXT_PROPERTY,
+        );
+        if (!hasOverride && state.richText !== preferences.defaultRichText) {
+            setRichText(preferences.defaultRichText, {focus:false, persist:false});
+        } else if (state.richText && state.editor) {
+            const caret = document.activeElement === state.editor
+                ? selectionTextOffset(state.editor) : null;
+            renderText(currentText(), caret);
+        }
+        updateInteractionHelp();
+    };
+    node._h3PromptIdeRefresh = () => {
+        repairLegacyWidgetWidth(domWidget);
+        hidePromptWidget(promptWidget);
+        synchronizeWidget();
+        refreshReferences(true);
+        refreshEditContext(true, {allowTemplatePrompt:false});
+    };
+    state.pollTimer = window.setInterval(() => {
+        repairLegacyWidgetWidth(domWidget);
+        synchronizeWidget();
+        refreshReferences(false);
+        refreshEditContext(false);
+    }, 500);
+
+    renderText(state.lastWidgetValue);
+    refreshReferences(true);
+    refreshEditContext(true, {allowTemplatePrompt:false});
+    refreshHistoryButtons();
+    updateHeader();
+}
+
+
+export { mountEditor };

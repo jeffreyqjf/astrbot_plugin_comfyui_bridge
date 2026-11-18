@@ -71,9 +71,12 @@ class H3Media:
             await self.service.initialize()
             workflow = self.service.workflows.get(H3_SEED_FULL)
             node = workflow.graph.get("416") if workflow else None
+            positive = workflow.positive[0] if workflow and workflow.positive else None
             return json_response({
                 "available": bool(node and node.get("class_type") == "MiniMaxH3MediaLoader"),
                 "items": json.loads(node["inputs"]["media_state"]) if node else [],
+                "prompt": workflow.graph[positive.node]["inputs"][positive.name] if positive else "",
+                "prompt_mode": "auto" if positive and positive.node == "571" else "ref2va",
             })
         except (OSError, ValueError, ComfyError) as exc:
             return error_response(str(exc), status_code=400)

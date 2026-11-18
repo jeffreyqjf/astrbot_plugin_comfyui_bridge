@@ -690,6 +690,14 @@
               <small class="section-note">多批次会分别入队，任务可单独取消。提示词按原文提交。超时从 ComfyUI 接收任务后计时，包含 ComfyUI 内的排队和执行。</small>
               <footer><button type="submit" class="primary" id="queue-add">加入队列</button></footer>
             </form>
+            <section id="queue-h3-prompt" class="h3-task-prompt wide" hidden aria-label="H3 提示词编辑器">
+              <div data-h3-prompt-editor></div>
+              <details class="h3-prompt-preferences">
+                <summary>编辑器设置</summary>
+                <div class="grid" data-h3-prompt-preferences></div>
+              </details>
+              <p id="h3-prompt-status" role="status"></p>
+            </section>
             <section id="queue-h3-media" class="h3-media-editor" hidden tabindex="0" aria-label="H3 参考素材编辑器">
               <header class="h3-media-header">
                 <div><h3>Fantastic H3 Media Loader</h3><small>图片、视频和音频参考素材</small></div>

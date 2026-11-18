@@ -608,6 +608,7 @@ class ComfyUIBridge(Star):
                 command, account, image, owner=f"studio:{request.username}", allow_nsfw=True,
                 controlnets=data.get("controlnets"),
                 h3_media=data.get("h3_media"),
+                h3_prompt=data.get("h3_prompt"),
             )
             return json_response(result)
         except (ComfyError, OSError, ValueError) as exc:
@@ -644,6 +645,7 @@ class ComfyUIBridge(Star):
         except (OSError, ValueError) as exc:
             return error_response(str(exc), status_code=400)
         owner = f"studio:{request.username}"
+        positive = None
         try:
             action, argument = route_command(command)
             if action == "sweep":
@@ -653,16 +655,18 @@ class ComfyUIBridge(Star):
                 _, name, *_ = parse_generation(parts[1], require_prompt=False)
                 workflow = self.service.resolve(owner, name)
             else:
-                workflow, _, _ = await self._studio_generation_target(
+                workflow, _, parsed = await self._studio_generation_target(
                     action, argument, owner, [b""] if data["has_reference"] else [], True, require_prompt=False,
                 )
+                positive = parsed[0]
         except WorkflowError:
             return json_response({"workflow": None})
-        return json_response({"workflow": workflow.name})
+        return json_response({"workflow": workflow.name, "positive": positive})
 
     async def run_remote_command(
         self, command, account, image_data, *, owner="studio:remote", allow_nsfw=False, controlnets=None,
         h3_media=None,
+        h3_prompt=None,
     ):
         if not self.config.get("enabled", True):
             raise WorkflowError("ComfyUI 插件已在面板禁用。")
@@ -670,8 +674,8 @@ class ComfyUIBridge(Star):
             raise WorkflowError("请填写不超过 16000 字符的任务命令。")
         action, argument = route_command(command)
         await self.service.initialize()
-        if h3_media is not None and action in {"help", "lora", "sweep"}:
-            raise WorkflowError("H3 媒体加载器用于 /comfy gen --wf h3-v3 生成任务。")
+        if (h3_media is not None or h3_prompt is not None) and action in {"help", "lora", "sweep"}:
+            raise WorkflowError("H3 素材和提示词设置仅用于生成任务。")
         if controlnets not in (None, {}) and action in {"help", "lora"}:
             raise WorkflowError("独立 ControlNet 仅用于创建生成任务。")
         if action == "help":
@@ -693,10 +697,15 @@ class ComfyUIBridge(Star):
             image_suffix(image_data)
         workflow, options, parsed = await self._studio_generation_target(
             action, argument, owner, [image_data] if image_data is not None else [], allow_nsfw,
+            require_prompt=h3_prompt is None,
         )
         if h3_media is not None:
             workflow = self.studio.with_h3_media(workflow, h3_media)
         prompt, _, negative, seed, preset, *_ = parsed
+        if h3_prompt is not None:
+            if workflow.name not in H3_WORKFLOWS or not isinstance(h3_prompt, str) or len(h3_prompt) > 8000:
+                raise WorkflowError("H3 提示词须为不超过 8000 字符的文本。")
+            prompt = h3_prompt
         bindings, sources, control_archive = await asyncio.to_thread(
             self.studio.prepare_controls, workflow.name, controlnets,
         )

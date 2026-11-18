@@ -3,7 +3,7 @@ import { LoaderPanel, pastedFiles } from "./h3_media_vendor.js";
 
 const workflowName = "MiniMax_H3_Seed_Hunter_V3_AstrBot";
 
-export function mountH3Media({ bridge, host, status, pickGallery }) {
+export function mountH3Media({ bridge, host, status, pickGallery, onChange = () => {} }) {
   configureH3Transport(bridge);
   const area = host.querySelector("[data-h3-panel]");
   const state = { items: [], panel: null, active: false, loading: null };
@@ -14,7 +14,10 @@ export function mountH3Media({ bridge, host, status, pickGallery }) {
     widgets: [{
       name: "media_state",
       get value() { return JSON.stringify(state.items); },
-      set value(value) { state.items = JSON.parse(value); },
+      set value(value) {
+        state.items = JSON.parse(value);
+        onChange(state.items);
+      },
     }],
     graph: app.graph,
     setDirtyCanvas() {},
@@ -30,6 +33,7 @@ export function mountH3Media({ bridge, host, status, pickGallery }) {
       await prepareH3Files(result.items);
       for (const player of state.panel?.players || []) player.stop();
       state.items = result.items;
+      onChange(state.items);
       if (state.panel) {
         clearTimeout(state.panel._dimsCommit);
         clearTimeout(state.panel._matchTimer);

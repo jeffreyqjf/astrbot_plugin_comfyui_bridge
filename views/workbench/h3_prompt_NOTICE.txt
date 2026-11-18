@@ -1,0 +1,18 @@
+H3 Prompt IDE 0.8.25
+Upstream project: https://github.com/ethanfel/ComfyUI-H3-Prompt-IDE
+License: GNU General Public License version 3 (see h3_prompt_LICENSE.txt).
+
+The upstream source for the prompt editor, schema, completion, settings, and
+widget-width support is included in this package as readable JavaScript:
+h3_prompt_vendor.js, h3_prompt_vendor.css, h3_prompt_ide_core.mjs,
+h3_prompt_completion_core.mjs, h3_prompt_schema_core.mjs,
+h3_prompt_ide_settings_core.mjs, and h3_legacy_widget_width.mjs.
+These files retain their upstream licensing.
+
+Changes made for AstrBot on 2026-11-18:
+- Mount the editor independently of the ComfyUI canvas extension.
+- Load external stylesheets for the workbench Content Security Policy.
+- Read reference records from the task media loader.
+- Display video previews using HTML video elements.
+
+The standalone host and transport are h3_prompt.js and h3_prompt_transport.js.

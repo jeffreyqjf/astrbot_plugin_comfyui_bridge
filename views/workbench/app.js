@@ -2,15 +2,25 @@ import { controlBranchTitle, controlTypeTitle, mountImageReviews, setTaskImagePr
 import { mountPromptLibrary } from "./prompt_library.js";
 import { mountVideos } from "./videos.js";
 import { mountH3Media } from "./h3_media.js";
+import { mountH3Prompt } from "./h3_prompt.js";
 
 const remote = !window.AstrBotPluginView;
 const bridge = window.AstrBotPluginView || (await import("./remote.js")).bridge;
 const get = (id) => document.getElementById(id);
+const h3Prompt = mountH3Prompt({
+  bridge, host: get("queue-h3-prompt"), textarea: get("queue-positive"),
+  status: (text, error = false) => {
+    const target = get("h3-prompt-status");
+    target.textContent = text;
+    target.classList.toggle("error", error);
+  },
+});
 const h3Media = mountH3Media({
   bridge, host: get("queue-h3-media"),
   pickGallery: (select) => imageReviews.pickResource("gallery", select, {
     useControls: Boolean(studio.input_available), title: "从图集导入 H3 参考图",
   }),
+  onChange: (items) => h3Prompt.references(items),
   status: (text, error = false) => {
     const target = get("h3-media-status");
     target.textContent = text;
@@ -2306,10 +2316,11 @@ async function resolveCommandControls() {
   }
   const request = commandControlsRequest;
   try {
-    const { workflow } = await request.result;
+    const { workflow, positive } = await request.result;
     if (request !== commandControlsRequest || queueMode.value !== "command"
         || command !== queueCommand.value.trim() || hasReference !== commandHasReference()) return false;
     renderTaskControlnets(workflow);
+    await h3Prompt.show(workflow, positive);
     return true;
   } catch (error) {
     if (request !== commandControlsRequest) return false;
@@ -2350,6 +2361,9 @@ function renderTaskControlnets(selectedName = queueWorkflow.value) {
   const reference = get("queue-reference");
   const position = form.contains(reference) && !reference.hidden ? reference : form.querySelector("footer");
   position.before(get("queue-h3-media"));
+  const promptAnchor = get(isCommand ? "queue-command-text" : "queue-positive").closest("label");
+  promptAnchor.after(get("queue-h3-prompt"));
+  h3Prompt.show(selectedName);
   h3Media.show(selectedName);
   if (selectedName === h3FullWorkflow) reference.hidden = true;
   if (controls.nextElementSibling !== position) position.before(controls);
@@ -2714,8 +2728,10 @@ get("queue-qq-timeout-form").addEventListener("submit", (event) => {
       : `${title} 已保存 QQ 等待超时。`;
   });
 });
-get("queue-form").addEventListener("submit", (event) => {
+get("queue-form").addEventListener("submit", async (event) => {
   event.preventDefault();
+  try { await h3Prompt.ready(); }
+  catch (error) { createTaskMessage(error.message, true); return; }
   const preset = get("queue-preset").value;
   const positive = get("queue-positive").value.trim();
   const workflow = queueWorkflow.value;
@@ -2807,10 +2823,11 @@ get("remote-command-form").addEventListener("submit", async (event) => {
     return;
   }
   changeQueue("studio/queue/command", async () => {
-    const [reference, controlnets, media] = await Promise.all([
+    const [reference, controlnets, media, prompt] = await Promise.all([
       taskControlWorkflow === h3FullWorkflow ? {} : queueReferencePayload(), queueControlnetPayload(), h3Media.payload(),
+      h3Prompt.payload(),
     ]);
-    return { command: form.get("command"), account: form.get("account") ?? "", ...reference, ...controlnets, ...media };
+    return { command: form.get("command"), account: form.get("account") ?? "", ...reference, ...controlnets, ...media, ...prompt };
   }, button, (result) => result.message, options);
 });
 

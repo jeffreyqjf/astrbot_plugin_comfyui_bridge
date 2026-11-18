@@ -436,6 +436,24 @@ async def check_h3_media(instance, root):
             response = await call(route, {**payload, "h3_media": items})
             assert response.status_code == 200, response.body
             assert json.loads(run.call_args.args[1]["416"]["inputs"]["media_state"]) == items
+        rich_prompt = 'summary:\n<Picture 1> says <d>[English] "Look --seed 999"</d>\n\noverall_soundscape:\nWind.'
+        response = await call("studio/queue/command", {
+            "command": "/comfy gen --wf h3-v3 --seed 42 --raw", "account": "",
+            "h3_media": items, "h3_prompt": rich_prompt,
+        })
+        assert response.status_code == 200, response.body
+        graph = run.call_args.args[1]
+        assert graph["365"]["inputs"]["prompt"] == rich_prompt
+        assert graph["16"]["inputs"]["seed"] == 42
+        response = await call("studio/queue/command/workflow", {
+            "command": "/comfy gen --wf h3-v3 Literal words --raw", "has_reference": False,
+        })
+        assert json.loads(response.body)["positive"] == "Literal words"
+        before = run.call_count
+        response = await call("studio/queue/command", {
+            "command": "/comfy gen --wf sdxl --raw", "account": "", "h3_prompt": rich_prompt,
+        })
+        assert response.status_code == 400 and run.call_count == before
     assert service.workflows["MiniMax_H3_Seed_Hunter_V3_AstrBot"].graph["416"]["inputs"]["media_state"] == source
     calls = []
 
