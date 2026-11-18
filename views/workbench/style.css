@@ -21,6 +21,10 @@
   }
 }
 * { box-sizing: border-box; }
+.h3-prompt-templates { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 10px; margin-bottom: 12px; }
+.h3-prompt-templates > .field { min-width: 0; }
+.h3-prompt-templates > .row-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+.h3-prompt-templates > p { grid-column: 1 / -1; margin: 0; }
 [hidden] { display: none !important; }
 body { margin: 0; }
 main { max-width: 1240px; margin: auto; padding: 24px clamp(14px, 4vw, 44px) 40px; }

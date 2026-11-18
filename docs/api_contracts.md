@@ -49,3 +49,5 @@
 - 简易任务与命令任务可附加 `h3_media: [...]`，完整保留原节点的文件描述、顺序、开关、裁剪、片段和遮罩字段。仅作用于本次工作流副本，空数组清空本次素材，省略时使用已保存默认值。
 - `GET studio/h3/media` 额外返回当前正向提示词 `prompt` 和编辑器模式 `prompt_mode`。命令工作流识别额外返回解析出的 `positive`，用于首次导入命令里的提示词。
 - 命令任务可附加 `h3_prompt`，仅用于 H3 工作流。该文本作为本次正向提示词，沿用 8000 字符上限，命令中的种子与选项仍由命令解析器处理。简易任务继续使用 `positive`。
+- `GET studio/h3/prompt-templates` 登录后返回 `{revision, templates: {名称: {prompt, mode}}}`。模板存于插件数据目录 `h3_prompt_templates.json`，桌面与远程工作台共用。
+- `POST studio/h3/prompt-templates` 接收 `{name, template: {prompt, mode}, revision}` 保存或更新同名模板；`template: null` 删除。名称为 1–64 字符，提示词非空且最多 8000 字符，保留原始换行及空白；模式为 `auto/t2va/i2va/fl2va/l2va/ref2va`。原子写入并校验文件版本，过期 `revision` 返回 409，刷新后再保存。总文件上限 4 MB。

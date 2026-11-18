@@ -32,6 +32,77 @@ export function mountH3Prompt({ bridge, host, textarea, status }) {
     },
   };
   app.graph._nodes = [node];
+  const templateList = host.querySelector("[data-h3-template-list]");
+  const templateName = host.querySelector("[data-h3-template-name]");
+  const templateLoad = host.querySelector("[data-h3-template-load]");
+  const templateSave = host.querySelector("[data-h3-template-save]");
+  const templateDelete = host.querySelector("[data-h3-template-delete]");
+  const templateRefresh = host.querySelector("[data-h3-template-refresh]");
+  const templateMessage = host.querySelector("[data-h3-template-status]");
+  const templatePath = "studio/h3/prompt-templates";
+  let templates = {};
+  let revision;
+  let templateBusy = false;
+  function templateStatus(message, error = false) {
+    templateMessage.textContent = message;
+    templateMessage.hidden = !message;
+    templateMessage.classList.toggle("error", error);
+  }
+  function templateControls() {
+    templateList.disabled = templateBusy;
+    templateName.disabled = templateBusy;
+    templateLoad.disabled = templateDelete.disabled = templateBusy || !loaded || !templateList.value;
+    templateSave.disabled = templateBusy || !loaded || revision === undefined || !templateName.value.trim();
+    templateSave.textContent = Object.hasOwn(templates, templateName.value.trim()) ? "更新模板" : "保存模板";
+    templateRefresh.disabled = templateBusy;
+  }
+  function templateCatalog(data, selected = templateList.value) {
+    templates = data.templates;
+    revision = data.revision;
+    templateList.replaceChildren(new Option("选择模板", ""));
+    for (const name of Object.keys(templates).sort((a, b) => a.localeCompare(b))) templateList.add(new Option(name, name));
+    templateList.value = Object.hasOwn(templates, selected) ? selected : "";
+  }
+  async function templateAction(action) {
+    if (templateBusy) return;
+    templateBusy = true;
+    templateControls();
+    templateStatus("");
+    try { await action(); }
+    catch (error) { templateStatus(error.message, true); }
+    finally { templateBusy = false; templateControls(); }
+  }
+  templateList.addEventListener("change", () => {
+    templateName.value = templateList.value;
+    templateControls();
+  });
+  templateName.addEventListener("input", templateControls);
+  templateRefresh.addEventListener("click", () => templateAction(async () => {
+    templateCatalog(await bridge.apiGet(templatePath));
+    templateStatus("模板列表已刷新。");
+  }));
+  templateSave.addEventListener("click", () => templateAction(async () => {
+    const name = templateName.value.trim();
+    const mode = node._h3PromptIdeState.manualMode;
+    templateCatalog(await bridge.apiPost(templatePath, {name, template: {prompt: text, mode}, revision}), name);
+    templateName.value = name;
+    templateStatus(`已保存模板「${name}」。`);
+  }));
+  templateLoad.addEventListener("click", () => {
+    const template = templates[templateList.value];
+    if (!template) return;
+    updateText(template.prompt);
+    const mode = host.querySelector(".h3ide-toolbar select");
+    mode.value = template.mode;
+    mode.dispatchEvent(new Event("change", {bubbles: true}));
+    templateStatus(`已加载模板「${templateList.value}」。`);
+  });
+  templateDelete.addEventListener("click", () => templateAction(async () => {
+    const name = templateList.value;
+    templateCatalog(await bridge.apiPost(templatePath, {name, template: null, revision}));
+    templateName.value = "";
+    templateStatus(`已删除模板「${name}」。`);
+  }));
   const preferenceLabels = ["默认显示", "自动补全", "补全后添加空格", "默认对白语言", "点击替换标记"];
   const preferences = host.querySelector("[data-h3-prompt-preferences]");
   for (const [index, setting] of H3_PROMPT_IDE_SETTING_DEFINITIONS.entries()) {
@@ -65,6 +136,10 @@ export function mountH3Prompt({ bridge, host, textarea, status }) {
       if (active) textarea.value = text;
       failure = "";
       status("");
+      templateControls();
+      if (revision === undefined) await templateAction(async () => {
+        templateCatalog(await bridge.apiGet(templatePath));
+      });
     } catch (error) {
       failure = error.message;
       status(failure, true);

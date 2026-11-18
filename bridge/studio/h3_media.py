@@ -14,6 +14,14 @@ import aiohttp
 
 from ..client import ComfyError
 from ..workflows.workflow import H3_SEED_FULL, WorkflowError
+from ..workflows.workflow_store import (
+    WORKFLOW_LIMIT,
+    atomic_write,
+    profile_bytes,
+    read_profile,
+    workflow_path,
+    workflow_revision,
+)
 
 H3_JSON_LIMIT = 1024 * 1024
 MEDIA_EXTENSIONS = {
@@ -30,6 +38,16 @@ WRITE_ROUTES = {
     "/minimax_h3/edit_files/delete",
     *{"/minimax_h3/presets/" + action for action in ("save", "load", "delete", "meta", "category", "match")},
 }
+
+
+def valid_prompt_template(template):
+    return (
+        isinstance(template, dict) and set(template) == {"prompt", "mode"}
+        and isinstance(template.get("prompt"), str) and bool(template["prompt"].strip())
+        and len(template["prompt"]) <= 8000
+        and isinstance(template.get("mode"), str)
+        and template["mode"] in {"auto", "t2va", "i2va", "fl2va", "l2va", "ref2va"}
+    )
 
 
 def media_view(file):
@@ -61,6 +79,64 @@ class H3Media:
         if self.preview_directory is not None:
             self.preview_directory.cleanup()
             self.preview_directory = None
+
+    def read_prompt_templates(self):
+        path = workflow_path(self.service.data_dir.resolve(), "h3_prompt_templates")
+        raw = read_profile(path) if path.exists() else b""
+        data = json.loads(raw) if raw else {"version": 1, "templates": {}}
+        if not isinstance(data, dict) or data.get("version") != 1 or not isinstance(data.get("templates"), dict):
+            raise WorkflowError("H3 提示词模板文件格式无效。")
+        if any(not re.fullmatch(r"[^\x00-\x1f]{1,64}", name) or not valid_prompt_template(template)
+               for name, template in data["templates"].items()):
+            raise WorkflowError("H3 提示词模板内容无效。")
+        return path, workflow_revision(raw), data
+
+    async def prompt_templates(self):
+        from astrbot.api.web import error_response, json_response, request
+
+        if not request.username:
+            return error_response("请登录工作台。", status_code=401)
+        try:
+            _, revision, data = await asyncio.to_thread(self.read_prompt_templates)
+            return json_response({"revision": revision, "templates": data["templates"]})
+        except (OSError, ValueError) as exc:
+            return error_response(str(exc), status_code=400)
+
+    async def save_prompt_template(self):
+        from astrbot.api.web import error_response, json_response, request
+
+        if not request.username:
+            return error_response("请登录工作台。", status_code=401)
+        try:
+            raw = await request.body()
+            if len(raw) > 128 * 1024:
+                raise WorkflowError("H3 提示词模板数据过大。")
+            payload = json.loads(raw)
+            if not isinstance(payload, dict) or "template" not in payload:
+                raise WorkflowError("请指定 H3 提示词模板。")
+            name = payload.get("name")
+            if not isinstance(name, str) or not re.fullmatch(r"[^\x00-\x1f]{1,64}", name.strip()):
+                raise WorkflowError("模板名称须为 1 到 64 个字符。")
+            name = name.strip()
+            template = payload["template"]
+            if template is not None and not valid_prompt_template(template):
+                raise WorkflowError("请填写有效的 H3 提示词和编辑模式，提示词最多 8000 字符。")
+            async with self.service.state_lock:
+                path, revision, data = await asyncio.to_thread(self.read_prompt_templates)
+                if payload.get("revision") != revision:
+                    return error_response("模板列表已更新，请刷新模板后重试。", status_code=409)
+                if template is None:
+                    data["templates"].pop(name, None)
+                else:
+                    data["templates"][name] = template
+                saved = profile_bytes(data)
+                if len(saved) > WORKFLOW_LIMIT:
+                    raise WorkflowError("H3 提示词模板文件超过 4 MB。")
+                path.parent.mkdir(parents=True, exist_ok=True)
+                await asyncio.to_thread(atomic_write, path, saved)
+            return json_response({"revision": workflow_revision(saved), "templates": data["templates"]})
+        except (OSError, ValueError, TypeError) as exc:
+            return error_response(str(exc), status_code=400)
 
     async def state(self):
         from astrbot.api.web import error_response, json_response, request

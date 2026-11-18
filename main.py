@@ -284,6 +284,8 @@ class ComfyUIBridge(Star):
             ("studio/queue/loras", self.studio.queue_loras, "GET"),
             ("studio/queue", self.studio.add_jobs, "POST"),
             ("studio/h3/media", self.studio.h3_media.state, "GET"),
+            ("studio/h3/prompt-templates", self.studio.h3_media.prompt_templates, "GET"),
+            ("studio/h3/prompt-templates", self.studio.h3_media.save_prompt_template, "POST"),
             ("studio/h3/media/rpc", self.studio.h3_media.rpc, "POST"),
             ("studio/h3/media/upload", self.studio.h3_media.upload, "POST"),
             ("studio/h3/media/preview", self.studio.h3_media.preview, "POST"),

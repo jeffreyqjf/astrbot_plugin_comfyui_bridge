@@ -42,6 +42,7 @@ API_PATHS = frozenset({
     "studio/videos", "studio/videos/play", "studio/videos/delete",
     "anima/settings", "anima/branches",
     "studio/h3/media", "studio/h3/media/rpc", "studio/h3/media/upload", "studio/h3/media/preview",
+    "studio/h3/prompt-templates",
 })
 PRIVATE_NETWORKS = tuple(map(ipaddress.ip_network, (
     "127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10",

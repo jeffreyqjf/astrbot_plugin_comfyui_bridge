@@ -411,18 +411,56 @@ async def check_h3_media(instance, root):
     from astrbot.api.web import PluginRequest, bind_request_context
     from starlette.requests import Request
 
-    async def call(route, payload=None, method="POST"):
+    async def call(route, payload=None, method="POST", username="test"):
         async def receive():
             return {"type": "http.request", "body": json.dumps(payload).encode()}
         incoming = Request({
             "type": "http", "method": method, "path": "/api/" + route,
             "headers": [(b"authorization", b"Bearer test-session")], "query_string": b"",
         }, receive)
-        with bind_request_context(PluginRequest(incoming, username="test")):
+        with bind_request_context(PluginRequest(incoming, username=username)):
             return await instance.remote_studio.routes[(method, route)]()
 
     service = instance.service
     source = service.workflows["MiniMax_H3_Seed_Hunter_V3_AstrBot"].graph["416"]["inputs"]["media_state"]
+    template_route = "studio/h3/prompt-templates"
+    assert (await call(template_route, method="GET", username=None)).status_code == 401
+    assert (await call(template_route, {}, username=None)).status_code == 401
+    response = await call(template_route, method="GET")
+    assert response.status_code == 200, response.body
+    catalog = json.loads(response.body)
+    assert catalog["templates"] == {}
+    template = {"prompt": '  summary:\n<Picture 1> says "--seed 42"\n', "mode": "ref2va"}
+    payload = {"name": " 多图模板 ", "template": template, "revision": catalog["revision"]}
+    response = await call(template_route, payload)
+    assert response.status_code == 200, response.body
+    saved = json.loads(response.body)
+    assert saved["templates"] == {"多图模板": template}
+    assert json.loads((service.data_dir / "h3_prompt_templates.json").read_text("utf-8"))["templates"] == saved["templates"]
+    response = await call(template_route, method="GET")
+    assert json.loads(response.body) == saved
+    response = await call(template_route, {**payload, "template": None})
+    assert response.status_code == 409
+    for invalid in ({**template, "prompt": " "}, {**template, "prompt": "x" * 8001}, {**template, "mode": []}):
+        response = await call(template_route, {**payload, "template": invalid, "revision": saved["revision"]})
+        assert response.status_code == 400, response.body
+    response = await call(template_route, {**payload, "name": "bad\nname", "revision": saved["revision"]})
+    assert response.status_code == 400
+    updated = {"prompt": "summary:\nUpdated", "mode": "auto"}
+    response = await call(template_route, {**payload, "template": updated, "revision": saved["revision"]})
+    assert response.status_code == 200, response.body
+    saved = json.loads(response.body)
+    assert saved["templates"] == {"多图模板": updated}
+    response = await call(template_route, {"name": "多图模板", "template": None, "revision": saved["revision"]})
+    assert response.status_code == 200 and json.loads(response.body)["templates"] == {}
+    path = service.data_dir / "h3_prompt_templates.json"
+    original = path.read_bytes()
+    damaged = b'{"version": 1, "templates": {"broken": {}}}'
+    path.write_bytes(damaged)
+    assert (await call(template_route, method="GET")).status_code == 400
+    assert (await call(template_route, payload)).status_code == 400
+    assert path.read_bytes() == damaged
+    path.write_bytes(original)
     response = await call("studio/h3/media", method="GET")
     assert response.status_code == 200 and json.loads(response.body)["available"]
     items = [{"kind": "picture", "file": "minimax_h3/portrait.png [input]", "mirror": True, "rotate": 90},
