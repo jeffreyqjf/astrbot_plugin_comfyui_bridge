@@ -383,6 +383,19 @@
             </footer>
             <input type="file" id="preset-file" accept=".json,application/json" hidden>
           </section>
+          <section data-h3-transfer>
+            <h2>MiniMax H3 提示词与模板</h2>
+            <p>导出当前已编辑的 H3 提示词，或导入导出整个模板库。模板导入后可在新建任务的 H3 Prompt IDE 中加载。</p>
+            <label class="toggle"><input type="checkbox" data-h3-templates-replace>导入时覆盖同名模板</label>
+            <footer>
+              <button type="button" data-h3-prompt-export disabled>导出当前提示词</button>
+              <button type="button" data-h3-templates-export>导出模板库</button>
+              <button type="button" data-h3-templates-import>导入提示词／模板</button>
+            </footer>
+            <small class="section-note">支持 JSON 模板与 TXT 提示词，最大 4 MB。导出当前提示词需先在新建任务中打开 H3 编辑器。</small>
+            <input type="file" data-h3-templates-file accept=".json,.txt,application/json,text/plain" hidden>
+            <p data-h3-transfer-status role="status" hidden></p>
+          </section>
           <section>
             <h2>常用命令</h2>
             <label class="toggle"><input type="checkbox" id="replace-commands"> 导入时覆盖同名命令</label>
@@ -702,12 +715,7 @@
                       <button type="button" data-h3-template-save disabled>保存模板</button>
                       <button type="button" data-h3-template-delete disabled>删除</button>
                       <button type="button" data-h3-template-refresh>刷新</button>
-                      <button type="button" data-h3-prompt-export>导出当前提示词</button>
-                      <button type="button" data-h3-templates-export>导出模板库</button>
-                      <button type="button" data-h3-templates-import>导入提示词／模板</button>
-                      <input type="file" data-h3-templates-file accept=".json,.txt,application/json,text/plain" hidden>
                     </div>
-                    <label class="toggle"><input type="checkbox" data-h3-templates-replace>导入时覆盖同名模板</label>
                     <p data-h3-template-status role="status" hidden></p>
                   </div>
                   <div data-h3-prompt-editor></div>

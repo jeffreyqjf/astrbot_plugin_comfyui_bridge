@@ -39,18 +39,22 @@ export function mountH3Prompt({ bridge, host, textarea, status, download }) {
   const templateDelete = host.querySelector("[data-h3-template-delete]");
   const templateRefresh = host.querySelector("[data-h3-template-refresh]");
   const templateMessage = host.querySelector("[data-h3-template-status]");
-  const exportPrompt = host.querySelector("[data-h3-prompt-export]");
-  const exportTemplates = host.querySelector("[data-h3-templates-export]");
-  const importTemplates = host.querySelector("[data-h3-templates-import]");
-  const importFile = host.querySelector("[data-h3-templates-file]");
+  const transfer = document.querySelector("[data-h3-transfer]");
+  const transferMessage = transfer.querySelector("[data-h3-transfer-status]");
+  const exportPrompt = transfer.querySelector("[data-h3-prompt-export]");
+  const exportTemplates = transfer.querySelector("[data-h3-templates-export]");
+  const importTemplates = transfer.querySelector("[data-h3-templates-import]");
+  const importFile = transfer.querySelector("[data-h3-templates-file]");
   const templatePath = "studio/h3/prompt-templates";
   let templates = {};
   let revision;
   let templateBusy = false;
   function templateStatus(message, error = false) {
-    templateMessage.textContent = message;
-    templateMessage.hidden = !message;
-    templateMessage.classList.toggle("error", error);
+    for (const target of [templateMessage, transferMessage]) {
+      target.textContent = message;
+      target.hidden = !message;
+      target.classList.toggle("error", error);
+    }
   }
   function templateControls() {
     templateList.disabled = templateBusy;
@@ -60,7 +64,7 @@ export function mountH3Prompt({ bridge, host, textarea, status, download }) {
     templateSave.textContent = Object.hasOwn(templates, templateName.value.trim()) ? "更新模板" : "保存模板";
     templateRefresh.disabled = templateBusy;
     exportPrompt.disabled = templateBusy || !loaded;
-    exportTemplates.disabled = importTemplates.disabled = templateBusy || revision === undefined;
+    exportTemplates.disabled = importTemplates.disabled = templateBusy;
   }
   function templateCatalog(data, selected = templateList.value) {
     templates = data.templates;
@@ -126,17 +130,25 @@ export function mountH3Prompt({ bridge, host, textarea, status, download }) {
     if (!file) return;
     templateAction(async () => {
       if (file.size > 4 * 1024 * 1024) throw new Error("导入文件不能超过 4 MB。");
+      if (revision === undefined) templateCatalog(await bridge.apiGet(templatePath));
       const content = (await file.text()).replace(/^\uFEFF/, "");
       if (file.name.toLowerCase().endsWith(".txt")) {
         if (!content.trim() || content.length > 8000) throw new Error("提示词须为 1 到 8000 字符。");
-        updateText(content);
-        templateStatus("已载入提示词文本，可继续编辑或保存为模板。");
+        if (loaded) {
+          updateText(content);
+          templateStatus("已载入提示词文本，可继续编辑或保存为模板。");
+        } else {
+          const name = file.name.replace(/\.txt$/i, "").trim().slice(0, 64) || "H3 提示词";
+          const result = await bridge.apiPost(templatePath, {version: 1, templates: {[name]: {prompt: content, mode: "auto"}}, revision, replace: transfer.querySelector("[data-h3-templates-replace]").checked});
+          templateCatalog(result);
+          templateStatus(`已导入 ${result.imported} 项，跳过 ${result.skipped} 项。可在 H3 编辑器中选择模板加载。`);
+        }
         return;
       }
       const data = JSON.parse(content);
       const result = await bridge.apiPost(templatePath, {
         version: data.version, templates: data.templates, revision,
-        replace: host.querySelector("[data-h3-templates-replace]").checked,
+        replace: transfer.querySelector("[data-h3-templates-replace]").checked,
       });
       templateCatalog(result);
       templateStatus(`已导入 ${result.imported} 项，跳过 ${result.skipped} 项。选择模板并点击加载即可使用。`);
@@ -190,6 +202,7 @@ export function mountH3Prompt({ bridge, host, textarea, status, download }) {
   }
   textarea.addEventListener("input", () => { if (active) updateText(textarea.value); });
 
+  templateControls();
   return {
     async show(name, positive) {
       const enabled = name === workflowName;
@@ -205,6 +218,7 @@ export function mountH3Prompt({ bridge, host, textarea, status, download }) {
       if (!loaded && !pending) pending = load().finally(() => { pending = null; });
       await pending;
       if (!active) return;
+      textarea.value = text;
       if (typeof positive === "string" && positive !== commandText) {
         if (positive || commandText !== undefined) updateText(positive);
         commandText = positive;
