@@ -691,34 +691,42 @@
               <footer><button type="submit" class="primary" id="queue-add">加入队列</button></footer>
             </form>
             <section id="queue-h3-prompt" class="h3-task-prompt wide" hidden aria-label="H3 提示词编辑器">
-              <div class="h3-prompt-templates" aria-label="提示词模板">
-                <label class="field">提示词模板<select data-h3-template-list><option value="">选择模板</option></select></label>
-                <label class="field">模板名称<input data-h3-template-name maxlength="64" placeholder="输入名称，保存当前提示词"></label>
-                <div class="row-actions">
-                  <button type="button" data-h3-template-load disabled>加载</button>
-                  <button type="button" data-h3-template-save disabled>保存模板</button>
-                  <button type="button" data-h3-template-delete disabled>删除</button>
-                  <button type="button" data-h3-template-refresh>刷新</button>
+              <details class="h3-task-disclosure">
+                <summary>H3 Prompt IDE<span>提示词与模板</span></summary>
+                <div class="h3-prompt-body">
+                  <div class="h3-prompt-templates" aria-label="提示词模板">
+                    <label class="field">提示词模板<select data-h3-template-list><option value="">选择模板</option></select></label>
+                    <label class="field">模板名称<input data-h3-template-name maxlength="64" placeholder="输入名称，保存当前提示词"></label>
+                    <div class="row-actions">
+                      <button type="button" data-h3-template-load disabled>加载</button>
+                      <button type="button" data-h3-template-save disabled>保存模板</button>
+                      <button type="button" data-h3-template-delete disabled>删除</button>
+                      <button type="button" data-h3-template-refresh>刷新</button>
+                    </div>
+                    <p data-h3-template-status role="status" hidden></p>
+                  </div>
+                  <div data-h3-prompt-editor></div>
+                  <details class="h3-prompt-preferences">
+                    <summary>编辑器设置</summary>
+                    <div class="grid" data-h3-prompt-preferences></div>
+                  </details>
                 </div>
-                <p data-h3-template-status role="status" hidden></p>
-              </div>
-              <div data-h3-prompt-editor></div>
-              <details class="h3-prompt-preferences">
-                <summary>编辑器设置</summary>
-                <div class="grid" data-h3-prompt-preferences></div>
               </details>
               <p id="h3-prompt-status" role="status"></p>
             </section>
             <section id="queue-h3-media" class="h3-media-editor" hidden tabindex="0" aria-label="H3 参考素材编辑器">
-              <header class="h3-media-header">
-                <div><h3>Fantastic H3 Media Loader</h3><small>图片、视频和音频参考素材</small></div>
-                <div class="row-actions">
-                  <button type="button" data-h3-gallery>从图集导入</button>
-                  <button type="button" data-h3-reload>读取已保存素材</button>
-                </div>
-              </header>
-              <div data-h3-panel></div>
-              <small class="section-note">点击图片可放大预览，右下角可编辑裁剪。可拖入或粘贴文件，并调整素材顺序、启用状态和音轨。此处设置用于本次任务。</small>
+              <details class="h3-task-disclosure">
+                <summary>Fantastic H3 Media Loader<span>参考素材</span></summary>
+                <header class="h3-media-header">
+                  <small>图片、视频和音频参考素材</small>
+                  <div class="row-actions">
+                    <button type="button" data-h3-gallery>从图集导入</button>
+                    <button type="button" data-h3-reload>读取已保存素材</button>
+                  </div>
+                </header>
+                <div data-h3-panel></div>
+                <small class="section-note">点击图片可放大预览，右下角可编辑裁剪。可拖入或粘贴文件，并调整素材顺序、启用状态和音轨。此处设置用于本次任务。</small>
+              </details>
               <p id="h3-media-status" role="status"></p>
             </section>
             <div class="field queue-reference" id="queue-reference" hidden>参考图

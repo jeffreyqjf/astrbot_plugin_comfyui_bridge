@@ -1,5 +1,13 @@
 # 开发状态
 
+## v2.38.1 · H3 折叠与禁用按钮指针
+
+- 修复全局禁用按钮使用 `cursor: wait` 导致灰色按钮悬停持续转圈的问题，改用普通指针并保留禁用状态。
+- H3 Prompt IDE（含模板）与 Fantastic H3 Media Loader 分别提供默认收起的标题折叠区。折叠保留编辑器、素材及模板草稿，简易和命令任务提交继续使用当前内容；切换任务入口保留展开状态，加载错误在折叠区外可见。
+- Chromium 在 1200px 与 360px 下通过折叠、展开、禁用指针、提示词模板回归、草稿保留和两种任务提交检查。原始工作流、API 与持久数据未修改。
+- Patch 版本 v2.38.1；运行副本尚未同步，真实手机访问待验证。
+- Git Commit Message 为 `fix: collapse H3 task editors and correct disabled button cursor`。
+
 ## v2.38.0 · H3 提示词模板
 
 - H3 Prompt IDE 上方新增模板列表、名称和保存、加载、更新、删除、刷新操作。保存完整提示词及编辑模式，简易与命令添加共用，电脑和手机通过插件数据目录 `h3_prompt_templates.json` 共用模板。操作结果在按钮下方就近显示。
