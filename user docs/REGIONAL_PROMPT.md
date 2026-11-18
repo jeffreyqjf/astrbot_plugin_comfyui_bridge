@@ -34,3 +34,7 @@ ControlNet 勾选后选择模型预设、控制类型、直用或预处理以及
 ## V40 前后放大
 
 勾选「Ultimate 放大 · Detailer 前」或「Ultimate 放大 · Detailer 后」，可独立或同时启用。模型、倍率、采样等沿用保存的工作流；仅影响本次任务。普通生成命令与简易添加支持这两个开关，单次遍历使用简易添加。
+
+## Hires 与 2ndSampler
+
+Advanced Gemma V40 新建任务可勾选 Hires PreDetailer、Hires PostDetailer、2ndSampler，可独立启用并与前后 Ultimate 放大组合。分辨率、模型、步数、降噪等参数沿用工作流已保存值；仅影响本次任务。普通生成命令、简易添加及简易 LoRA 遍历支持这些选项。

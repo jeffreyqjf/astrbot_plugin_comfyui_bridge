@@ -42,6 +42,10 @@ export function mountTaskFeatures({bridge, host, onControlChange, pickGallery}) 
       if (entries.some(item => item.kind === "branch")) result.upscale = {
         pre: active.has("upscale.pre"), post: active.has("upscale.post"),
       };
+      if (entries.some(item => item.id.startsWith("sampling."))) result.sampling = {
+        hires_pre: active.has("sampling.hires_pre"), hires_post: active.has("sampling.hires_post"),
+        second_sampler: active.has("sampling.second_sampler"),
+      };
       return result;
     },
   };

@@ -15,6 +15,11 @@ UPSCALE_FEATURES = [
     {"id": "upscale.pre", "kind": "branch", "branch": "pre", "title": "Ultimate 放大 · Detailer 前"},
     {"id": "upscale.post", "kind": "branch", "branch": "post", "title": "Ultimate 放大 · Detailer 后"},
 ]
+SAMPLING_FEATURES = [
+    {"id": "sampling.hires_pre", "kind": "branch", "branch": "hires_pre", "title": "Hires PreDetailer"},
+    {"id": "sampling.hires_post", "kind": "branch", "branch": "hires_post", "title": "Hires PostDetailer"},
+    {"id": "sampling.second_sampler", "kind": "branch", "branch": "second_sampler", "title": "2ndSampler"},
+]
 
 
 def feature_catalog(workflow):
@@ -32,13 +37,13 @@ def feature_catalog(workflow):
                 branch = item.get("branch")
                 if not isinstance(branch, str) or branch not in CONTROL_BRANCHES.get(workflow.name, {}) or item["id"] != f"controlnet.{branch}":
                     raise WorkflowError("工作流未适配所声明的 ControlNet 分支。")
-            elif item in UPSCALE_FEATURES and workflow.name == ADVANCED_V40_WORKFLOW:
+            elif item in UPSCALE_FEATURES + SAMPLING_FEATURES and workflow.name == ADVANCED_V40_WORKFLOW:
                 pass
             elif item.get("kind") != "regional" or item["id"] != "regional" or workflow.name != ADVANCED_V40_WORKFLOW:
                 raise WorkflowError("工作流可选功能需要对应的已注册适配器。")
         result = deepcopy(workflow.task_features)
         if workflow.name == ADVANCED_V40_WORKFLOW:
-            result.extend(deepcopy(item) for item in UPSCALE_FEATURES if item["id"] not in seen)
+            result.extend(deepcopy(item) for item in UPSCALE_FEATURES + SAMPLING_FEATURES if item["id"] not in seen)
         return result
     result = [
         {"id": f"controlnet.{key}", "kind": "controlnet", "branch": key,
@@ -48,6 +53,7 @@ def feature_catalog(workflow):
     if workflow.name == ADVANCED_V40_WORKFLOW:
         result.append({"id": "regional", "kind": "regional", "title": "区域提示词 · RGB"})
         result.extend(deepcopy(UPSCALE_FEATURES))
+        result.extend(deepcopy(SAMPLING_FEATURES))
     return result
 
 
@@ -56,6 +62,14 @@ def upscale_options(name, value):
             or any(type(item) is not bool for item in value.values())):
         raise WorkflowError("V40 放大设置须包含 pre、post 两个布尔开关。")
     return {"43": value["pre"], "upscale_post": value["post"]}
+
+
+def sampling_options(name, value):
+    branches = {"hires_pre": "18", "hires_post": "40", "second_sampler": "second_sampler"}
+    if (name != ADVANCED_V40_WORKFLOW or not isinstance(value, dict) or value.keys() != branches.keys()
+            or any(type(item) is not bool for item in value.values())):
+        raise WorkflowError("Hires 与 2ndSampler 设置须包含三个布尔开关。")
+    return {branch: value[key] for key, branch in branches.items()}
 
 
 def regional_text(value):

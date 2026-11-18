@@ -615,6 +615,7 @@ class ComfyUIBridge(Star):
                 h3_prompt=data.get("h3_prompt"),
                 regional={"regional": data["regional"]} if "regional" in data else None,
                 upscale=data.get("upscale"),
+                sampling=data.get("sampling"),
             )
             return json_response(result)
         except (ComfyError, OSError, ValueError) as exc:
@@ -679,6 +680,7 @@ class ComfyUIBridge(Star):
         h3_prompt=None,
         regional=None,
         upscale=None,
+        sampling=None,
     ):
         if not self.config.get("enabled", True):
             raise WorkflowError("ComfyUI 插件已在面板禁用。")
@@ -690,6 +692,8 @@ class ComfyUIBridge(Star):
             raise WorkflowError("区域提示词请使用普通生成命令或简易添加。")
         if upscale is not None and action in {"help", "lora", "sweep"}:
             raise WorkflowError("放大开关请使用普通生成命令或简易添加。")
+        if sampling is not None and action in {"help", "lora", "sweep"}:
+            raise WorkflowError("Hires 与 2ndSampler 请使用普通生成命令或简易添加。")
         if (h3_media is not None or h3_prompt is not None) and action in {"help", "lora", "sweep"}:
             raise WorkflowError("H3 素材和提示词设置仅用于生成任务。")
         if controlnets not in (None, {}) and action in {"help", "lora"}:
@@ -726,6 +730,10 @@ class ComfyUIBridge(Star):
             if workflow.name != ADVANCED_V40_WORKFLOW:
                 raise WorkflowError("当前工作流不支持前后两段放大。")
             options = {**options, "upscale": upscale}
+        if sampling is not None:
+            if workflow.name != ADVANCED_V40_WORKFLOW:
+                raise WorkflowError("当前工作流不支持 Hires Pre/PostDetailer 与 2ndSampler。")
+            options = {**options, "sampling": sampling}
         if h3_prompt is not None:
             if workflow.name not in H3_WORKFLOWS or not isinstance(h3_prompt, str) or len(h3_prompt) > 8000:
                 raise WorkflowError("H3 提示词须为不超过 8000 字符的文本。")

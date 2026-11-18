@@ -3954,6 +3954,24 @@
             "kind": "branch",
             "branch": "post",
             "title": "Ultimate 放大 · Detailer 后"
+          },
+          {
+            "id": "sampling.hires_pre",
+            "kind": "branch",
+            "branch": "hires_pre",
+            "title": "Hires PreDetailer"
+          },
+          {
+            "id": "sampling.hires_post",
+            "kind": "branch",
+            "branch": "hires_post",
+            "title": "Hires PostDetailer"
+          },
+          {
+            "id": "sampling.second_sampler",
+            "kind": "branch",
+            "branch": "second_sampler",
+            "title": "2ndSampler"
           }
         ]
       }
@@ -4838,6 +4856,24 @@
         "kind": "branch",
         "branch": "post",
         "title": "Ultimate 放大 · Detailer 后"
+      },
+      {
+        "id": "sampling.hires_pre",
+        "kind": "branch",
+        "branch": "hires_pre",
+        "title": "Hires PreDetailer"
+      },
+      {
+        "id": "sampling.hires_post",
+        "kind": "branch",
+        "branch": "hires_post",
+        "title": "Hires PostDetailer"
+      },
+      {
+        "id": "sampling.second_sampler",
+        "kind": "branch",
+        "branch": "second_sampler",
+        "title": "2ndSampler"
       }
     ]
   }

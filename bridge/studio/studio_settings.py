@@ -71,7 +71,12 @@ from ..workflows.parameter_layout import (
     read_parameter_layout,
     validate_parameter_layout,
 )
-from ..workflows.regional import feature_catalog, prepare_regional, upscale_options
+from ..workflows.regional import (
+    feature_catalog,
+    prepare_regional,
+    sampling_options,
+    upscale_options,
+)
 from ..workflows.svi import (
     check_video_rife,
     parse_stages,
@@ -1443,6 +1448,8 @@ class StudioSettings:
             regional = {"regional": data["regional"]} if "regional" in data else {}
             if "upscale" in data:
                 regional["upscale"] = data["upscale"]
+            if "sampling" in data:
+                regional["sampling"] = data["sampling"]
             if regional and workflow.name != ADVANCED_V40_WORKFLOW:
                 raise WorkflowError("此工作流不支持区域提示词。")
             if not inputs["simple"]:
@@ -2069,13 +2076,16 @@ class StudioSettings:
             if controlnets:
                 raise WorkflowError("请更新 V40 工作流以使用独立 ControlNet。")
             return detailer_workflow(graph, settings, mapping, options) if name == DETAILER_WORKFLOW else workflow
-        allowed = REPAIR_OPTIONS | ({"img2img", "regional", "upscale"} if name == ADVANCED_V40_WORKFLOW else set())
+        allowed = REPAIR_OPTIONS | ({"img2img", "regional", "upscale", "sampling"} if name == ADVANCED_V40_WORKFLOW else set())
         if options.keys() - allowed:
             raise WorkflowError("V40 支持单次切换局部修复。Advanced V40 也支持 --img2img on/off。")
         if not allow_nsfw:
             options = {**options, "nsfw_repair": False}
         schemas = await self.service.client.node_schemas(controlnet_node_types(name)) if any((controlnets or {}).values()) else None
         images = {}
+        if "sampling" in options:
+            branches = sampling_options(name, options["sampling"])
+            options = {**{key: value for key, value in options.items() if key != "sampling"}, **branches}
         if "upscale" in options:
             branches = upscale_options(name, options["upscale"])
             options = {**{key: value for key, value in options.items() if key != "upscale"}, **branches}

@@ -79,3 +79,7 @@
 ## V40 放大任务选项（v3.1.0）
 
 功能描述新增 `upscale.pre/upscale.post`，`kind:branch`，`branch:pre/post`。普通命令与简易任务传 `upscale:{pre:bool,post:bool}`，仅 Advanced Gemma V40 接受，分别映射 43 和 upscale_post。省略沿用工作流；网页明确传两个状态，简易 LoRA 遍历共用本次构图。
+
+## V40 Hires 与二次采样（v3.2.0）
+
+新增 `sampling.hires_pre/sampling.hires_post/sampling.second_sampler`，kind 为 branch。任务传 `sampling:{hires_pre:bool,hires_post:bool,second_sampler:bool}`，对应 18、40、second_sampler，仅 Advanced Gemma V40 接受。省略保留默认，网页显式提交勾选状态，三个值均须为布尔类型。
