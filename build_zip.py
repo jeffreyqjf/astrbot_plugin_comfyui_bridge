@@ -39,6 +39,8 @@ def build(target=None):
         "bridge/workflows/regional.py",
         "bridge/studio/regional_presets.py",
         "views/workbench/task_features.js",
+        "views/workbench/task_inspect.js",
+        "bridge/studio/job_details.py",
         "bridge/workflows/illustrious.py",
         "bridge/workflows/lightning.py",
         "bridge/workflows/minimax_h3.py",

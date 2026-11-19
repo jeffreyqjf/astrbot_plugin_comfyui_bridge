@@ -83,6 +83,7 @@ class Job:
     qq_parameters: tuple[str, ...] = ()
     timeout_seconds: int = IMAGE_TIMEOUT_DEFAULT
     preset: dict | None = None
+    configuration: dict | None = field(default=None, repr=False)
 
     @property
     def short_id(self):
@@ -620,6 +621,11 @@ class ComfyService:
             job = Job(
                 job_id, owner, wf.name, actual_seed, kind=wf.kind,
                 timeout_seconds=timeout_seconds, preset=preset,
+                configuration={
+                    "graph": graph, "outputs": list(wf.outputs), "active": list(wf.active),
+                    "positive": [(item.node, item.name) for item in wf.positive],
+                    "negative": [(item.node, item.name) for item in wf.negative],
+                },
             )
             job.task = asyncio.create_task(
                 self._run(

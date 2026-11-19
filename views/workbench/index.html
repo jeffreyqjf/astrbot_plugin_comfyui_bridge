@@ -645,7 +645,10 @@
               <div class="grid">
                 <label class="field">工作流<select id="queue-workflow" required></select></label>
                 <label class="field">预设所属用户<select id="queue-preset-account"></select></label>
-                <label class="field">提示词预设<select id="queue-preset"></select></label>
+                <label class="field">提示词预设
+                  <select id="queue-preset" hidden></select>
+                  <button type="button" id="queue-preset-picker" aria-haspopup="dialog" aria-expanded="false" disabled>不使用预设</button>
+                </label>
                 <label class="field wide">正向提示词或本次补充
                   <textarea id="queue-positive" rows="4" maxlength="8000" spellcheck="false"></textarea>
                 </label>

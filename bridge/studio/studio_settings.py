@@ -145,6 +145,7 @@ from ..workflows.workflow_store import (
 )
 from .h3_media import H3Media, media_view
 from .input_library import InputLibrary, InputUnavailable
+from .job_details import describe_configuration
 from .mask_image import apply_mask, reference_body_limit
 from .prompt_library import PromptLibrary
 from .regional_presets import RegionalPresets
@@ -1167,6 +1168,22 @@ class StudioSettings:
                 "image": {"default": self.service.generation_timeout(), "max": IMAGE_TIMEOUT_MAX},
                 "video": {"default": self.service.generation_timeout(video=True), "max": VIDEO_TIMEOUT_MAX},
             },
+        })
+
+    async def queue_details(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        identity = request.query.get("id", "")
+        if not re.fullmatch(r"[0-9a-fA-F]{8,32}", identity):
+            return error_response("任务 ID 无效。", status_code=400)
+        try:
+            job = self.service.get_job(None, identity)
+        except ComfyError as exc:
+            return error_response(str(exc), status_code=404)
+        return json_response({
+            "job": self._queue_row(job),
+            "preset": {key: value for key, value in (job.preset or {}).items() if key != "account"},
+            "configuration": describe_configuration(job.configuration),
         })
 
     async def save_qq_timeout(self):

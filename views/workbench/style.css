@@ -574,3 +574,41 @@ button.image-download {
   .has-control-pair { grid-template-columns: minmax(0, 1fr); }
   .image-resource-dialog button, #image-original button { min-height: 44px; }
 }
+
+/* Preset peek and accepted-task configuration. */
+.task-info-dialog { width: min(94vw, 780px); max-height: 90vh; padding: clamp(14px, 3vw, 24px); color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow-wrap: anywhere; }
+.task-info-dialog::backdrop { background: #181a2a99; }
+.task-info-dialog h2 { margin: 0; }
+.task-info-dialog .panel-heading { align-items: center; margin-bottom: 12px; }
+#queue-preset-picker { text-align: left; background: var(--soft); min-width: 0; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#queue-preset-picker::after { content: "⌄"; float: right; margin-left: 8px; }
+.preset-picker-dialog { width: min(92vw, 540px); }
+.task-preset-options { display: grid; gap: 6px; margin: 14px 0; }
+.task-preset-option { text-align: left; padding: 10px 12px; white-space: normal; overflow-wrap: anywhere; touch-action: pan-y; user-select: none; -webkit-touch-callout: none; }
+.task-preset-option[aria-pressed="true"] { border-color: var(--accent); background: var(--tint); color: var(--accent); }
+.task-preset-pages { display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: nowrap; }
+.task-preset-pages span { white-space: nowrap; font-size: 13px; }
+.task-preset-preview { position: fixed; z-index: 3; width: min(240px, calc(100vw - 24px)); padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 8px 28px #1115; pointer-events: none; }
+.task-preset-preview strong, .task-preset-preview small { display: block; }
+.task-preset-preview img { display: block; width: 100%; height: min(240px, 40vh); object-fit: contain; border-radius: 7px; background: var(--soft); margin: 8px 0; }
+.task-preset-preview img[hidden] { display: none; }
+.queue-row { cursor: pointer; }
+.queue-heading .queue-detail-open { margin-left: auto; }
+.queue-heading button + button { margin-left: 0; }
+.job-detail-fields { display: grid; grid-template-columns: minmax(85px, 150px) minmax(0, 1fr); gap: 8px 14px; margin: 12px 0; }
+.job-detail-fields dt { color: var(--muted); }
+.job-detail-fields dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+.job-details-dialog section { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 10px; }
+.job-details-dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; padding: 10px; background: var(--soft); border-radius: 8px; }
+.job-details-dialog h4 { margin: 12px 0 6px; }
+.job-details-dialog table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.job-details-dialog th, .job-details-dialog td { border-bottom: 1px solid var(--line); text-align: left; padding: 8px; overflow-wrap: anywhere; }
+.job-details-dialog th:first-child { width: 60%; }
+.job-details-dialog details { margin: 7px 0; padding: 10px; border: 1px solid var(--line); border-radius: 9px; }
+@media (max-width: 520px) {
+  .task-info-dialog { max-height: 92dvh; }
+  .task-info-dialog .panel-heading h2 { font-size: 21px; }
+  .job-detail-fields { grid-template-columns: minmax(72px, 100px) minmax(0, 1fr); gap: 8px; font-size: 13px; }
+  .job-details-dialog th, .job-details-dialog td { padding: 6px 4px; font-size: 12px; }
+  .job-details-dialog th:first-child { width: 52%; }
+}

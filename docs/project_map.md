@@ -8,6 +8,7 @@
 | `bridge/client.py`、`bridge/service.py`、`bridge/video_library.py` | ComfyUI 请求、队列与媒体任务 |
 | `bridge/studio/`、`_conf_schema.json` | 工作台服务端、远程入口、表单处理与宿主配置 |
 | `views/workbench/` | HTML、CSS、JavaScript，含任务、遮罩、归档评价、视频与词库 |
+| `views/workbench/task_inspect.js`、`bridge/studio/job_details.py` | 任务预设分页与长按预览、受理配置快照详情和凭据字段隐藏 |
 | `bridge/workflows/`、`workflows/` | 图加载、字段映射、专用模型逻辑、随包 API 图 |
 | `bridge/workflows/regional.py`、`bridge/studio/regional_presets.py`、`views/workbench/task_features.js` | 可扩展任务功能、RGB 区域提示词、三区预设及遮罩编辑 |
 | `templates/` | Anima 同步与参考画布、WD14 辅助 API、默认绘图人格 |

@@ -4,6 +4,7 @@ import { mountVideos } from "./videos.js";
 import { mountH3Media } from "./h3_media.js";
 import { mountH3Prompt } from "./h3_prompt.js";
 import { mountTaskFeatures } from "./task_features.js";
+import { mountJobDetails, mountTaskPresets } from "./task_inspect.js";
 
 const remote = !window.AstrBotPluginView;
 const bridge = window.AstrBotPluginView || (await import("./remote.js")).bridge;
@@ -1952,6 +1953,8 @@ get("preset-form").addEventListener("submit", async (event) => {
 mountPromptLibrary({ get, bridge, message, notify });
 
 const queueStates = { queued: "等待中", running: "处理中", completed: "已完成", failed: "失败", cancelled: "已取消" };
+const taskPresets = mountTaskPresets({bridge, select: get("queue-preset"), button: get("queue-preset-picker")});
+const jobDetails = mountJobDetails({bridge, workflowTitle, states: queueStates});
 let queueSnapshot = "";
 let queueReading = false;
 let queueWriting = false;
@@ -2007,6 +2010,16 @@ function renderQueueJobs(id, jobs, empty) {
     state.className = "pill";
     state.textContent = queueStates[job.state] ?? job.state;
     heading.append(title, state);
+    const inspect = document.createElement("button");
+    inspect.type = "button";
+    inspect.className = "queue-detail-open";
+    inspect.textContent = "查看配置";
+    inspect.dataset.jobId = job.id;
+    inspect.addEventListener("click", () => jobDetails.open(job.id));
+    heading.append(inspect);
+    row.addEventListener("click", event => {
+      if (!event.target.closest("button, a")) jobDetails.open(job.id);
+    });
     if (job.can_cancel) {
       const cancel = document.createElement("button");
       cancel.type = "button";
@@ -2094,12 +2107,14 @@ async function loadQueuePresets(keep = false) {
   const select = get("queue-preset");
   const selectedPreset = keep ? select.value : "";
   select.replaceChildren(new Option("不使用预设", ""));
+  taskPresets.setRows([]);
   if (!account) return;
   try {
     const data = await bridge.apiGet("studio/presets", { account });
     if (scope.value !== account) return;
     for (const [index, row] of data.presets.entries()) select.add(new Option(`${index + 1}. ${row.name}`, row.name));
     if (data.presets.some((row) => row.name === selectedPreset)) select.value = selectedPreset;
+    taskPresets.setRows(data.presets);
   } catch (error) {
     if (!get("create-task").hidden && scope.value === account) createTaskMessage(error.message, true);
   }

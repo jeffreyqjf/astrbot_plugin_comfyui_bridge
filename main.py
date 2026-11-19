@@ -288,6 +288,7 @@ class ComfyUIBridge(Star):
             ("studio/prompt-tags", self.studio.prompt_tags, "GET"),
             ("studio/prompt-tags/preview", self.studio.prompt_preview, "GET"),
             ("studio/queue", self.studio.queue, "GET"),
+            ("studio/queue/details", self.studio.queue_details, "GET"),
             ("studio/queue/loras", self.studio.queue_loras, "GET"),
             ("studio/queue", self.studio.add_jobs, "POST"),
             ("studio/h3/media", self.studio.h3_media.state, "GET"),

@@ -1,5 +1,13 @@
 # API 契约
 
+## 任务预设预览与配置详情（v3.7.0）
+
+- 预设列表沿用 `GET studio/presets?account=…` 返回的 `preview` 图片 ID。长按时按需调用 `GET studio/images/file?id=…&state=favourite`，不在加载预设时读取全库图片；无预览、失效图片或松开后的迟到响应不影响选择。
+- 新增登录保护的 `GET studio/queue/details?id=…`，支持 8–32 位十六进制任务 ID／唯一前缀。未登录 401、非法 ID 400、找不到或前缀不唯一 404。远程入口沿用已有工作台鉴权。队列轮询响应保持原结构，详情按需读取。
+- 返回 `{job, preset, configuration}`：`job` 沿用队列摘要，`preset` 不返回账号；`configuration` 包含 `positive/negative`（node、field、text）、`models`（node、field、name）、按输出节点分组的 `loras`（name、model、clip），以及 `nodes`（id、title、type、parameters）。无配置快照时为 null。仅展示执行图中可达节点，节点参数不重复展示上游连线；大于 JavaScript 安全整数范围的数值转为十进制字符串。
+- 快照引用 `Workflow.prepare()` 已为单次任务复制的执行图，保留最终提示词、单次分支和 LoRA 覆盖，上传成功后同步实际输入文件名；后续保存工作流不会改写既有任务。记录随现有内存任务清理，不新增数据库或历史任务恢复机制。
+- 返回前递归隐藏 API key、password、secret、token、authorization、credential、cookie 和 headers 字段（包括 JSON 字符串中的嵌套字段）。界面按纯文本渲染提示词和参数，不解释 HTML。
+
 ## v3 可选任务功能与 Regional Prompt
 
 - `task_inputs.features` 为描述列表，稳定字段 `id/kind/title`，ControlNet 另带 `branch`。已注册 `controlnet.openpose`、`controlnet.any`、`controlnet.lllite`、`regional`。前端按 `kind` 分派面板，后端对应适配器校验；新增功能类型须实现两侧适配。

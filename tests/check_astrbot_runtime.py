@@ -27,6 +27,20 @@ class PluginContext:
         self.routes.update((method, path) for method in methods)
 
 
+async def check_queue_details_auth(instance):
+    from astrbot.api.web import PluginRequest, bind_request_context
+    from starlette.requests import Request
+
+    async def get(identity, username):
+        incoming = Request({"type": "http", "method": "GET", "path": "/studio/queue/details", "headers": [],
+                            "query_string": f"id={identity}".encode()})
+        with bind_request_context(PluginRequest(incoming, username=username)):
+            return await instance.studio.queue_details()
+    assert (await get("0" * 32, None)).status_code == 401
+    assert (await get("../other", "test")).status_code == 400
+    assert (await get("0" * 32, "test")).status_code == 404
+
+
 async def check_input_picker(instance, root):
     if sys.platform != "win32":
         return
@@ -97,6 +111,13 @@ async def check_queue_loras(instance, root, name):
         response = await call("POST", "studio/queue", data={"workflow": name, "positive": "fixture", "loras": stacked})
         assert response.status_code == 200, response.body
         assert len(json.loads(response.body)["jobs"]) == 1
+        identity = json.loads(response.body)["jobs"][0]["id"]
+        details = await call("GET", "studio/queue/details", f"id={identity}".encode())
+        assert details.status_code == 200, details.body
+        config = json.loads(details.body)["configuration"]
+        strengths = {(row["model"], row["clip"]) for rows in config["loras"].values() for row in rows}
+        assert strengths == {(0.4, 0.4), (-0.25, -0.25)}, strengths
+        assert any(row["text"] == "fixture" for row in config["positive"])
         graph = run.call_args.args[1]
         assert graph["astrbot_v40_lora"]["inputs"]["strength_model"] == 0.4
         assert graph["astrbot_v40_lora_2"]["inputs"]["strength_model"] == -0.25
@@ -381,6 +402,7 @@ async def check(root, archive, core, *, anima_workspace=None, anima_schemas=None
         assert ("POST", f"/{PLUGIN}/studio/input/pick") in context.routes
         assert ("POST", "studio/input/pick") not in instance.remote_studio.routes
         await check_input_picker(instance, root)
+        await check_queue_details_auth(instance)
         assert ("GET", f"/{PLUGIN}/studio/queue/loras") in context.routes
         await check_queue_loras(instance, root, module.ADVANCED_V40_WORKFLOW)
         assert ("GET", f"/{PLUGIN}/studio/images/export") in context.routes

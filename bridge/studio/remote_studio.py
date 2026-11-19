@@ -22,7 +22,7 @@ ASSETS = (
     "h3_media.js", "h3_media_transport.js", "h3_media_vendor.js", "h3_media_vendor.css", "h3_media_LICENSE.txt",
     "h3_prompt.js", "h3_prompt_transport.js", "h3_prompt_vendor.js", "h3_prompt_vendor.css", "h3_prompt_LICENSE.txt",
     "h3_prompt_ide_core.mjs", "h3_prompt_completion_core.mjs", "h3_prompt_schema_core.mjs",
-    "h3_prompt_ide_settings_core.mjs", "h3_legacy_widget_width.mjs", "task_features.js",
+    "h3_prompt_ide_settings_core.mjs", "h3_legacy_widget_width.mjs", "task_features.js", "task_inspect.js",
 )
 VIEW = PACKAGE_ROOT / "views" / "workbench"
 API_PATHS = frozenset({
@@ -32,7 +32,7 @@ API_PATHS = frozenset({
     "studio/workflow/export", "studio/workflows/export", "studio/workflows/import", "studio/workflows/replace",
     "studio/workflow/configs", "studio/workflow/configs/import", "studio/workflow/configs/export",
     "studio/lora-tags", "studio/controlnet/profiles", "studio/queue/templates/import",
-    "studio/presets/import", "studio/queue", "studio/queue/command", "studio/queue/command/workflow",
+    "studio/presets/import", "studio/queue", "studio/queue/details", "studio/queue/command", "studio/queue/command/workflow",
     "studio/queue/templates", "studio/queue/cancel",
     "studio/queue/qq-timeout", "studio/queue/loras",
     "studio/queue/cancel-all", "studio/images", "studio/images/file", "studio/images/export",
