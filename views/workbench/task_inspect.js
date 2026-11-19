@@ -35,7 +35,7 @@ export function mountTaskPresets({bridge, select, button}) {
     try {
       let src = cache.get(row.preview);
       if (!src) {
-        ({src} = await bridge.apiGet("studio/images/file", {id: row.preview, state: "favourite"}));
+        ({src} = await bridge.apiGet("studio/images/file", {id: row.preview}));
         if (cache.size >= 24) cache.delete(cache.keys().next().value);
         cache.set(row.preview, src);
       }

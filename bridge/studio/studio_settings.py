@@ -199,7 +199,7 @@ def validate_presets(presets):
         preview = row.get("preview")
         if preview is not None:
             if not isinstance(preview, str) or len(preview) > 2048 or not re.fullmatch(
-                r"(?:[0-9a-f]{32}:[1-9][0-9]*|manual:favourite:-?[0-9a-f]+:[0-9a-f]+:[^\x00-\x1f]+)", preview,
+                r"(?:[0-9a-f]{32}:[1-9][0-9]*|manual:(?:favourite|pass|unevaluate):-?[0-9a-f]+:[0-9a-f]+:[^\x00-\x1f]+)", preview,
             ):
                 raise WorkflowError(f"「{name}」的预览图标识无效。")
             normalized["preview"] = preview

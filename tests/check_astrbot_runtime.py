@@ -412,6 +412,16 @@ async def check(root, archive, core, *, anima_workspace=None, anima_schemas=None
         bundle.extractall(plugins)
     sys.path[:0] = [str(root), str(core)]
     module = importlib.import_module(f"data.plugins.{PLUGIN}.main")
+    validate_presets = importlib.import_module(f"data.plugins.{PLUGIN}.bridge.studio.studio_settings").validate_presets
+    for state in ("favourite", "pass", "unevaluate"):
+        row = {"name": "gallery preview", "positive": "fixture", "negative": "", "preview": f"manual:{state}:abc:12:example.png"}
+        assert validate_presets([row]) == [row]
+    try:
+        validate_presets([{"name": "invalid", "positive": "fixture", "preview": "manual:other:abc:12:example.png"}])
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Invalid preview gallery accepted")
     plugin = plugins / PLUGIN
     assert Path(module.__file__).is_relative_to(plugin)
     from astrbot.dashboard.services.plugin_page_service import PluginPageService

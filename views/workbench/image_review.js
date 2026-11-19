@@ -910,7 +910,7 @@ export function mountImageReviews({
       showControlAsset(link, originalControls, () => dialog.open && version === originalVersion);
     }
     try {
-      const { src } = await bridge.apiGet("studio/images/file", { id: item.id, original: "1", state });
+      const { src } = await bridge.apiGet("studio/images/file", { id: item.id, original: "1", ...(state ? {state} : {}) });
       if (version !== originalVersion || !dialog.open) return;
       original.src = src;
       original.alt = imageLabel(item);

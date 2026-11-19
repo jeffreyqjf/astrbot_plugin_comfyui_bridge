@@ -1099,7 +1099,6 @@ function renderOrderList(list, items, {
       image.className = "preset-list-preview";
       image.alt = "";
       image.dataset.image = preview;
-      image.dataset.state = "favourite";
       image.decoding = "async";
       label.prepend(image);
       imageReviews.previews.observe(image);
@@ -1887,10 +1886,10 @@ async function renderPresetPreview() {
   open.hidden = true;
   img.removeAttribute("src");
   get("preset-preview-clear").hidden = !presetPreview;
-  status.textContent = presetPreview ? "正在读取预览…" : "可以选一张收藏图作为效果参考。";
+  status.textContent = presetPreview ? "正在读取预览…" : "可以从图集中选择图片作为效果参考。";
   if (!presetPreview) return;
   try {
-    const { src } = await bridge.apiGet("studio/images/file", { id: presetPreview, state: "favourite" });
+    const { src } = await bridge.apiGet("studio/images/file", { id: presetPreview });
     if (request !== presetPreviewRequest) return;
     img.src = src;
     open.hidden = false;
@@ -1902,11 +1901,11 @@ async function renderPresetPreview() {
 
 get("preset-preview-select").addEventListener("click", () => {
   if (loading || !presets) return;
-  imageReviews.pickFavourite("从收藏选择预设预览图", (item) => {
-    presetPreview = item.id;
+  imageReviews.pickResource("gallery", ({entry}) => {
+    presetPreview = entry.id;
     renderPresetPreview();
     updatePresetDraft();
-  });
+  }, {gallery: "images/favourite", title: "从图集选择预设效果图"});
 });
 get("preset-preview-clear").addEventListener("click", () => {
   presetPreview = "";
@@ -1916,7 +1915,7 @@ get("preset-preview-clear").addEventListener("click", () => {
 get("preset-preview-open").addEventListener("click", () => {
   if (presetPreview) imageReviews.openOriginal({
     id: presetPreview, name: get("preset-name").value || "预设效果图", rating: "预览",
-  }, "favourite", { readOnly: true });
+  }, undefined, { readOnly: true });
 });
 get("preset-form").addEventListener("input", updatePresetDraft);
 get("preset-discard").addEventListener("click", () => {

@@ -2,7 +2,7 @@
 
 ## 任务预设预览与配置详情（v3.7.0）
 
-- 预设列表沿用 `GET studio/presets?account=…` 返回的 `preview` 图片 ID。长按时按需调用 `GET studio/images/file?id=…&state=favourite`，不在加载预设时读取全库图片；无预览、失效图片或松开后的迟到响应不影响选择。
+- 预设列表沿用 `GET studio/presets?account=…` 返回的 `preview` 图片 ID。长按时按需调用 `GET studio/images/file?id=…`，不在加载预设时读取全库图片；无预览、失效图片或松开后的迟到响应不影响选择。
 - 新增登录保护的 `GET studio/queue/details?id=…`，支持 8–32 位十六进制任务 ID／唯一前缀。未登录 401、非法 ID 400、找不到或前缀不唯一 404。远程入口沿用已有工作台鉴权。队列轮询响应保持原结构，详情按需读取。
 - 返回 `{job, preset, configuration}`：`job` 沿用队列摘要，`preset` 不返回账号；`configuration` 包含 `positive/negative`（node、field、text）、`models`（node、field、name）、按输出节点分组的 `loras`（name、model、clip），以及 `nodes`（id、title、type、parameters）。无配置快照时为 null。仅展示执行图中可达节点，节点参数不重复展示上游连线；大于 JavaScript 安全整数范围的数值转为十进制字符串。
 - 快照引用 `Workflow.prepare()` 已为单次任务复制的执行图，保留最终提示词、单次分支和 LoRA 覆盖，上传成功后同步实际输入文件名；后续保存工作流不会改写既有任务。记录随现有内存任务清理，不新增数据库或历史任务恢复机制。
@@ -114,3 +114,7 @@
 - `task_inputs.features` 为 `anima_detailer.hires_pre/hires_post/inoutpaint/mask/upscale`。任务和普通命令接受 `anima_detailer:{hires_pre:bool,hires_post:bool,inoutpaint:bool,mask:bool,upscale:bool}`，严格五项且仅该工作流接受，映射 `13/14/126/mask/19`。省略沿用保存值，网页显式提交选择；不接受 Detailer V40 的 `detailer` 参数。
 - 输入 `image/reference_id/mask` 复用既有结构。始终需要参考图，支持普通提示词预设、负向词、批次、Anima LoRA 叠加及遍历。命令支持手脸眼和 NSFW 单次开关；原版没有 feet，传入会拒绝。#103 仅在实际可达时按 ModelPatchLoader schema 校验模型；缺失返回 400 且不入队。
 - 参数页暴露所有分支的字面输入和本机下拉项，关闭的分支仍可编辑；手动参数布局保留。原 Image Saver 文件名／元数据专用节点不进入插件执行参数。API 图和配套模板加入打包白名单，生产实例同步与重载另行授权。
+
+## 预设效果图来源（v3.8.0）
+
+预设 `preview` 字符串格式保持兼容，允许 `manual:favourite/ pass/ unevaluate` 对应状态（实际标识使用冒号分隔），仍校验 ID 长度与格式。生成记录 ID 不变。列表、效果图、大图与长按预览读取时省略 state，由归档层按记录或手动文件标识定位；不向远程请求发送字符串 undefined。选图窗口复用现有图集分页、筛选和预览，不开放控制图或任意文件路径。
