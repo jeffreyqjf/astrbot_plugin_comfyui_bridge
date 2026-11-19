@@ -16,6 +16,7 @@ from astrbot.api.message_components import Image, Plain, Video
 from astrbot.api.provider import ProviderRequest
 from astrbot.api.star import Context, Star, StarTools
 from astrbot.api.web import error_response, json_response, request
+from astrbot.core.agent.message import TextPart
 
 from .bridge.client import ComfyError, image_suffix
 from .bridge.lora_settings import LORA_CATEGORIES
@@ -1499,7 +1500,7 @@ class ComfyUIBridge(Star):
                     "当前用户在本会话的历史任务（从新到旧，仅供查询）：\n"
                     + json.dumps(recent, ensure_ascii=False)
                 )
-        req.system_prompt = "\n".join([req.system_prompt or "", *guidance])
+        req.extra_user_content_parts.append(TextPart(text="\n".join(guidance)).mark_as_temp())
 
     @filter.on_decorating_result()
     async def verify_drawing_reply(self, event: AstrMessageEvent):

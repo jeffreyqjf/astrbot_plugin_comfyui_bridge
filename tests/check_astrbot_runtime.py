@@ -27,6 +27,53 @@ class PluginContext:
         self.routes.update((method, path) for method in methods)
 
 
+async def check_drawing_guidance(instance, module):
+    from astrbot.api.provider import ProviderRequest
+    from astrbot.core.agent.message import Message, TextPart, dump_messages_with_checkpoints
+
+    extras = {}
+    event = SimpleNamespace(
+        get_message_str=lambda: "请帮我画一只猫", is_admin=lambda: False,
+        is_private_chat=lambda: True, set_extra=extras.__setitem__,
+    )
+    job = SimpleNamespace(id="a" * 32, short_id="a" * 8, kind="text_to_image", state="queued",
+                          delivery_state="pending", delivered=False, sent_count=0, paths=[])
+    tools = [SimpleNamespace(name=name, active=True) for name in (
+        "comfyui_execute", "comfyui_query_wait", "comfyui_list_workflows", "comfyui_reverse_prompt",
+    )]
+    with patch.object(instance.service, "owner", return_value="guidance-test"), patch.object(
+        instance.service, "recent_jobs", return_value=[job]
+    ), patch.object(instance.studio, "persona_prompt", return_value="fixture drawing persona"):
+        for state in ("queued", "completed"):
+            job.state = state
+            original = TextPart(text="existing user content")
+            req = ProviderRequest(prompt="original user prompt", system_prompt="stable system", func_tool=tools,
+                                  contexts=[{"role": "user", "content": "prior turn"}], extra_user_content_parts=[original])
+            await instance.drawing_guidance(event, req)
+            assert req.system_prompt == "stable system" and req.prompt == "original user prompt"
+            assert req.contexts == [{"role": "user", "content": "prior turn"}]
+            assert len(req.extra_user_content_parts) == 2 and req.extra_user_content_parts[0] is original
+            added = req.extra_user_content_parts[-1]
+            assert isinstance(added, TextPart) and added._no_save
+            assert all(value in added.text for value in ("fixture drawing persona", job.id, state, "comfyui_reverse_prompt"))
+            saved = dump_messages_with_checkpoints([Message(role="user", content=req.extra_user_content_parts)])
+            assert saved[0]["content"] == [original.model_dump()]
+        req = ProviderRequest(system_prompt="stable system", func_tool=[])
+        await instance.drawing_guidance(event, req)
+        assert req.system_prompt == "stable system" and "comfyui_execute" in req.extra_user_content_parts[0].text
+        assert extras[module.DRAW_REQUEST_KEY]
+        event.get_message_str = lambda: "hello"
+        req = ProviderRequest(system_prompt="stable system")
+        await instance.drawing_guidance(event, req)
+        assert not req.extra_user_content_parts and req.system_prompt == "stable system"
+        for settings in ({"enabled": False}, {"admin_only": True}):
+            with patch.dict(instance.config, settings):
+                req = ProviderRequest(system_prompt="stable system", func_tool=tools)
+                await instance.drawing_guidance(event, req)
+                assert not req.extra_user_content_parts and req.system_prompt == "stable system"
+    print("PASS: temporary drawing context, stable system prompt, retained guidance and permission gates")
+
+
 async def check_queue_details_auth(instance):
     from astrbot.api.web import PluginRequest, bind_request_context
     from starlette.requests import Request
@@ -446,6 +493,7 @@ async def check(root, archive, core, *, anima_workspace=None, anima_schemas=None
         service = instance.service
         assert service.data_dir.is_relative_to(root)
         assert not service.errors, service.errors
+        await check_drawing_guidance(instance, module)
         assert len(service.workflows) == len(list((plugin / "workflows").glob("*.json")))
         assert ("GET", f"/{PLUGIN}/studio/images") in context.routes
         assert ("GET", "studio/images") in instance.remote_studio.routes

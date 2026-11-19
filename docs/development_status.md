@@ -1,5 +1,13 @@
 # 开发状态
 
+## v3.8.1 · AstrBot 日志与临时绘图上下文
+
+- `bridge/service.py` 移除标准库 logging，全部五处归档／元数据异常日志统一使用 `from astrbot.api import logger`，保留原级别、文案、参数和异常处理。
+- 绘图请求钩子保留人格、工具可用性说明、当前工作流、NSFW 权限提示和最近四项任务信息，统一以 TextPart 追加至 `extra_user_content_parts`，使用本机 AstrBot 的 `mark_as_temp()` 标记；不再读写 `system_prompt`，不覆盖用户正文、既有附加内容或历史上下文。未增加额外查询工具要求，生成与查询工具及权限门禁不变。
+- 53 项回归测试通过。真实 AstrBot 隔离检查 queued／completed 两种动态状态下系统提示词一致、既有用户内容保留、全部绘图信息可见且临时部分在历史序列化时被剔除；直接绘图但无工具、普通聊天无工具、插件关闭和非管理员限制路径通过。15 条工作流与 73 条路由加载正常，Ruff 与 Git 差异检查通过。
+- Patch v3.8.1；更新维护与用户说明及安装包。未修改工作流或用户数据，未安装／重载生产插件，未测量实际模型缓存命中率，未进行 GPU 生成或 QQ 投递，未自动提交。
+- Git Commit Message：`fix: use AstrBot logger and temporary drawing request context`。
+
 ## v3.8.0 · 预设从图集选图与筛选
 
 - 提示词预设「从收藏选图」改为「从图集选图」，复用现有选图弹窗，支持收藏、Pass、待评价三类图集和筛选按钮，可展开工作流、预设、LoRA 等筛选，保留分页和选择前预览。

@@ -3,13 +3,14 @@
 import asyncio
 import hashlib
 import json
-import logging
 import re
 import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.parse import urlsplit
+
+from astrbot.api import logger
 
 from .client import VIDEO_MIME, ComfyCancelled, ComfyClient, ComfyError, output_refs
 from .image_archive import DEFAULT_ARCHIVE, ImageArchive, ImageFavorites, ImageReviews, folder_name
@@ -706,7 +707,7 @@ class ComfyService:
                             if await asyncio.to_thread(self.video_library.original, ref) is None:
                                 await self.client.download_video(ref, directory)
                         except (OSError, ComfyError) as exc:
-                            logging.getLogger(__name__).warning("Could not archive additional video for %s: %s", job.short_id, exc)
+                            logger.warning("Could not archive additional video for %s: %s", job.short_id, exc)
                     await asyncio.to_thread(
                         self.favorites.remember, job.id, job.owner, job.paths, refs[:len(job.paths)], video=True,
                     )
@@ -718,7 +719,7 @@ class ComfyService:
                         trace["controlnets"] = links
                     await self._archive_images(job, refs, image_folder, directory, trace["image_loras"], links)
             except (OSError, ValueError, ComfyError) as exc:
-                logging.getLogger(__name__).warning("Could not archive media for %s: %s", job.short_id, exc)
+                logger.warning("Could not archive media for %s: %s", job.short_id, exc)
             job.state = "completed"
         except asyncio.CancelledError:
             job.state = "cancelled"
@@ -749,7 +750,7 @@ class ComfyService:
                     ],
                 }))
             except (OSError, ValueError) as exc:
-                logging.getLogger(__name__).error("Could not save generation metadata for %s: %s", job.short_id, exc)
+                logger.error("Could not save generation metadata for %s: %s", job.short_id, exc)
                 if job.state == "completed":
                     job.error = "已生成媒体，但无法保存完整的追溯元数据。"
             if job.state != "completed" and job.prompt_id:
@@ -787,7 +788,7 @@ class ComfyService:
                     links.append({**details, "asset_id": asset["asset_id"], "new": True})
             except (OSError, ValueError, ComfyError) as exc:
                 job.error = "已生成图片，但有控制图未能归档。"
-                logging.getLogger(__name__).warning("Could not archive control image for %s/%s: %s", job.short_id, branch, exc)
+                logger.warning("Could not archive control image for %s/%s: %s", job.short_id, branch, exc)
         return links
 
     async def _archive_images(self, job, refs, image_folder, directory, loras, controlnets=()):
@@ -799,7 +800,7 @@ class ComfyService:
                 try:
                     cached = await self.client.download_image(refs[index], directory)
                 except (ComfyError, OSError) as exc:
-                    logging.getLogger(__name__).warning("Could not archive image %d for %s: %s", index + 1, job.short_id, exc)
+                    logger.warning("Could not archive image %d for %s: %s", index + 1, job.short_id, exc)
             caches.append(cached)
         await asyncio.to_thread(
             self.image_reviews.remember, job.id, job.owner, job.workflow, image_folder, caches, originals,

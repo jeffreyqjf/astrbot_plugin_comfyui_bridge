@@ -10,3 +10,7 @@
 6. 每轮结束更新 [开发状态](development_status.md)，并更新本轮实际涉及的架构、工作流、持久数据或 API 文档。涉及用户行为时核对 `user docs/` 下的对应部分。
 
 项目配置 `.codex/config.toml` 关闭子 Agent。此前的角色定义保留供查阅。
+
+## 日志与模型请求上下文
+
+插件日志统一使用 `from astrbot.api import logger`，不得创建独立的 logging logger。绘图人格及本轮工具、工作流、任务历史等附加信息通过 `req.extra_user_content_parts` 的 TextPart 传入，临时信息使用宿主的 `mark_as_temp()` 标记，不随每轮状态改写 `req.system_prompt`；保留既有用户内容和权限判断。
