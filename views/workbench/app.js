@@ -913,7 +913,7 @@ function showUnsavedNotice() {
 
 async function save(rebuild) {
   if (loading || get("save").disabled) return;
-  const configName = get("workflow-config-name").value;
+  const configName = activeConfigs.get(current.workflow);
   get("save").disabled = get("sync").disabled = get("save-branches").disabled = true;
   const configSelect = get("workflow-config-name");
   configSelect.disabled = true;
@@ -1312,7 +1312,7 @@ function renderConfigOptions(select, names, preferred) {
 
 function updateWorkflowConfigButtons() {
   const disabled = !get("workflow-config-name").value || loading || get("save").disabled;
-  for (const action of ["rename", "delete"]) {
+  for (const action of ["apply", "rename", "delete"]) {
     get(`${action}-workflow-config`).disabled = disabled;
   }
 }
@@ -1420,9 +1420,9 @@ get("workflow-config-name").addEventListener("change", async (event) => {
   }
   if (select.value === activeConfigs.get(workflow)) return;
   await editWorkflowConfig("apply");
-  select.value = activeConfigs.get(workflow) ?? "";
   updateWorkflowConfigButtons();
 });
+get("apply-workflow-config").addEventListener("click", () => editWorkflowConfig("apply"));
 get("save-workflow-config").addEventListener("click", () => showWorkflowConfigDialog("save"));
 get("rename-workflow-config").addEventListener("click", () => showWorkflowConfigDialog("rename"));
 get("delete-workflow-config").addEventListener("click", () => showWorkflowConfigDialog("delete"));
@@ -1460,8 +1460,11 @@ async function editWorkflowConfig(action) {
       clearQueueWorkflowOptions();
       completed(`已应用「${result.name}」。后续任务将使用这套参数。`);
     } else {
-      if (result.name) activeConfigs.set(current.workflow, result.name);
-      else activeConfigs.delete(current.workflow);
+      if (action === "save" || (action === "rename" && activeConfigs.get(current.workflow) === name)) {
+        activeConfigs.set(current.workflow, result.name);
+      } else if (action === "delete" && activeConfigs.get(current.workflow) === name) {
+        activeConfigs.delete(current.workflow);
+      }
       renderConfigOptions(select, result.names, result.name);
       completed({
         save: `已保存「${result.name}」。`,

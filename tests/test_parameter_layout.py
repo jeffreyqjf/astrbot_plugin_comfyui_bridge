@@ -214,6 +214,35 @@ class WorkflowParameterLayoutTest(unittest.TestCase):
         self.assertEqual(applied["groups"], current["groups"])
         self.assertEqual(applied["links"], current["links"])
 
+        # ComfyUI can reorder link records and update slot metadata without rewiring.
+        compatible = deepcopy(incoming)
+        compatible["links"].reverse()
+        compatible["nodes"][0]["pos"] = [-90000, -90000]
+        compatible["groups"][0]["bounding"] = [-90000, -90000, 10, 10]
+        compatible["nodes"][0].setdefault("properties", {})["ui-metadata"] = "legacy"
+        for node in compatible["nodes"]:
+            for slot in node.get("outputs", []):
+                if isinstance(slot.get("links"), list):
+                    slot["links"].reverse()
+        merged = preserve_anima_layout(compatible, current)
+        self.assertEqual(merged["groups"], current["groups"])
+        self.assertEqual(merged["links"], current["links"])
+        self.assertEqual(merged["nodes"][0]["pos"], original_pos)
+        self.assertEqual(merged["nodes"][0]["widgets_values"], ["updated"])
+
+        target = deepcopy(current)
+        output = next(node for node in target["nodes"] if node["id"] == 510)
+        output["widgets_values_named"] = {"filename_prefix": "current"}
+        output["widgets_values"] = ["current"]
+        legacy = deepcopy(target)
+        old_output = next(node for node in legacy["nodes"] if node["id"] == 510)
+        old_output["inputs"].append({"name": "obsolete", "link": None, "widget": {"name": "obsolete"}})
+        old_output["widgets_values_named"] = {"filename_prefix": "saved", "obsolete": 9}
+        old_output["widgets_values"] = ["saved", 9]
+        restored = next(node for node in preserve_anima_layout(legacy, target)["nodes"] if node["id"] == 510)
+        self.assertEqual(restored["widgets_values"], ["saved"])
+        self.assertEqual(restored["inputs"], output["inputs"])
+
         incoming["definitions"]["subgraphs"][0]["links"][0]["origin_id"] = 999
         with self.assertRaisesRegex(WorkflowError, "连线"):
             preserve_anima_layout(incoming, current)

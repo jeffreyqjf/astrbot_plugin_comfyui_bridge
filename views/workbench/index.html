@@ -64,11 +64,12 @@
             <h2>工作流配置</h2>
             <label class="field">已保存的配置<select id="workflow-config-name"></select></label>
             <footer>
+              <button type="button" id="apply-workflow-config" disabled>应用配置</button>
               <button type="button" id="rename-workflow-config" disabled>重命名</button>
               <button type="button" id="save-workflow-config" disabled>另存当前参数</button>
               <button type="button" id="delete-workflow-config" disabled>删除配置</button>
             </footer>
-            <small class="section-note">选择后直接加载。保存设置时会同步更新选中的配置。</small>
+            <small class="section-note">选择后直接加载，失败时可重试、重命名或删除。保存设置只更新已成功应用的配置。</small>
           </section>
           <details id="workflow-basics" class="compact-disclosure workflow-basics">
             <summary>基础配置<span>命令、提示词、种子与参考图</span></summary>

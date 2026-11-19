@@ -173,16 +173,22 @@ def preserve_anima_layout(incoming_canvas, current_canvas):
     def subgraphs(canvas):
         return {graph["id"]: graph for graph in canvas.get("definitions", {}).get("subgraphs", [])}
 
-    def layout_membership(canvas):
-        groups = {}
-        for group in canvas.get("groups", []):
-            x, y, w, h = group["bounding"]
-            groups[group["id"]] = {
-                node["id"] for node in canvas["nodes"]
-                if node["type"] != "Image Comparer (rgthree)"
-                and x <= node["pos"][0] < x + w and y <= node["pos"][1] < y + h
-            }
-        return groups
+    def connections(canvas):
+        return sorted(
+            (str(link["origin_id"]), link["origin_slot"], str(link["target_id"]), link["target_slot"])
+            if isinstance(link, dict) else (str(link[1]), link[2], str(link[3]), link[4])
+            for link in canvas.get("links", [])
+        )
+
+    def interface(node, field):
+        return [slot.get("name") for slot in node.get(field, [])]
+
+    def connected_slots(canvas):
+        return {
+            (node, field, slot)
+            for origin, output, target, input_slot in connections(canvas)
+            for node, field, slot in ((origin, "outputs", output), (target, "inputs", input_slot))
+        }
 
     def nodes_by_id(canvas):
         return {node["id"]: node for node in canvas["nodes"]}
@@ -190,18 +196,34 @@ def preserve_anima_layout(incoming_canvas, current_canvas):
     def update(incoming, target):
         nodes = nodes_by_id(incoming)
         previous = nodes_by_id(target)
+        linked = connected_slots(incoming)
         if (
             nodes.keys() != previous.keys()
-            or incoming.get("links") != target.get("links")
-            or layout_membership(incoming) != layout_membership(target)
+            or connections(incoming) != connections(target)
             or any(
-                nodes[key].get(field) != previous[key].get(field)
-                for key in nodes for field in ("type", "inputs", "outputs")
+                nodes[key]["type"] != previous[key]["type"]
+                or any(
+                    interface(nodes[key], field)[slot] != interface(previous[key], field)[slot]
+                    for node_id, field, slot in linked if node_id == str(key)
+                )
+                for key in nodes
             )
         ):
-            raise WorkflowError("Anima 画布的节点、连线或分组成员已变化，无法保留当前布局。")
+            raise WorkflowError("Anima 画布的节点或实际连线已变化，无法安全应用旧配置；可导出备份或删除该配置。")
         for key, node in nodes.items():
+            changed_widgets = interface(node, "inputs") != interface(previous[key], "inputs")
+            if changed_widgets:
+                values = previous[key].get("widgets_values_named", {})
+                old_values = node.get("widgets_values_named", {})
+                merged = {name: deepcopy(old_values.get(name, value)) for name, value in values.items()}
+                if merged:
+                    if len(previous[key].get("widgets_values", [])) != len(merged):
+                        raise WorkflowError(f"Anima 节点 #{key} 的控件格式已变化，无法安全恢复旧参数。")
+                    previous[key]["widgets_values_named"] = merged
+                    previous[key]["widgets_values"] = list(merged.values())
             for field in ("mode", "widgets_values", "widgets_values_named"):
+                if changed_widgets and field != "mode":
+                    continue
                 if field in node:
                     previous[key][field] = deepcopy(node[field])
         children = subgraphs(incoming)
@@ -213,7 +235,7 @@ def preserve_anima_layout(incoming_canvas, current_canvas):
 
     try:
         update(incoming_canvas, result)
-    except (AttributeError, KeyError, TypeError) as exc:
+    except (AttributeError, KeyError, TypeError, IndexError) as exc:
         raise WorkflowError("Anima 画布的子图格式无效。") from exc
     return result
 
