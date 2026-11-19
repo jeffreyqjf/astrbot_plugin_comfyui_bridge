@@ -86,7 +86,7 @@ async def check_queue_loras(instance, root, name):
     entries = {
         key: {"id": key, "title": key, "number": number, "category": number[0],
               "filename": f"illustrious/{key}.safetensors", "default_strength": 0.7, "tag": ""}
-        for key, number in (("alpha", "C1"), ("beta", "C2"), ("style", "S1"))
+        for key, number in (("alpha", "C1"), ("beta", "C2"), ("style", "S1"), ("style2", "S2"), ("other", "O1"))
     }
 
     async def call(method, route, query=b"", data=None):
@@ -138,7 +138,47 @@ async def check_queue_loras(instance, root, name):
             "workflow": name, "positive": "fixture", "lora_sweep": True, "loras": [stacked[1]],
         })
         assert response.status_code == 200, response.body
-        assert run.call_args.args[1]["astrbot_v40_lora"]["inputs"]["lora_name"] == entries["style"]["filename"]
+        assert len(json.loads(response.body)["jobs"]) == 2
+        for character, item in zip(("alpha", "beta"), run.call_args_list, strict=True):
+            graph = item.args[1]
+            assert graph["astrbot_v40_lora"]["inputs"]["lora_name"] == entries["style"]["filename"]
+            assert graph["astrbot_v40_lora"]["inputs"]["strength_model"] == -0.25
+            assert graph["astrbot_v40_lora_2"]["inputs"]["lora_name"] == entries[character]["filename"]
+        run.reset_mock()
+        fixed = [stacked[1], {"id": "style2", "strength": 0.6}, {"id": "other", "strength": 0}]
+        for characters in ([], [{"id": "C2", "strength": 0.45}]):
+            run.reset_mock()
+            response = await call("POST", "studio/queue", data={
+                "workflow": name, "positive": "fixture", "lora_sweep": True, "count": 2,
+                "loras": fixed + characters,
+            })
+            assert response.status_code == 200, response.body
+            expected = ["beta", "beta"] if characters else ["alpha", "beta", "alpha", "beta"]
+            jobs = json.loads(response.body)["jobs"]
+            assert len(jobs) == len(expected)
+            if not characters:
+                assert jobs[0]["seed"] == jobs[1]["seed"] and jobs[2]["seed"] == jobs[3]["seed"]
+            for character, item in zip(expected, run.call_args_list, strict=True):
+                graph = item.args[1]
+                for suffix, key, strength in (("", "style", -0.25), ("_2", "style2", 0.6), ("_3", "other", 0)):
+                    inputs = graph[f"astrbot_v40_lora{suffix}"]["inputs"]
+                    assert inputs["lora_name"] == entries[key]["filename"]
+                    assert inputs["strength_model"] == strength
+                assert graph["astrbot_v40_lora_4"]["inputs"]["lora_name"] == entries[character]["filename"]
+                assert graph["astrbot_v40_lora_4"]["inputs"]["strength_model"] == (0.45 if characters else 0.7)
+        run.reset_mock()
+        with patch.object(service, "queue_limit_for", return_value=1):
+            response = await call("POST", "studio/queue", data={
+                "workflow": name, "positive": "fixture", "lora_sweep": True, "loras": [stacked[1]],
+            })
+        assert response.status_code == 400, response.body
+        run.assert_not_called()
+        with patch.object(studio.lora_families["illustrious"], "lora_catalog", return_value={"style": entries["style"]}):
+            response = await call("POST", "studio/queue", data={
+                "workflow": name, "positive": "fixture", "lora_sweep": True, "loras": [stacked[1]],
+            })
+        assert response.status_code == 400, response.body
+        run.assert_not_called()
         run.reset_mock()
         invalid = await call("POST", "studio/queue", data={
             "workflow": name, "positive": "fixture", "loras": [{"id": "alpha", "strength": 101}],
@@ -727,6 +767,8 @@ async def check_anima_detailer(instance):
     catalog = {key: {"id": key, "title": key, "filename": f"anima/{key}.safetensors", "tag": key,
                      "category": "C", "number": f"C{index}", "default_strength": 0.7}
                for index, key in enumerate(("alpha", "beta"), 1)}
+    catalog["style"] = {**catalog["alpha"], "id": "style", "title": "style", "filename": "anima/style.safetensors",
+                        "tag": "style-tag", "category": "S", "number": "S1"}
     schemas = {"ModelPatchLoader": {"input": {"required": {"name": [["anima-lllite-inpainting-v2.safetensors"]]}}},
                "LoraLoader": {"input": {"required": {"lora_name": [[row["filename"] for row in catalog.values()]]}}}}
     pixels, painted = io.BytesIO(), io.BytesIO()
@@ -762,6 +804,16 @@ async def check_anima_detailer(instance):
         assert response.status_code == 200 and "astrbot_anima_detailer_lora_2" in run.call_args.args[1], response.body
         response = await call("studio/queue", {"workflow": name, "positive": "Scene", "lora_sweep": True, **images})
         assert response.status_code == 200 and len(json.loads(response.body)["jobs"]) == 2, response.body
+        run.reset_mock()
+        response = await call("studio/queue", {"workflow": name, "positive": "Scene", "lora_sweep": True,
+                                              "loras": [{"id": "S1", "strength": -0.3}], **images})
+        assert response.status_code == 200 and len(json.loads(response.body)["jobs"]) == 2, response.body
+        for character, item in zip(("alpha", "beta"), run.call_args_list, strict=True):
+            graph = item.args[1]
+            assert graph["astrbot_anima_detailer_lora_1"]["inputs"]["lora_name"] == "anima/style.safetensors"
+            assert graph["astrbot_anima_detailer_lora_1"]["inputs"]["strength_model"] == -0.3
+            assert graph["astrbot_anima_detailer_lora_2"]["inputs"]["lora_name"] == catalog[character]["filename"]
+            assert "style-tag" in graph["3"]["inputs"]["text"], graph["3"]
         pending_key = ("studio:anima-detailer-check", name)
         family.pending_loras[pending_key] = [{"id": "alpha", "strength": 0.5}]
         response = await call("studio/queue", {"workflow": name, "positive": "Scene", **images})

@@ -663,12 +663,12 @@
                 <summary>LoRA <span id="queue-lora-summary"></span></summary>
                 <div class="queue-lora-picker">
                   <label class="field">用法
-                    <select id="queue-lora-mode"><option value="stack">叠加</option><option value="sweep">逐个遍历</option></select>
+                    <select id="queue-lora-mode"><option value="stack">叠加</option><option value="sweep">人物遍历＋固定叠加</option></select>
                   </label>
                   <label class="field">选择 LoRA<select id="queue-lora-choice"></select></label>
                   <button type="button" id="queue-lora-add" disabled>添加</button>
                 </div>
-                <small id="queue-lora-hint" class="section-note" hidden>未指定 LoRA 时遍历目录内的全部人物 LoRA。同一批次共用一个种子。</small>
+                <small id="queue-lora-hint" class="section-note" hidden>C 类人物逐个遍历，所选 S／O 类固定叠加到每个任务。未选 C 类时遍历全部人物；同一批次共用一个种子。</small>
                 <div id="queue-lora-rows"></div>
                 <small id="queue-lora-status" role="status"></small>
               </details>

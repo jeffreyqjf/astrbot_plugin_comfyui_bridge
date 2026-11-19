@@ -24,7 +24,7 @@
 | `GET studio/queue` | 查询队列及近期任务 |
 | `POST studio/queue`、`POST studio/queue/command` | 结构化参数或命令创建任务。工作流和入口支持时，使用 `image`（Base64）或 `reference_id`（收藏图标识）二选一，可加 `mask`（Base64） |
 | `POST studio/queue/command/workflow` | 发送 `command` 和布尔值 `has_reference`，返回生成或遍历命令选中的 `workflow`。无法解析或无需生成时返回 `workflow: null`，无需上传图像即可查询 |
-| `GET studio/queue/loras` | 按 `workflow` 读取该工作流目录下可选 LoRA 的 ID、编号、名称和默认强度 |
+| `GET studio/queue/loras` | 按 `workflow` 读取该工作流目录下可选 LoRA 的 ID、编号、名称、分类 `category`（C／S／O）和默认强度 |
 | `GET/POST studio/controlnet/profiles` | GET 按 `workflow`、`branch` 读取预设、ComfyUI 模型和预处理器选项及文件修订号。POST 传 `workflow`、`branch`、`revision`、`profile`，编辑或删除时加 `id`，删除用 `profile: null`。修订不匹配返回 409 |
 | `GET studio/input`、`GET studio/input/preview` | 用 `directory`、`page` 浏览受限的本机 ComfyUI input，`id` 指定要预览的图片 |
 | `POST studio/input/pick` | AstrBot 内嵌工作台登录后发送空对象，在 Windows 主机的 ComfyUI input 中打开文件选择窗口。选图返回 `id`（input 相对路径），取消返回 `cancelled: true`。已有文件窗口返回 409，超时返回 408，窗口或目录不可用返回 503。远程工作台使用目录和预览查询 |
@@ -48,7 +48,9 @@
 
 配置了预设的分支在初始化数据附带 `profiles`，任务绑定可加 `profile` ID。省略 ID 时，后端使用匹配控制类型的第一条预设。文件保存在插件数据目录的 `controlnet_profiles.json`，由后端在受理时解析，模型参数由已保存的预设提供。
 
-初始化还返回 `sweep_lora_family`（无目录时为 `null`）。结构化创建任务可传 `loras: [{id, strength}]`，按提供顺序叠加，省略强度时使用目录默认值。设置 `lora_sweep: true` 会逐个生成，空名单遍历全部人物 LoRA。每批共享一个种子，队列一次校验并接收全部批次。
+初始化还返回 `sweep_lora_family`（无目录时为 `null`）。结构化创建任务可传 `loras: [{id, strength}]`，按提供顺序叠加，省略强度时使用目录默认值。设置 `lora_sweep: true` 时，按完整目录的实际分类将所选 S／O 类作为固定叠加组，并为每个所选 C 类人物生成一个任务；未选择 C 类时遍历目录中全部人物。每个变体按固定组原顺序加载，再加载一个人物；保留各项强度和附带词。无人物时返回 400，不生成纯风格遍历任务。每批共享一个种子，人物数量 × 批次决定队列容量检查，任一校验失败时整批不入队。普通叠加及 QQ 命令自身的遍历协议不变。
+
+命令添加的 `account` 独立于工作流参数能力显示，列表加载状态与输入是否适用分开管理；命令识别不能清空或禁用已选账号。账号由已有命令接口按原规则解析和校验。
 
 - `GET /object_info/<class>` 获取节点字段和可选项。
 - `POST /upload/image` 用 multipart 上传，使用 `type=input`、`subfolder=astrbot_bridge` 及 `overwrite=false`。回填服务返回的名字及子路径。

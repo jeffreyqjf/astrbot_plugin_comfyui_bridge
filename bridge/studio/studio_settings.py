@@ -1417,7 +1417,7 @@ class StudioSettings:
             family = await self.lora_catalog_for(workflow.sweep_lora_family)
             catalog = await asyncio.to_thread(family.task_catalog)
             return json_response({"entries": [
-                {key: entry[key] for key in ("id", "number", "title", "default_strength")}
+                {key: entry[key] for key in ("id", "number", "title", "category", "default_strength")}
                 for entry in catalog.values()
             ]})
         except (OSError, ValueError) as exc:
@@ -1429,11 +1429,16 @@ class StudioSettings:
         family = await self.lora_catalog_for(workflow.sweep_lora_family)
         catalog = await asyncio.to_thread(family.lora_catalog)
         rows = family.parse_loras(loras, catalog)
-        if sweep and not rows:
-            rows = family.parse_loras([{"id": key} for key, entry in catalog.items() if entry["category"] == "C"], catalog)
-            if not rows:
+        if sweep:
+            characters = [row for row in rows if catalog[row["id"]]["category"] == "C"]
+            fixed = [row for row in rows if catalog[row["id"]]["category"] != "C"]
+            if not characters:
+                characters = family.parse_loras([{"id": key} for key, entry in catalog.items() if entry["category"] == "C"], catalog)
+            if not characters:
                 raise WorkflowError("此目录没有人物 LoRA。请手动选择，或在「LoRA 编号」调整分类。")
-        variants = [[row] for row in rows] if sweep else [rows]
+            variants = [fixed + [character] for character in characters]
+        else:
+            variants = [rows]
         self.service.check_queue_capacity(workflow.name, count * len(variants))
         if workflow.name == ANIMA_WORKFLOW:
             base = await self.anima.for_generation(workflow, {"loras": [], **(regional or {})}, has_reference, {}, controlnets=controls)

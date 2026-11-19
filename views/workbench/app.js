@@ -2210,6 +2210,7 @@ const queueLoraAdd = get("queue-lora-add");
 const queueLoraRows = get("queue-lora-rows");
 const queueLoraStatus = get("queue-lora-status");
 const queueLoras = new Map();
+const queueAccountLoads = new Set();
 let queueLoraWorkflow;
 let queueLoraFamily;
 let queueLoraRequest = 0;
@@ -2240,9 +2241,12 @@ function renderQueueLoraChoices() {
   queueLoraAdd.disabled = !queueLoraChoice.value;
   const sweep = queueLoraMode.value === "sweep";
   const count = queueLoras.size;
+  const selected = (queueLoraEntries ?? []).filter(({id}) => queueLoras.has(id));
+  const characters = selected.filter(({category}) => category === "C").length;
+  const fixed = selected.length - characters;
   get("queue-lora-hint").hidden = !sweep;
   get("queue-lora-summary").textContent = sweep
-    ? (count ? `遍历 · ${count} 项` : "遍历 · 全部人物")
+    ? `遍历 · ${characters ? `${characters} 个人物` : "全部人物"}${fixed ? ` ＋ ${fixed} 项固定叠加` : ""}`
     : (count ? `叠加 · ${count} 项` : "");
 }
 
@@ -2288,7 +2292,7 @@ queueLoraAdd.addEventListener("click", () => {
   const row = document.createElement("div");
   row.className = "queue-lora-row";
   const title = document.createElement("span");
-  title.textContent = entry.title;
+  title.textContent = `${entry.number} · ${entry.title}`;
   const slider = document.createElement("input");
   slider.type = "range";
   slider.step = "0.01";
@@ -2393,10 +2397,11 @@ function renderTaskControlnets(selectedName = queueWorkflow.value, inputs) {
   function field(id, visible) {
     const input = get(id);
     input.closest("label").hidden = !visible;
-    input.disabled = !visible;
+    input.disabled = !visible || queueAccountLoads.has(input);
   }
   field("queue-negative", taskInputs.negative);
-  for (const id of ["queue-preset", "queue-preset-account", "remote-command-account"]) field(id, taskInputs.presets);
+  for (const id of ["queue-preset", "queue-preset-account"]) field(id, taskInputs.presets);
+  field("remote-command-account", isCommand);
   showQueueReference();
   const reference = get("queue-reference");
   const position = form.contains(reference) && !reference.hidden ? reference : form.querySelector("footer");
@@ -2696,7 +2701,8 @@ async function showCreateMode() {
   if (!mode) return;
   if (mode === "command") refreshCommandTemplates();
   const accounts = get(mode === "command" ? "remote-command-account" : "queue-preset-account");
-  if (accounts.disabled) return;
+  if (queueAccountLoads.has(accounts)) return;
+  queueAccountLoads.add(accounts);
   accounts.disabled = true;
   try {
     await loadPresetAccounts(accounts, "不使用预设", accounts.value);
@@ -2704,7 +2710,8 @@ async function showCreateMode() {
   } catch (error) {
     if (!get("create-task").hidden && queueMode.value === mode) createTaskMessage(error.message, true);
   } finally {
-    accounts.disabled = false;
+    queueAccountLoads.delete(accounts);
+    accounts.disabled = mode === "command" ? queueMode.value !== "command" : !taskInputs.presets;
   }
 }
 queueMode.addEventListener("change", showCreateMode);
