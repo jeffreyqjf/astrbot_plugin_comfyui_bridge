@@ -62,6 +62,8 @@ let presets;
 let presetIndex = -1;
 let loraOrder;
 let loraTagId;
+let loraPreview = "";
+let loraPreviewRequest = 0;
 let selected;
 let unsaved = [];
 let loading = false;
@@ -1155,6 +1157,7 @@ function renderLoraOrder(locked = false) {
       ? `QQ 查看编号用 ${command} list，预约用 ${command} use C1:0.85 S1。`
       : "人物 LoRA 扫图使用此处保存的分组、顺序、权重和附带词。";
   const groups = get("lora-order-list");
+  for (const image of groups.querySelectorAll("img")) imageReviews.previews.unobserve(image);
   groups.replaceChildren();
   for (const [code, title] of Object.entries(loraCategories)) {
     if (category.value && code !== category.value) continue;
@@ -1224,6 +1227,8 @@ function editLoraTag(index) {
   get("lora-default-strength").value = row.default_strength ?? 1;
   get("lora-tag-hash").textContent = `SHA-256 · ${row.sha256}`;
   get("lora-tag-text").value = row.tag;
+  loraPreview = row.preview || "";
+  renderLoraPreview();
   get("lora-tag-default").textContent = row.default_tag ? `默认触发词 · ${row.default_tag}` : "这个 LoRA 没有默认触发词。";
   get("lora-tag-error").hidden = true;
   get("lora-tag-dialog").showModal();
@@ -1243,10 +1248,12 @@ async function saveLoraTag(tag, category, defaultStrength) {
   errorText.hidden = true;
   try {
     loraOrder = await bridge.apiPost("studio/lora-order", {
-      ...loraOrderQuery(), id: loraTagId, tag, category, default_strength: defaultStrength, revision: loraOrder.revision,
+      ...loraOrderQuery(), id: loraTagId, tag, category, preview: loraPreview, default_strength: defaultStrength, revision: loraOrder.revision,
     });
     dialog.close();
     renderLoraOrder();
+    queueLoraEntries = undefined;
+    queueLoraRequest++;
     const row = [...get("lora-order-list").querySelectorAll(".order-row")].find((item) => item.dataset.id === loraTagId);
     row?.querySelector(".order-name")?.focus();
     completed(tag === null ? "已恢复 LoRA 的默认触发词。" : "已保存 LoRA 设置。");
@@ -1262,6 +1269,31 @@ async function saveLoraTag(tag, category, defaultStrength) {
   }
 }
 
+function openLoraPreview(id, title) {
+  if (id) imageReviews.openOriginal({id, name: title || "LoRA 效果图", rating: "预览"}, undefined, {readOnly: true});
+}
+async function renderLoraPreview() {
+  const version = ++loraPreviewRequest;
+  const open = get("lora-preview-open"), status = get("lora-preview-status");
+  open.hidden = true;
+  get("lora-preview-clear").hidden = !loraPreview;
+  status.textContent = loraPreview ? "正在读取效果图…" : "尚未设置效果图，选择后请保存设置。";
+  if (!loraPreview) return;
+  try {
+    const {src} = await bridge.apiGet("studio/images/file", {id: loraPreview});
+    if (version !== loraPreviewRequest) return;
+    get("lora-preview-image").src = src;
+    open.hidden = false;
+    status.textContent = "保存设置后生效。";
+  } catch {
+    if (version === loraPreviewRequest) status.textContent = "效果图已不可用，请重新选择。";
+  }
+}
+get("lora-preview-select").addEventListener("click", () => imageReviews.pickResource("gallery", ({entry}) => {
+  loraPreview = entry.id; renderLoraPreview();
+}, {gallery: "images/favourite", title: "选择 LoRA 效果图"}));
+get("lora-preview-clear").addEventListener("click", () => { loraPreview = ""; renderLoraPreview(); });
+get("lora-preview-open").addEventListener("click", () => openLoraPreview(loraPreview, get("lora-tag-name").textContent));
 get("open-lora-order").addEventListener("click", openLoraOrder);
 get("lora-order-refresh").addEventListener("click", openLoraOrder);
 get("lora-family").addEventListener("change", openLoraOrder);
@@ -2241,6 +2273,7 @@ function renderQueueLoraChoices() {
   ));
   if (entries.some(({ id }) => id === previous)) queueLoraChoice.value = previous;
   queueLoraAdd.disabled = !queueLoraChoice.value;
+  get("queue-lora-preview").disabled = !queueLoraEntries?.find(row => row.id === queueLoraChoice.value)?.preview;
   const sweep = queueLoraMode.value === "sweep";
   const count = queueLoras.size;
   const selected = (queueLoraEntries ?? []).filter(({id}) => queueLoras.has(id));
@@ -2271,12 +2304,13 @@ function renderQueueLoras() {
   const name = queueWorkflow.value;
   const family = studio.workflows.find((workflow) => workflow.name === name)?.sweep_lora_family;
   queueLora.hidden = !family;
-  if (name === queueLoraWorkflow && family === queueLoraFamily) return;
+  if (name === queueLoraWorkflow && family === queueLoraFamily) { loadQueueLoras(); return; }
   queueLoraWorkflow = name;
   queueLoraFamily = family;
   queueLoraRequest++;
   queueLoraEntries = undefined;
   queueLoras.clear();
+  for (const image of queueLoraRows.querySelectorAll("img")) imageReviews.previews.unobserve(image);
   queueLoraRows.replaceChildren();
   queueLoraMode.value = "stack";
   queueLoraStatus.textContent = "";
@@ -2287,7 +2321,11 @@ function renderQueueLoras() {
 
 queueLora.addEventListener("toggle", loadQueueLoras);
 queueLoraMode.addEventListener("change", renderQueueLoraChoices);
-queueLoraChoice.addEventListener("change", () => { queueLoraAdd.disabled = !queueLoraChoice.value; });
+queueLoraChoice.addEventListener("change", renderQueueLoraChoices);
+get("queue-lora-preview").addEventListener("click", () => {
+  const row = queueLoraEntries?.find(row => row.id === queueLoraChoice.value);
+  if (row) openLoraPreview(row.preview, row.title);
+});
 queueLoraAdd.addEventListener("click", () => {
   const entry = queueLoraEntries?.find(({ id }) => id === queueLoraChoice.value);
   if (!entry || queueLoras.has(entry.id)) return;
@@ -2295,6 +2333,18 @@ queueLoraAdd.addEventListener("click", () => {
   row.className = "queue-lora-row";
   const title = document.createElement("span");
   title.textContent = `${entry.number} · ${entry.title}`;
+  if (entry.preview) {
+    const image = document.createElement("img");
+    image.className = "lora-task-thumbnail";
+    image.alt = `${entry.title} 效果预览`;
+    image.dataset.image = entry.preview;
+    const preview = document.createElement("button");
+    preview.type = "button"; preview.className = "lora-thumbnail-open";
+    preview.setAttribute("aria-label", `查看 ${entry.title} 效果图`);
+    preview.append(image); title.prepend(preview);
+    preview.onclick = () => openLoraPreview(entry.preview, entry.title);
+    imageReviews.previews.observe(image);
+  }
   const slider = document.createElement("input");
   slider.type = "range";
   slider.step = "0.01";
@@ -2321,6 +2371,7 @@ queueLoraAdd.addEventListener("click", () => {
   remove.setAttribute("aria-label", `移除 ${entry.title}`);
   remove.addEventListener("click", () => {
     queueLoras.delete(entry.id);
+    for (const image of row.querySelectorAll("img")) imageReviews.previews.unobserve(image);
     row.remove();
     renderQueueLoraChoices();
   });

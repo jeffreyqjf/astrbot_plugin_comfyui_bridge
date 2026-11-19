@@ -17,3 +17,7 @@ v3 新增 `regional_prompt_presets.json`：`{version:1,presets:{名称:{regions:
 ControlNet 产物的媒体保存在 ComfyUI `input/my_input/{unevaluated,favourite,pass}/<asset_id>.<格式>`。生成档案可在每个输出图槽记录 `controlnets`，每个关系保留 ID、分支、类型和本次是否新建。文件状态迁移时保持 ID，保存目标媒体并校验后更新索引。旧评价记录可省略控制图关系。
 
 参数布局保存在工作流 `astrbot.parameter_layout`，以版本、分类顺序和 `节点.字段` 顺序表示。布局保存与参数值修改分开，同名导入及命名配置保留已有布局。`workflow_layout_admissions.json` 记录已接纳的工作流名，首次升级保留既有排序，之后停机期间新放入的自定义图也能在首次读取时生成初始布局。
+
+## LoRA 预览关联
+
+各族 `lora_order*.json` 新增可选 `previews: {LoRA_ID: image_ID}`，与排序／分类／强度保存在同一个原子替换文件内。缺省为空；该关联按目录内稳定 ID 保存，不使用预览 URL 或图片二进制。旧版列表设置仍可读取，无需迁移。

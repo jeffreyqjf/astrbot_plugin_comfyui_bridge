@@ -118,3 +118,7 @@
 ## 预设效果图来源（v3.8.0）
 
 预设 `preview` 字符串格式保持兼容，允许 `manual:favourite/ pass/ unevaluate` 对应状态（实际标识使用冒号分隔），仍校验 ID 长度与格式。生成记录 ID 不变。列表、效果图、大图与长按预览读取时省略 state，由归档层按记录或手动文件标识定位；不向远程请求发送字符串 undefined。选图窗口复用现有图集分页、筛选和预览，不开放控制图或任意文件路径。
+
+## LoRA 效果图（v3.9.0）
+
+`GET studio/lora-order` 与 `GET studio/queue/loras` 的每个 entry 增加 `preview` 图片 ID 字符串，无图为空。`POST studio/lora-order` 可与 tag/category/default_strength 一起或单独提交 `preview`，空字符串／null 清除，沿用 family、id、revision 校验。允许生成记录及 favourite/pass/unevaluate 手动图集标识，不接受外部 URL 或任意路径。列表只返回标识，图片复用登录保护的 `studio/images/file` 接口按需读取。旧设置默认无预览，写入其他设置时必须保留 `previews`；其变动参与修订计算。图片与模型文件均不被修改。

@@ -1417,7 +1417,8 @@ class StudioSettings:
             family = await self.lora_catalog_for(workflow.sweep_lora_family)
             catalog = await asyncio.to_thread(family.task_catalog)
             return json_response({"entries": [
-                {key: entry[key] for key in ("id", "number", "title", "category", "default_strength")}
+                {**{key: entry[key] for key in ("id", "number", "title", "category", "default_strength")},
+                 "preview": entry.get("preview", "")}
                 for entry in catalog.values()
             ]})
         except (OSError, ValueError) as exc:

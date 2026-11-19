@@ -11,3 +11,4 @@ tests/*
 !tests/test_h3_media.py
 !tests/test_detailer_comparisons.py
 !tests/test_task_details.py
+!tests/test_lora_previews.py

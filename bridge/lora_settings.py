@@ -94,11 +94,32 @@ class LoraSettings:
             if isinstance(saved.get("default_strengths"), dict) else {},
         )
 
-    def _write_lora_settings(self, order, legacy, tags, categories, strengths):
+    def _read_previews(self):
+        try:
+            saved = json.loads(self.lora_order_path.read_bytes())
+        except (OSError, ValueError):
+            return {}
+        previews = saved.get("previews", {}) if isinstance(saved, dict) else {}
+        return {key: value for key, value in previews.items() if isinstance(value, str)} if isinstance(previews, dict) else {}
+
+    @staticmethod
+    def _preview(value):
+        if value is None or value == "":
+            return ""
+        if not isinstance(value, str) or len(value) > 2048 or not re.fullmatch(
+            r"(?:[0-9a-f]{32}:[1-9][0-9]*|manual:(?:favourite|pass|unevaluate):-?[0-9a-f]+:[0-9a-f]+:[^\x00-\x1f]+)", value,
+        ):
+            raise WorkflowError("请选择有效的 LoRA 图集预览图。")
+        return value
+
+    def _write_lora_settings(self, order, legacy, tags, categories, strengths, *, previews=None):
         temp = self.lora_order_path.with_suffix(".tmp")
         if temp.resolve() != temp.absolute():
             raise WorkflowError("LoRA 设置临时文件必须位于插件数据目录。")
         data = {"order": order, "tags_by_sha256": tags}
+        previews = self._read_previews() if previews is None else previews
+        if previews:
+            data["previews"] = previews
         if categories:
             data["categories"] = categories
         if strengths:
@@ -142,6 +163,7 @@ class LoraSettings:
 
     def _load_lora_catalog(self, *, hash_files=True):
         order, legacy, tags, categories, strengths = self._read_lora_settings()
+        previews = self._read_previews()
         root = (self.workspace / "models/loras").resolve() / self.family
         if root.resolve() != root:
             raise WorkflowError("LoRA 分类目录必须位于 ComfyUI 的 models/loras 下。")
@@ -202,6 +224,7 @@ class LoraSettings:
                 "id": key, "title": title, "filename": f"{self.family}/{relative}", "sha256": sha256,
                 "default_tag": tag, "category": categories.get(key) or self._default_category(relative, meta),
                 "default_strength": strengths.get(key, 1),
+                "preview": previews.get(key, ""),
             }
         if hash_files:
             self.lora_hashes = {path: self.lora_hashes[path] for path in files}
@@ -272,6 +295,7 @@ class LoraSettings:
     def _update_lora_order(self, data, *, check_revision=True):
         with self.lora_lock:
             catalog, order, legacy, tags, categories, strengths = self._load_lora_catalog()
+            previews = self._read_previews()
             if check_revision and data.get("revision") != self._lora_order_snapshot(catalog, tags)["revision"]:
                 return None
             imported = None
@@ -289,7 +313,7 @@ class LoraSettings:
                 catalog = {key: catalog[key] for key in order}
             else:
                 key = data.get("id")
-                if not isinstance(key, str) or key not in catalog or not {"tag", "category", "default_strength"} & data.keys():
+                if not isinstance(key, str) or key not in catalog or not {"tag", "category", "default_strength", "preview"} & data.keys():
                     raise WorkflowError("请选择目录中的 LoRA，并指定要修改的设置。")
                 if "category" in data:
                     code = data["category"]
@@ -301,13 +325,20 @@ class LoraSettings:
                     if type(strength) not in (int, float) or not -100 <= strength <= 100:
                         raise WorkflowError("LoRA 默认权重必须是 -100 到 100 的数值。")
                     strengths[key] = catalog[key]["default_strength"] = strength
+                if "preview" in data:
+                    preview = self._preview(data["preview"])
+                    if preview:
+                        previews[key] = preview
+                    else:
+                        previews.pop(key, None)
+                    catalog[key]["preview"] = preview
                 if "tag" in data:
                     sha256 = catalog[key]["sha256"]
                     if data["tag"] is None:
                         tags.pop(sha256, None)
                     else:
                         tags[sha256] = self._lora_tag(data["tag"])
-            self._write_lora_settings(order, legacy, tags, categories, strengths)
+            self._write_lora_settings(order, legacy, tags, categories, strengths, previews=previews)
             snapshot = self._lora_order_snapshot(catalog, tags)
             if imported is not None:
                 snapshot["imported"] = imported

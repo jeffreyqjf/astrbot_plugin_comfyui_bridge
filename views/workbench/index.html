@@ -226,6 +226,13 @@
               <textarea id="lora-tag-text" rows="4" maxlength="1000" spellcheck="false" placeholder="例如 watercolor, soft lighting"></textarea>
             </label>
             <small class="section-note" id="lora-tag-default"></small>
+            <div class="preset-preview">
+              <button type="button" id="lora-preview-open" hidden aria-label="查看 LoRA 效果图"><img id="lora-preview-image" alt="LoRA 效果图"></button>
+              <div><p id="lora-preview-status" role="status"></p><div class="row-actions">
+                <button type="button" id="lora-preview-select">从图集选图</button>
+                <button type="button" id="lora-preview-clear">移除预览</button>
+              </div></div>
+            </div>
             <small class="section-note">留空保存可停用插件补词。恢复默认可重新使用 LoRA 自带的触发词。</small>
             <p id="lora-tag-error" role="alert" class="error" hidden></p>
             <footer>
@@ -668,6 +675,7 @@
                   </label>
                   <label class="field">选择 LoRA<select id="queue-lora-choice"></select></label>
                   <button type="button" id="queue-lora-add" disabled>添加</button>
+                  <button type="button" id="queue-lora-preview" disabled>查看效果</button>
                 </div>
                 <small id="queue-lora-hint" class="section-note" hidden>C 类人物逐个遍历，所选 S／O 类固定叠加到每个任务。未选 C 类时遍历全部人物；同一批次共用一个种子。</small>
                 <div id="queue-lora-rows"></div>

@@ -379,8 +379,8 @@ body:has(#error-notice:not([hidden]) #unsaved-actions:not([hidden])) main {
 .image-preset-link { padding: 0; border: 0; background: transparent; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; font: inherit; text-align: left; }
 .review-card-footer .image-generation-summary { flex-basis: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .preset-preview { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 12px; margin-top: 12px; background: var(--soft); border-radius: 10px; }
-#preset-preview-open { padding: 0; overflow: hidden; }
-#preset-preview-image { display: block; width: min(45vw, 164px); height: 136px; object-fit: contain; }
+#preset-preview-open, #lora-preview-open { padding: 0; overflow: hidden; }
+#preset-preview-image, #lora-preview-image { display: block; width: min(45vw, 164px); height: 136px; object-fit: contain; }
 #preset-preview-status { margin: 4px 0 8px; }
 .preset-list-preview { width: 42px; height: 42px; object-fit: contain; margin-inline-end: 8px; vertical-align: middle; border-radius: 5px; background: var(--soft); }
 #persona-text { min-height: 14rem; line-height: 1.6; }
@@ -516,7 +516,9 @@ button.order-name { border-color: transparent; background: transparent; text-ali
 .control-source-actions { margin-top: 10px; }
 .queue-lora { margin-top: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
 #queue-lora-summary { margin-left: 6px; color: var(--muted); font-size: 12px; }
-.queue-lora-picker { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: end; gap: 8px; margin-top: 10px; }
+.queue-lora-picker { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: end; gap: 8px; margin-top: 10px; }
+.lora-thumbnail-open { padding: 2px; margin-right: 8px; vertical-align: middle; }
+.lora-task-thumbnail { display: block; width: 44px; height: 56px; object-fit: contain; }
 .queue-lora-picker select { min-width: 0; }
 .queue-lora-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(5rem, 1fr) 5rem auto; gap: 8px; align-items: center; margin-top: 8px; }
 .queue-lora-row span { overflow-wrap: anywhere; }
