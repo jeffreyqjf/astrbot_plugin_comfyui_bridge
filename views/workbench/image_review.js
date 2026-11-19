@@ -23,6 +23,7 @@ export function mountImageReviews({
   const original = get("image-original-file");
   const originalStatus = get("image-original-status");
   const moveOriginal = get("image-original-move");
+  const hdOriginal = get("image-original-hd");
   const downloadOriginal = get("image-original-download");
   const favouriteOriginal = get("image-original-favourite");
   const passOriginal = get("image-original-pass");
@@ -836,9 +837,12 @@ export function mountImageReviews({
     const { item, state, list, loading, reviewing, readOnly } = openedImage;
     downloadOriginal.hidden = loading || original.hidden;
     moveOriginal.hidden = readOnly || state === "unevaluate";
+    hdOriginal.hidden = readOnly;
+    hdOriginal.textContent = state === "hd" ? "移到收藏" : "移入高清";
     favouriteOriginal.hidden = passOriginal.hidden = readOnly || state !== "unevaluate";
     const busy = reviewing || Boolean(list?.navigating);
     moveOriginal.disabled = favouriteOriginal.disabled = passOriginal.disabled = busy || loading;
+    hdOriginal.disabled = busy || loading;
     originalNav.hidden = !list;
     if (!list) return;
     const index = list.items.findIndex(({ id }) => id === item.id);
@@ -1001,6 +1005,21 @@ export function mountImageReviews({
       });
       actions.append(remove);
     }
+    if (state !== "unevaluate" && state !== "hd") {
+      const finish = document.createElement("button");
+      finish.type = "button";
+      finish.textContent = "移入高清";
+      finish.onclick = async () => {
+        finish.disabled = true;
+        try {
+          await bridge.apiPost("studio/images", {id: item.id, source: state, state: "hd"});
+          notify("成品已移入高清图集。");
+          await refreshAfterRemoval(item, state);
+        } catch (error) { message(error.message, true); }
+        finally { finish.disabled = false; }
+      };
+      actions.append(finish);
+    }
     if (actions.children.length) footer.append(actions);
     frame.append(preview, footer);
     cards.set(key, frame);
@@ -1116,6 +1135,7 @@ export function mountImageReviews({
   for (const [id, state, title] of [
     ["open-image-gallery", "favourite", "收藏图集"],
     ["open-pass-gallery", "pass", "Pass 图集"],
+    ["open-hd-gallery", "hd", "高清图集"],
   ]) {
     const tab = get(id);
     tab.addEventListener("click", () => {
@@ -1131,7 +1151,7 @@ export function mountImageReviews({
       galleryList.state = state;
       galleryList.snapshot = "";
       get("image-gallery-title").textContent = title;
-      get("image-gallery-empty").textContent = state === "pass" ? "Pass 图集暂无图片。" : "暂无收藏图片。";
+      get("image-gallery-empty").textContent = `${title}暂无图片。`;
       showPanel("image-gallery", tab);
       placeFilters("image-gallery-filter-slot");
       message("");
@@ -1210,13 +1230,14 @@ export function mountImageReviews({
     originalStatus.textContent = "正在更新图片…";
     try {
       await bridge.apiPost("studio/images", { id: item.id, state, ...(source !== "unevaluate" ? { source } : {}) });
-      if (source === "unevaluate") notify(state === "favourite" ? "图片已收藏。" : "图片已跳过。");
+      if (state === "hd") notify("成品已移入高清图集。");
+      else if (source === "unevaluate") notify(state === "favourite" ? "图片已收藏。" : "图片已跳过。");
       else notify(state === "favourite" ? "图片已移到收藏。" : "图片已移到 Pass 图集。");
       if (dialog.open && openedImage === preview && item.generation?.controlnets?.length) {
         preview.removedIndex ??= Math.max(0, preview.list?.items.findIndex(({ id }) => id === item.id) ?? 0);
         preview.state = state;
         moveOriginal.textContent = state === "pass" ? "移到收藏" : "移到 Pass";
-        originalStatus.textContent = state === "favourite" ? "生成图已收藏。" : "生成图已移到 Pass。";
+        originalStatus.textContent = state === "hd" ? "成品已移入高清图集。" : state === "favourite" ? "生成图已收藏。" : "生成图已移到 Pass。";
         if (preview.list) await refreshList(preview.list, preview.list.page, { keepPreview: true });
         loadFacets();
       } else await refreshAfterRemoval(item, source);
@@ -1232,6 +1253,7 @@ export function mountImageReviews({
   }
   favouriteOriginal.addEventListener("click", () => reviewOriginal("favourite"));
   passOriginal.addEventListener("click", () => reviewOriginal("pass"));
+  hdOriginal.addEventListener("click", () => reviewOriginal(openedImage?.state === "hd" ? "favourite" : "hd"));
   moveOriginal.addEventListener("click", () => reviewOriginal(openedImage?.state === "pass" ? "favourite" : "pass"));
   downloadOriginal.addEventListener("click", () => {
     if (openedImage && !original.hidden) {

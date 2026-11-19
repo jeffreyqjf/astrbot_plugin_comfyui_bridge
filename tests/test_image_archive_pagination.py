@@ -1,13 +1,16 @@
+import io
 import json
 import os
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
+from zipfile import ZipFile
 
 from PIL import Image
 
 from bridge.image_archive import ImageReviews
+from bridge.workflows.workflow import WorkflowError
 
 
 class ImageReviewPaginationTests(unittest.TestCase):
@@ -94,3 +97,45 @@ class ImageReviewPaginationTests(unittest.TestCase):
         result = self.review.gallery("SFW", 1, state=state, filters={"lora": {""}}, lora_match="all")
         self.assertEqual(result["total"], 1)
         self.assertEqual(result["images"][0]["name"], "manual.png")
+
+    def test_hd_manual_curation_preserves_original_and_generation_metadata(self):
+        identity = f"{self.new_id}:1"
+        self.assertEqual(self.review.gallery("", 1, state="hd")["total"], 0)
+        _, original = self.review.read(identity, True, 1024 * 1024)
+        self.review.rate(identity, "favourite")
+        self.review.rate(identity, "hd", source="favourite")
+        result = self.review.gallery("", 1, state="hd", filters=self.filters, lora_match="all")
+        self.assertEqual(result["total"], 1)
+        self.assertEqual(result["images"][0]["id"], identity)
+        self.assertEqual(result["images"][0]["generation"]["loras"], [self.lora_a, self.lora_b])
+        self.assertEqual(self.review.read(identity, True, 1024 * 1024, state="hd")[1], original)
+        self.assertEqual(self.review.filter_options("hd", "")["lora"][self.lora_a["name"]], self.lora_a["name"])
+        self.review.rate(identity, "pass", source="hd")
+        self.review.rate(identity, "hd", source="pass")
+        self.review.rate(identity, "favourite", source="hd")
+        self.assertEqual(self.review.gallery("", 1, state="hd")["total"], 0)
+        self.assertEqual(self.review.read(identity, True, 1024 * 1024, state="favourite")[1], original)
+
+    def test_hd_unindexed_files_export_and_collision_protection(self):
+        manual = next(image for job in self.review.pending(10)["jobs"] for image in job["images"]
+                      if image["id"].startswith("manual:"))
+        self.assertTrue(manual["id"].startswith("manual:"))
+        self.review.rate(manual["id"], "hd")
+        result = self.review.gallery("", 1, state="hd")
+        identity = result["images"][0]["id"]
+        self.assertTrue(identity.startswith("manual:hd:"))
+        _, original = self.review.read(identity, True, 1024 * 1024, state="hd")
+        bundle = io.BytesIO()
+        with ZipFile(bundle, "w", strict_timestamps=False) as archive:
+            self.review.write_gallery_zip("hd", archive)
+        with ZipFile(io.BytesIO(bundle.getvalue())) as archive:
+            self.assertEqual(archive.read("SFW/manual.png"), original)
+        self.review.rate(identity, "favourite", source="hd")
+        record, index = self.review._lookup(f"{self.new_id}:1")
+        target = self.review._path(f"hd/{record['directory']}/{record['files'][index - 1]}")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(b"different original")
+        with self.assertRaisesRegex(WorkflowError, "未覆盖"):
+            self.review.rate(f"{self.new_id}:1", "hd")
+        self.assertEqual(target.read_bytes(), b"different original")
+        self.assertTrue(self.review.read(f"{self.new_id}:1", True, 1024 * 1024, state="unevaluate")[1])

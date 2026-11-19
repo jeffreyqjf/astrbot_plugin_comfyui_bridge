@@ -208,12 +208,12 @@ class ImageFavorites:
 
 
 
-REVIEW_STATES = ("unevaluate", "favourite", "pass")
+REVIEW_STATES = ("unevaluate", "favourite", "pass", "hd")
 REVIEW_RATINGS = ("SFW", "NSFW")
 IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif"}
-GALLERY_STATES = ("favourite", "pass")
+GALLERY_STATES = ("favourite", "pass", "hd")
 JOB_ID = re.compile(r"[0-9a-f]{32}")
-MANUAL_ID = re.compile(r"manual:(unevaluate|favourite|pass):-?[0-9a-f]+:[0-9a-f]+:(.+)")
+MANUAL_ID = re.compile(r"manual:(unevaluate|favourite|pass|hd):-?[0-9a-f]+:[0-9a-f]+:(.+)")
 UNSAFE_MANUAL_PATH = re.compile(r'[<>:"\\|?*\x00-\x1f]')
 IMAGE_FILTERS = ("preset", "workflow", "lora")
 
@@ -572,7 +572,7 @@ class ImageReviews:
             raise WorkflowError("这张图片已评价或已移走。")
         if not _matches_digest(source, digest):
             raise WorkflowError("原图内容已变更，未移动。")
-        if state == "favourite":
+        if state in {"favourite", "hd"}:
             self._thumbnail(record, index, source)
         target.parent.mkdir(parents=True, exist_ok=True)
         _place_file(source, target, digest)
@@ -637,7 +637,7 @@ class ImageReviews:
         except OSError:
             target.unlink()
             raise
-        if state == "favourite":
+        if state in {"favourite", "hd"}:
             item = self._manual_item(state, target.relative_to(self.root / state), target.stat())
             self._make_thumbnail(self._manual_thumbnail(item["id"]), target)
 

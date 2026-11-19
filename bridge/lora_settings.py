@@ -107,7 +107,7 @@ class LoraSettings:
         if value is None or value == "":
             return ""
         if not isinstance(value, str) or len(value) > 2048 or not re.fullmatch(
-            r"(?:[0-9a-f]{32}:[1-9][0-9]*|manual:(?:favourite|pass|unevaluate):-?[0-9a-f]+:[0-9a-f]+:[^\x00-\x1f]+)", value,
+            r"(?:[0-9a-f]{32}:[1-9][0-9]*|manual:(?:favourite|pass|unevaluate|hd):-?[0-9a-f]+:[0-9a-f]+:[^\x00-\x1f]+)", value,
         ):
             raise WorkflowError("请选择有效的 LoRA 图集预览图。")
         return value

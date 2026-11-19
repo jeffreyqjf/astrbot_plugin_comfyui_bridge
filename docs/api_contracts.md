@@ -122,3 +122,7 @@
 ## LoRA 效果图（v3.9.0）
 
 `GET studio/lora-order` 与 `GET studio/queue/loras` 的每个 entry 增加 `preview` 图片 ID 字符串，无图为空。`POST studio/lora-order` 可与 tag/category/default_strength 一起或单独提交 `preview`，空字符串／null 清除，沿用 family、id、revision 校验。允许生成记录及 favourite/pass/unevaluate 手动图集标识，不接受外部 URL 或任意路径。列表只返回标识，图片复用登录保护的 `studio/images/file` 接口按需读取。旧设置默认无预览，写入其他设置时必须保留 `previews`；其变动参与修订计算。图片与模型文件均不被修改。
+
+## 高清图集（v3.10.0）
+
+图片接口的 state/source 增加 `hd`：`POST studio/images` 从 unevaluate/favourite/pass 手动移入 hd，或从 hd 移回 favourite/pass。`GET studio/images`、图片读取、缩略图生成、筛选与图集导出支持 hd。导出参数 `kind=images&state=hd`，ZIP 按既有 SFW/NSFW 和子目录组织原图。认证、路径／摘要校验及错误语义沿用原接口，不开放自动归档或高清原图直接删除。控制图接口仍只接受原三种状态。

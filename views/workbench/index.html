@@ -41,6 +41,7 @@
           <button type="button" id="open-image-review" class="workflow-tab" aria-controls="image-review">待评价图片</button>
           <button type="button" id="open-image-gallery" class="workflow-tab" aria-controls="image-gallery">收藏图集</button>
           <button type="button" id="open-pass-gallery" class="workflow-tab" aria-controls="image-gallery">Pass 图集</button>
+          <button type="button" id="open-hd-gallery" class="workflow-tab" aria-controls="image-gallery">高清图集</button>
           <button type="button" id="open-control-gallery" class="workflow-tab" aria-controls="control-gallery">控制图集</button>
           <button type="button" id="open-controlnet-profiles" class="workflow-tab" aria-controls="controlnet-profiles">ControlNet 配置</button>
           <button type="button" id="open-videos" class="workflow-tab" aria-controls="videos">生成视频</button>
@@ -435,6 +436,7 @@
                 <optgroup label="生成图">
                   <option value="images/favourite">收藏图集</option>
                   <option value="images/pass">Pass 图集</option>
+                  <option value="images/hd">高清图集</option>
                   <option value="images/unevaluate">待评价图片</option>
                 </optgroup>
                 <optgroup label="控制图">
@@ -594,6 +596,7 @@
                 <button type="button" id="image-original-favourite" class="primary" hidden>收藏</button>
                 <button type="button" id="image-original-pass" hidden>跳过</button>
                 <button type="button" id="image-original-move" hidden></button>
+                <button type="button" id="image-original-hd" hidden>移入高清</button>
               </div>
             </article>
             <div id="image-original-controls" hidden></div>
@@ -848,6 +851,7 @@
                   <optgroup label="生成图">
                     <option value="images/favourite">收藏图集</option>
                     <option value="images/pass">Pass 图集</option>
+                    <option value="images/hd">高清图集</option>
                     <option value="images/unevaluate">待评价图片</option>
                   </optgroup>
                   <optgroup label="控制图 · 直接使用" id="task-resource-control-galleries">

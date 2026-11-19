@@ -199,7 +199,7 @@ def validate_presets(presets):
         preview = row.get("preview")
         if preview is not None:
             if not isinstance(preview, str) or len(preview) > 2048 or not re.fullmatch(
-                r"(?:[0-9a-f]{32}:[1-9][0-9]*|manual:(?:favourite|pass|unevaluate):-?[0-9a-f]+:[0-9a-f]+:[^\x00-\x1f]+)", preview,
+                r"(?:[0-9a-f]{32}:[1-9][0-9]*|manual:(?:favourite|pass|unevaluate|hd):-?[0-9a-f]+:[0-9a-f]+:[^\x00-\x1f]+)", preview,
             ):
                 raise WorkflowError(f"「{name}」的预览图标识无效。")
             normalized["preview"] = preview
@@ -1986,7 +1986,7 @@ class StudioSettings:
             data = json.loads(body) if body else {}
             state = data.get("state", "favourite") if isinstance(data, dict) else None
             if state not in GALLERY_STATES:
-                raise WorkflowError("请选择收藏图集或 Pass 图集。")
+                raise WorkflowError("请选择收藏、Pass 或高清图集。")
             result = await asyncio.to_thread(self.service.image_reviews.generate_gallery_thumbnails, state)
             return json_response(result)
         except (OSError, ValueError) as exc:
@@ -1996,7 +1996,7 @@ class StudioSettings:
         source = self.service.image_reviews if kind == "images" else self._control_archive()
         output = TemporaryFile()
         try:
-            with ZipFile(output, "w") as archive:
+            with ZipFile(output, "w", strict_timestamps=False) as archive:
                 source.write_gallery_zip(state, archive)
                 if not archive.filelist:
                     raise WorkflowError("所选图集暂无图片。")

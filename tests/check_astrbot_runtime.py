@@ -301,10 +301,12 @@ async def check_gallery_export(instance, root):
     Image.new("RGB", (2, 2)).save(result, "PNG")
     pixels = result.getvalue()
     reviews = instance.service.image_reviews
-    for state in ("favourite", "pass", "unevaluate"):
+    for state in ("favourite", "pass", "unevaluate", "hd"):
         file = reviews.root / state / "NSFW" / "自定义" / "原图.png"
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_bytes(pixels)
+        if state == "hd":
+            os.utime(file, (300, 300))
     source = root / "original.png"
     source.write_bytes(pixels)
     job = "a" * 32
@@ -328,7 +330,7 @@ async def check_gallery_export(instance, root):
         with bind_request_context(PluginRequest(incoming, username=username)):
             return await instance.remote_studio.routes["GET", route]()
 
-    for kind, states in (("images", ("favourite", "pass", "unevaluate")), ("controls", control_files)):
+    for kind, states in (("images", ("favourite", "pass", "unevaluate", "hd")), ("controls", control_files)):
         for state in states:
             response = await export(kind, state)
             assert response.status_code == 200, getattr(response, "body", "")
@@ -345,7 +347,7 @@ async def check_gallery_export(instance, root):
     assert (await export("images", "..")).status_code == 400
     assert (await export("invalid", "favourite")).status_code == 400
     workflow = instance.service.resolve("test", "v40").name
-    for state in ("favourite", "pass", "unevaluate"):
+    for state in ("favourite", "pass", "unevaluate", "hd"):
         manual = reviews.root / state / "NSFW" / "自定义" / "原图.png"
         identity = reviews._manual_item(state, manual.relative_to(reviews.root / state), manual.stat())["id"]
         for mode in ("direct", "preprocess"):
@@ -460,7 +462,7 @@ async def check(root, archive, core, *, anima_workspace=None, anima_schemas=None
     sys.path[:0] = [str(root), str(core)]
     module = importlib.import_module(f"data.plugins.{PLUGIN}.main")
     validate_presets = importlib.import_module(f"data.plugins.{PLUGIN}.bridge.studio.studio_settings").validate_presets
-    for state in ("favourite", "pass", "unevaluate"):
+    for state in ("favourite", "pass", "unevaluate", "hd"):
         row = {"name": "gallery preview", "positive": "fixture", "negative": "", "preview": f"manual:{state}:abc:12:example.png"}
         assert validate_presets([row]) == [row]
     try:

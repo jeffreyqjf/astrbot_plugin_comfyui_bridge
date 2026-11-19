@@ -21,3 +21,7 @@ ControlNet 产物的媒体保存在 ComfyUI `input/my_input/{unevaluated,favouri
 ## LoRA 预览关联
 
 各族 `lora_order*.json` 新增可选 `previews: {LoRA_ID: image_ID}`，与排序／分类／强度保存在同一个原子替换文件内。缺省为空；该关联按目录内稳定 ID 保存，不使用预览 URL 或图片二进制。旧版列表设置仍可读取，无需迁移。
+
+## 高清成品状态（v3.10.0）
+
+图片归档增加 `hd`，属于 REVIEW_STATES 和 GALLERY_STATES，目录 `hd/{SFW|NSFW}/…`。已有任务图片保持 `{job_id}:{index}` 标识，手动文件支持 `manual:hd:…`。状态仍由原图所在目录表示，不更改旧记录 schema；原图按原有摘要验证移动，任务与 LoRA 元数据不变。预设／LoRA 预览标识校验接受 manual:hd，图片查找枚举新状态。
