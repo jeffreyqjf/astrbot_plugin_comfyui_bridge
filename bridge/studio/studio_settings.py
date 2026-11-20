@@ -1211,6 +1211,7 @@ class StudioSettings:
             return error_response(str(exc), status_code=400)
 
     def read_queue_reference(self, data):
+        data.pop("_reference_origin", None)
         encoded, reference, mask = (data.get(key, "") for key in ("image", "reference_id", "mask"))
         if not all(isinstance(value, str) for value in (encoded, reference, mask)):
             raise WorkflowError("参考图或遮罩格式无效。")
@@ -1223,6 +1224,10 @@ class StudioSettings:
             _, image = self.service.image_reviews.read(reference, True, limit, state="favourite")
         else:
             image = base64.b64decode(encoded, validate=True) if encoded else None
+        if data.get("reference_origin") is not None:
+            data["_reference_origin"] = self.service.image_reviews.verify_reference_origin(image, data["reference_origin"])
+        elif reference:
+            data["_reference_origin"] = self.service.image_reviews.verify_reference_origin(image, {"id": reference, "state": "favourite"})
         if mask:
             if image is None:
                 raise WorkflowError("请先选择参考图，再编辑遮罩。")
@@ -1575,6 +1580,7 @@ class StudioSettings:
                 settings = {
                     "timeout_seconds": self.service.qq_timeout_for(workflow), "image_data": image,
                     "control_sources": sources, "control_archive": control_archive,
+                    "reference_origin": data.get("_reference_origin"),
                 }
                 if sweep:
                     seed, *repeat_seeds = [secrets.randbelow(2**63) for _ in range(count)]
@@ -1617,6 +1623,7 @@ class StudioSettings:
                     owner, prompt, workflow, negative, count,
                     timeout_seconds=self.service.qq_timeout_for(workflow), preset=preset_details, image_data=image,
                     seed=final_seed,
+                    reference_origin=data.get("_reference_origin"),
                     control_sources=sources, control_archive=control_archive,
                 )
                 if pending is not None and catalog.pending_loras.get(reservation) is pending:
@@ -2042,6 +2049,18 @@ class StudioSettings:
             "Content-Length": str(size),
             "Cache-Control": "no-store",
         })
+
+    async def refinement_image(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        try:
+            mime, data = await asyncio.to_thread(
+                self.service.image_reviews.refinement_input, request.query.get("id"),
+                request.query.get("original") == "1", self.service.client.max_image_bytes,
+            )
+            return json_response({"src": f"data:{mime};base64,{base64.b64encode(data).decode('ascii')}"})
+        except (OSError, ValueError, KeyError) as exc:
+            return error_response(str(exc), status_code=400)
 
     async def image_file(self):
         if not request.username:

@@ -76,19 +76,24 @@ class OutputContractTests(unittest.IsolatedAsyncioTestCase):
                     cache = root / "result.png"
                     Image.new("RGB", (16, 12), "green").save(cache)
                     original = cache.read_bytes()
+                    input_path = root / "input.png"
+                    Image.new("RGB", (8, 6), "red").save(input_path)
+                    input_image = input_path.read_bytes()
                     history = {"outputs": {output: {"images": [{"filename": "result.png", "type": "output"}]}}}
                     with patch.object(service.client, "node_schemas", new=AsyncMock(return_value=schemas)), patch.object(
                         service.client, "upload_image", new=AsyncMock(return_value="reference.png")
                     ), patch.object(service.client, "submit", new=AsyncMock(return_value="fixture")) as submit, patch.object(
                         service.client, "wait", new=AsyncMock(return_value=history)
                     ), patch.object(service.client, "download_outputs", new=AsyncMock(return_value=([cache], 1))):
-                        job = await service.start("owner", "refined", workflow, image_data=original)
+                        job = await service.start("owner", "refined", workflow, image_data=input_image)
                         await job.task
                     self.assertEqual(job.state, "completed", job.error)
                     self.assertIn(output, submit.call_args.kwargs["outputs"])
                     items = service.image_reviews.pending(10)["jobs"]
                     self.assertEqual(items[0]["images"][0]["id"], f"{job.id}:1")
                     self.assertEqual(service.image_reviews.read(f"{job.id}:1", True, 1024 * 1024)[1], original)
+                    self.assertEqual(service.image_reviews.refinement_input(f"{job.id}:1", True, 1024 * 1024)[1], input_image)
+                    self.assertIn("refinement", items[0]["images"][0]["generation"])
                     with patch.object(service.client, "node_schemas", new=AsyncMock(return_value=schemas)), patch.object(
                         service.client, "upload_image", new=AsyncMock(return_value="reference.png")
                     ), patch.object(service.client, "submit", new=AsyncMock(return_value="fixture")), patch.object(

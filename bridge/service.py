@@ -449,6 +449,7 @@ class ComfyService:
         allow_nsfw=True,
         control_sources=None,
         control_archive=None,
+        reference_origin=None,
     ):
         await self.initialize()
         wf = workflow if isinstance(workflow, Workflow) else self.resolve(owner, workflow)
@@ -456,6 +457,7 @@ class ComfyService:
             owner, [(wf, prompt, negative, seed, image_folder, preset)], image_data,
             timeout_seconds=timeout_seconds, allow_nsfw=allow_nsfw,
             control_sources=control_sources, control_archive=control_archive,
+            reference_origin=reference_origin,
         )
         return jobs[0]
 
@@ -504,7 +506,7 @@ class ComfyService:
 
     async def start_batch(
         self, owner, prompt, workflow, negative, count, *, timeout_seconds=None, preset=None,
-        image_data=None, control_sources=None, control_archive=None, seed=None,
+        image_data=None, control_sources=None, control_archive=None, seed=None, reference_origin=None,
     ):
         await self.initialize()
         if type(count) is not int or not 1 <= count <= self.queue_limit:
@@ -514,6 +516,7 @@ class ComfyService:
         return self._enqueue(
             owner, [request] * count, image_data, timeout_seconds=timeout_seconds,
             control_sources=control_sources, control_archive=control_archive,
+            reference_origin=reference_origin,
         )
 
     async def start_preset_sweep(
@@ -538,7 +541,7 @@ class ComfyService:
 
     async def start_lora_sweep(
         self, owner, workflows, prompts, seed, *, image_folder, timeout_seconds, allow_nsfw, image_data=None,
-        repeat_seeds=(), control_sources=None, control_archive=None,
+        repeat_seeds=(), control_sources=None, control_archive=None, reference_origin=None,
     ):
         await self.initialize()
         requests = [
@@ -550,6 +553,7 @@ class ComfyService:
         return self._enqueue(
             owner, requests, image_data, timeout_seconds=timeout_seconds, allow_nsfw=allow_nsfw,
             control_sources=control_sources, control_archive=control_archive,
+            reference_origin=reference_origin,
         )
 
     @property
@@ -591,7 +595,7 @@ class ComfyService:
 
     def _enqueue(
         self, owner, requests, image_data, *, timeout_seconds=None, allow_nsfw=True,
-        control_sources=None, control_archive=None,
+        control_sources=None, control_archive=None, reference_origin=None,
     ):
         # Each batch consists of variants of the same workflow.
         wf = requests[0][0]
@@ -609,6 +613,7 @@ class ComfyService:
         ):
             raise WorkflowError("参考图片无效或超过大小上限。")
         prefix = str(self.config.get("positive_prefix", "")).strip()
+        refinement = reference_origin if wf.name in {DETAILER_WORKFLOW, ANIMA_DETAILER_WORKFLOW} else None
         prepared = []
         for wf, prompt, negative, seed, image_folder, preset in requests:
             if not isinstance(prompt, str) or (wf.positive and not prompt.strip()):
@@ -645,6 +650,7 @@ class ComfyService:
                     image_folder=image_folder, control_sources=control_sources,
                     control_outputs=wf.controlnet_outputs, control_archive=control_archive,
                     input_images=wf.input_images,
+                    refinement=refinement,
                 )
             )
             self.jobs[job.id] = job
@@ -654,7 +660,7 @@ class ComfyService:
     async def _run(
         self, job, graph, outputs, image_data, image_fields, *, image_folder,
         control_sources=None, control_outputs=None, control_archive=None,
-        input_images=None,
+        input_images=None, refinement=None,
     ):
         acquired = False
         record = None
@@ -675,6 +681,17 @@ class ComfyService:
                 if directory.resolve() != directory:
                     raise WorkflowError("归档目录必须位于插件输出目录内。")
                 await asyncio.to_thread(directory.mkdir, exist_ok=True)
+            if job.workflow in {DETAILER_WORKFLOW, ANIMA_DETAILER_WORKFLOW} and refinement is None:
+                original = image_data
+                if original is None:
+                    image_name = graph.get("2", {}).get("inputs", {}).get("image")
+                    if not isinstance(image_name, str):
+                        raise WorkflowError("Detailer 没有可记录的输入原图。")
+                    match = re.fullmatch(r"(.*?)(?: \[(input|output|temp)\])?", image_name)
+                    name = match[1].replace("\\", "/")
+                    folder, _, filename = name.rpartition("/")
+                    original = await self.client.image_bytes({"filename": filename, "subfolder": folder, "type": match[2] or "input"})
+                refinement = await asyncio.to_thread(self.image_reviews.capture_refinement, original, job.owner)
             if image_data:
                 filename = await self.client.upload_image(image_data)
                 for target in image_fields:
@@ -733,7 +750,7 @@ class ComfyService:
                     )
                     if links:
                         trace["controlnets"] = links
-                    await self._archive_images(job, refs, image_folder, directory, trace["image_loras"], links)
+                    await self._archive_images(job, refs, image_folder, directory, trace["image_loras"], links, refinement)
             except (OSError, ValueError, ComfyError) as exc:
                 logger.warning("Could not archive media for %s: %s", job.short_id, exc)
                 if not video:
@@ -809,7 +826,7 @@ class ComfyService:
                 logger.warning("Could not archive control image for %s/%s: %s", job.short_id, branch, exc)
         return links
 
-    async def _archive_images(self, job, refs, image_folder, directory, loras, controlnets=()):
+    async def _archive_images(self, job, refs, image_folder, directory, loras, controlnets=(), refinement=None):
         originals = await asyncio.to_thread(self.image_reviews.originals, image_folder, job.id, refs)
         caches = list(job.paths)
         for index in range(len(caches), len(refs)):
@@ -822,6 +839,7 @@ class ComfyService:
             caches.append(cached)
         await asyncio.to_thread(
             self.image_reviews.remember, job.id, job.owner, job.workflow, image_folder, caches, originals,
+            refinement=refinement,
             metadata={
                 "seed": job.seed, "preset": job.preset,
                 "loras": [loras[ref["output_node"]] for ref in refs],

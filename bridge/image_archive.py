@@ -264,7 +264,7 @@ class ImageReviews:
         path.parent.mkdir(parents=True, exist_ok=True)
         atomic_write(path, profile_bytes(record))
 
-    def remember(self, job_id, owner, workflow, folder, caches, originals, *, metadata=None):
+    def remember(self, job_id, owner, workflow, folder, caches, originals, *, metadata=None, refinement=None):
         directory = self.pending_folder(folder, job_id)
         files = []
         digests = {}
@@ -289,6 +289,15 @@ class ImageReviews:
         if metadata is not None:
             record["generation"] = metadata
         with self.lock:
+            if refinement:
+                image = refinement["image"]
+                suffix = image_suffix(image)
+                target = self._refinement_path(job_id, suffix)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                atomic_write(target, image)
+                record.setdefault("generation", {"loras": [[] for _ in files]})["refinement"] = {
+                    "input_id": job_id, "suffix": suffix, "source": refinement.get("source"),
+                }
             self._write_record(job_id, record)
             for source, target, digest, move in transfers:
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -297,6 +306,76 @@ class ImageReviews:
                         _place_file(source, target, digest)
                     if move:
                         source.unlink()
+
+    def _refinement_path(self, identity, suffix):
+        if not JOB_ID.fullmatch(identity or "") or suffix not in {*IMAGE_TYPES, ".thumb.webp"}:
+            raise WorkflowError("细化原图标识无效。")
+        root = self.index.absolute()
+        if root.resolve() != root:
+            raise WorkflowError("细化原图目录不能是链接。")
+        return ImageFavorites._contained_file(root, f"detailer_inputs/{identity}{suffix}")
+
+    def verify_reference_origin(self, image, origin):
+        if not isinstance(origin, dict) or origin.keys() != {"id", "state"} or origin["state"] not in REVIEW_STATES:
+            raise WorkflowError("参考图来源无效。")
+        with self.lock:
+            identity, state = origin["id"], origin["state"]
+            if not isinstance(identity, str):
+                raise WorkflowError("参考图来源无效。")
+            if identity.startswith("manual:"):
+                current, path, _ = self._manual_lookup(identity)
+                if current != state:
+                    raise WorkflowError("参考图已移走，请重新选择。")
+            else:
+                record, index = self._lookup(identity)
+                path = self._path(f"{state}/{record['directory']}/{record['files'][index - 1]}")
+            digest = hashlib.sha256(image or b"").hexdigest()
+            if not _matches_digest(path, digest):
+                raise WorkflowError("参考图与所选原图不匹配，请重新选择。")
+            return {"image": image, "source": {"id": identity, "state": state, "digest": digest,
+                    "relative": path.relative_to(self.root / state).as_posix()}}
+
+    def capture_refinement(self, image, owner):
+        digest = hashlib.sha256(image).hexdigest()
+        matches = []
+        with self.lock:
+            for state in REVIEW_STATES:
+                for record in self._records(state):
+                    if record.get("owner") != owner:
+                        continue
+                    for index, path in self._files(record, state):
+                        if record["digests"].get(record["files"][index - 1]) == digest and _matches_digest(path, digest):
+                            matches.append({"id": f"{record['id']}:{index}", "state": state, "digest": digest,
+                                            "relative": path.relative_to(self.root / state).as_posix()})
+        return {"image": image, "source": matches[0] if len(matches) == 1 else None}
+
+    def refinement_input(self, image_id, original, limit):
+        with self.lock:
+            record, _ = self._lookup(image_id)
+            relation = record.get("generation", {}).get("refinement")
+            if not relation:
+                raise WorkflowError("该图片没有细化原图记录。")
+            path = self._refinement_path(record["id"], relation["suffix"])
+            if not original:
+                path = self._make_thumbnail(self._refinement_path(record["id"], ".thumb.webp"), path)
+            if path is None:
+                raise WorkflowError("细化原图无法预览。")
+            with path.open("rb") as stream:
+                image = stream.read(limit + 1)
+            if len(image) > limit:
+                raise WorkflowError("细化原图超过图片大小上限。")
+            return IMAGE_TYPES[path.suffix.lower()], image
+
+    def _hd_source_paths(self):
+        hidden = set()
+        for record in self._records("hd"):
+            relation = record.get("generation", {}).get("refinement", {})
+            source = relation.get("source")
+            if source and any(self._files(record, "hd")) and _matches_digest(
+                self._path(f"hd/{source['relative']}"), source["digest"],
+            ):
+                hidden.add(source["relative"])
+        return hidden
 
     def _records(self, state, rating=None):
         for section in (rating,) if rating else REVIEW_RATINGS:
@@ -325,6 +404,9 @@ class ImageReviews:
         if generation is not None:
             info.update(seed=generation.get("seed"), loras=generation["loras"][index - 1])
             preset = generation.get("preset")
+            relation = generation.get("refinement")
+            if relation:
+                info["refinement"] = {"input_id": relation["input_id"], "linked": bool(relation.get("source"))}
             slots = generation.get("controlnets")
             if isinstance(slots, list) and index <= len(slots):
                 links = _controlnet_links(slots[index - 1])
@@ -507,18 +589,22 @@ class ImageReviews:
 
     def gallery(self, rating, page, size=24, *, state="favourite", filters=None, lora_match="any"):
         with self.lock:
+            hidden = self._hd_source_paths() if state == "hd" else set()
             start = (page - 1) * size
             entries = []
             page_metadata = {}
             for record in self._records(state, rating):
                 legacy = self._legacy_metadata(record) if filters else None
-                for index, _ in self._files(record, state):
+                for index, path in self._files(record, state):
+                    if path.relative_to(self.root / state).as_posix() in hidden:
+                        continue
                     item = self._item(record, index, legacy, include_generation=bool(filters))
                     if not filters or self._matches_filters(item, filters, lora_match):
                         entries.append((record["created"], item, record))
             entries.extend(
-                (created, item, None) for created, item, _ in self._manual_files(state, rating)
-                if not filters or self._matches_filters(item, filters, lora_match)
+                (created, item, None) for created, item, path in self._manual_files(state, rating)
+                if path.relative_to(self.root / state).as_posix() not in hidden
+                and (not filters or self._matches_filters(item, filters, lora_match))
             )
             entries.sort(key=lambda row: (-row[0], row[1]["id"]))
             rows = []
@@ -536,10 +622,13 @@ class ImageReviews:
 
     def filter_options(self, state, rating):
         with self.lock:
+            hidden = self._hd_source_paths() if state == "hd" else set()
             facets = {key: {} for key in IMAGE_FILTERS}
             for record in self._records(state, rating):
                 legacy = self._legacy_metadata(record)
-                for index, _ in self._files(record, state):
+                for index, path in self._files(record, state):
+                    if path.relative_to(self.root / state).as_posix() in hidden:
+                        continue
                     item = self._item(record, index, legacy)
                     for key, values in self._filter_values(item).items():
                         for value in values - {""}:
@@ -587,6 +676,49 @@ class ImageReviews:
             pass
         return True
 
+    def _move_refinement_hd(self, record, index, source_state):
+        relation = record.get("generation", {}).get("refinement", {})
+        origin = relation.get("source")
+        if not origin:
+            return self._move(record, index, "hd", source_state=source_state)
+        name = record["files"][index - 1]
+        relative = f"{record['directory']}/{name}"
+        plans = [(self._path(f"{source_state}/{relative}"), self._path(f"hd/{relative}"), record["digests"][name])]
+        candidates = [self._path(f"{state}/{origin['relative']}") for state in REVIEW_STATES]
+        existing = [path for path in candidates if path.is_file()]
+        matches = [path for path in existing if _matches_digest(path, origin["digest"])]
+        if existing and not matches:
+            raise WorkflowError("细化原图已变更，未移动任何图片。")
+        if len(matches) > 1:
+            raise WorkflowError("细化原图存在多份，无法安全确定移动来源。")
+        if matches and matches[0] != self._path(f"hd/{origin['relative']}"):
+            plans.append((matches[0], self._path(f"hd/{origin['relative']}"), origin["digest"]))
+        created, removed = [], []
+        for source, target, digest in plans:
+            if target.exists() and not _matches_digest(target, digest):
+                raise WorkflowError("高清图集已有不同的同名图片，未覆盖或移动。")
+            if not _matches_digest(source, digest) and not _matches_digest(target, digest):
+                raise WorkflowError("图片已变更或移走，请刷新后重试。")
+        try:
+            for source, target, digest in plans:
+                if not target.exists():
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    _place_file(source, target, digest)
+                    created.append(target)
+            if any(not _matches_digest(target, digest) for _, target, digest in plans):
+                raise WorkflowError("高清图片校验失败，未移除来源图片。")
+            for source, target, digest in plans:
+                if source != target and source.is_file():
+                    source.unlink()
+                    removed.append((source, target, digest))
+        except (OSError, ValueError):
+            for source, target, digest in removed:
+                _place_file(target, source, digest)
+            for path in created:
+                path.unlink(missing_ok=True)
+            raise
+        return bool(created or removed)
+
     def rate(self, image_id, state, *, source="unevaluate"):
         if state not in GALLERY_STATES or source not in REVIEW_STATES or source == state:
             raise WorkflowError("图片的来源或目标分类无效。")
@@ -595,7 +727,10 @@ class ImageReviews:
                 self._rate_manual(image_id, state, source)
             else:
                 record, index = self._lookup(image_id)
-                self._move(record, index, state, source_state=source)
+                if state == "hd" and record.get("generation", {}).get("refinement"):
+                    self._move_refinement_hd(record, index, source)
+                else:
+                    self._move(record, index, state, source_state=source)
 
     def delete(self, image_id, state):
         if state not in {"unevaluate", "pass"}:
@@ -737,11 +872,20 @@ class ImageReviews:
         if state not in REVIEW_STATES:
             raise WorkflowError("请选择有效的图片图集。")
         with self.lock:
+            hidden = self._hd_source_paths() if state == "hd" else set()
             paths = {
                 path
                 for record in self._records(state) for _, path in self._files(record, state)
             }
             paths.update(path for _, _, path in self._manual_files(state))
+            paths = {path for path in paths if path.relative_to(self.root / state).as_posix() not in hidden}
+            inputs = []
+            if state == "hd":
+                for record in self._records(state):
+                    relation = record.get("generation", {}).get("refinement")
+                    if relation and any(self._files(record, state)):
+                        inputs.append((self._refinement_path(record["id"], relation["suffix"]),
+                                       f"{record['directory']}/input/original{relation['suffix']}"))
         root = self._path(state)
         for path in sorted(paths):
             relative = path.relative_to(root).as_posix()
@@ -750,6 +894,9 @@ class ImageReviews:
                 if source.suffix.lower() not in IMAGE_TYPES or UNSAFE_MANUAL_PATH.search(relative) or not source.is_file():
                     raise WorkflowError("图集文件已变动或不可读取，请刷新后重新导出。")
                 archive.write(source, relative)
+        for path, relative in inputs:
+            with self.lock:
+                archive.write(path, relative)
 
     def read(self, image_id, original, limit, *, state=None):
         with self.lock:

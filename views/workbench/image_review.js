@@ -72,6 +72,7 @@ export function mountImageReviews({
   let referenceVersion = 0;
   let sourceVersion = 0;
   let referenceLabel = "";
+  let referenceOrigin;
   let chooseFavourite;
   let mask = null;
 
@@ -368,6 +369,7 @@ export function mountImageReviews({
         const files = new DataTransfer();
         files.items.add(new File([bytes], `reference.${suffix}`, {type: match[1]}));
         referenceFile.files = files.files;
+        referenceOrigin = kind === "images" ? {id: entry.id, state, file: referenceFile.files[0]} : null;
         referenceId.value = "";
         updateReference(`已选择图集图片 · ${label}`, src);
       } catch (error) { notify(error.message, true); }
@@ -874,6 +876,26 @@ export function mountImageReviews({
     }
   }
 
+  async function showRefinementInput(item, container, isCurrent) {
+    const frame = document.createElement("article"); frame.className = "image-preview-card";
+    const heading = document.createElement("div"); heading.className = "image-preview-heading";
+    const title = document.createElement("h3"); title.textContent = "输入原图 · 修复前";
+    const download = document.createElement("button"); download.type = "button"; download.className = "image-download";
+    download.setAttribute("aria-label", "下载细化输入原图"); download.title = "下载细化输入原图"; download.hidden = true;
+    heading.append(title, download);
+    const media = document.createElement("div"); media.className = "image-preview-media";
+    const image = document.createElement("img"); image.alt = "细化输入原图"; image.hidden = true; media.append(image);
+    const status = document.createElement("p"); status.setAttribute("role", "status"); status.textContent = "正在读取细化原图…";
+    frame.append(heading, media, status); container.append(frame);
+    try {
+      const {src} = await bridge.apiGet("studio/images/refinement", {id: item.id, original: "1"});
+      if (!isCurrent() || !container.contains(frame)) return;
+      image.src = src; image.hidden = download.hidden = false;
+      status.textContent = "与本次修复结果关联保存";
+      download.onclick = () => downloadImage(src, `detailer-input-${item.id}`, download);
+    } catch (error) { if (isCurrent()) status.textContent = error.message; }
+  }
+
   async function openOriginal(item, state, { readOnly = false, list = null } = {}) {
     const version = ++originalVersion;
     openedImage = { item, state, list, readOnly, loading: true, reviewing: false };
@@ -906,10 +928,12 @@ export function mountImageReviews({
     }
     if (!dialog.open) dialog.showModal();
     const controls = item.generation?.controlnets ?? [];
+    const refinement = item.generation?.refinement;
     originalControls.replaceChildren();
-    originalControls.hidden = !controls.length;
-    originalControls.parentElement.classList.toggle("has-control-pair", controls.length > 0);
-    get("image-original-title").textContent = controls.length ? "生成图与控制图" : "原图";
+    originalControls.hidden = !controls.length && !refinement;
+    originalControls.parentElement.classList.toggle("has-control-pair", controls.length > 0 || Boolean(refinement));
+    get("image-original-title").textContent = refinement ? "细化结果与原图" : controls.length ? "生成图与控制图" : "原图";
+    if (refinement) showRefinementInput(item, originalControls, () => dialog.open && version === originalVersion);
     for (const link of controls) {
       showControlAsset(link, originalControls, () => dialog.open && version === originalVersion);
     }
@@ -965,6 +989,10 @@ export function mountImageReviews({
       if (summary.textContent) footer.append(summary);
     }
     const actions = document.createElement("div");
+    if (item.generation?.refinement) {
+      const badge = document.createElement("small"); badge.className = "pill";
+      badge.textContent = "已关联原图"; footer.append(badge);
+    }
     actions.className = state === "unevaluate" ? "review-card-actions" : "row-actions";
     if (state === "unevaluate") {
       if (item.generation?.controlnets?.some(({ new: created }) => created)) {
@@ -1233,7 +1261,7 @@ export function mountImageReviews({
       if (state === "hd") notify("成品已移入高清图集。");
       else if (source === "unevaluate") notify(state === "favourite" ? "图片已收藏。" : "图片已跳过。");
       else notify(state === "favourite" ? "图片已移到收藏。" : "图片已移到 Pass 图集。");
-      if (dialog.open && openedImage === preview && item.generation?.controlnets?.length) {
+      if (dialog.open && openedImage === preview && (item.generation?.controlnets?.length || item.generation?.refinement)) {
         preview.removedIndex ??= Math.max(0, preview.list?.items.findIndex(({ id }) => id === item.id) ?? 0);
         preview.state = state;
         moveOriginal.textContent = state === "pass" ? "移到收藏" : "移到 Pass";
@@ -1280,5 +1308,7 @@ export function mountImageReviews({
     if (!controlPreview.open) controlPreviewAsset.replaceChildren();
   });
   setInterval(() => refreshList(pendingList, pendingList.page, { background: true }), 5000);
-  return { mask: () => mask, pickFavourite, pickResource, openOriginal, previews };
+  return { mask: () => mask, pickFavourite, pickResource, openOriginal, previews,
+    referenceOrigin: () => referenceOrigin && referenceOrigin.file === referenceFile.files[0]
+      ? {id: referenceOrigin.id, state: referenceOrigin.state} : null };
 }

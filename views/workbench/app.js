@@ -2920,7 +2920,7 @@ async function queueReferencePayload(withMask = true) {
     encodeReference(get("queue-reference-file").files[0]),
     encodeReference(withMask ? queueMask() : null),
   ]);
-  return { reference_id: referenceId, image, mask };
+  return { reference_id: referenceId, image, mask, reference_origin: imageReviews.referenceOrigin() };
 }
 
 get("remote-command-form").addEventListener("submit", async (event) => {

@@ -320,6 +320,7 @@ class ComfyUIBridge(Star):
             ("studio/images", self.studio.rate_image, "POST"),
             ("studio/images/delete", self.studio.delete_image, "POST"),
             ("studio/images/file", self.studio.image_file, "GET"),
+            ("studio/images/refinement", self.studio.refinement_image, "GET"),
             ("studio/images/export", self.studio.export_gallery, "GET"),
             ("studio/images/thumbnails", self.studio.generate_thumbnails, "POST"),
             ("studio/videos", self.studio.videos, "GET"),
@@ -630,6 +631,7 @@ class ComfyUIBridge(Star):
             result = await self.run_remote_command(
                 command, account, image, owner=f"studio:{request.username}", allow_nsfw=True,
                 controlnets=data.get("controlnets"),
+                reference_origin=data.get("_reference_origin"),
                 h3_media=data.get("h3_media"),
                 h3_prompt=data.get("h3_prompt"),
                 regional={"regional": data["regional"]} if "regional" in data else None,
@@ -698,6 +700,7 @@ class ComfyUIBridge(Star):
 
     async def run_remote_command(
         self, command, account, image_data, *, owner="studio:remote", allow_nsfw=False, controlnets=None,
+        reference_origin=None,
         h3_media=None,
         h3_prompt=None,
         regional=None,
@@ -738,6 +741,7 @@ class ComfyUIBridge(Star):
                 "message": await self._command_sweep(
                     None, owner, argument, account=account, allow_nsfw=allow_nsfw, image_data=image_data,
                     controlnets=controlnets,
+                    reference_origin=reference_origin,
                 ),
             }
         if image_data is not None:
@@ -797,13 +801,14 @@ class ComfyUIBridge(Star):
             None, workflow, prompt, negative, seed, 1, options, image_folder,
             preset_details=preset_details, owner=owner, image_data=image_data, allow_nsfw=allow_nsfw,
             controlnets=bindings, control_sources=sources, control_archive=control_archive,
+            reference_origin=reference_origin,
         )
         return {"queued": True, "message": f"已加入 1 项生成任务。\n{qq_job_summary(job)}"}
 
     async def _start_generation(
         self, event, wf, prompt, negative, seed, image_index, options, image_folder,
         images=None, *, preset_details=None, owner=None, image_data=QQ_REFERENCE, allow_nsfw=None,
-        controlnets=None, control_sources=None, control_archive=None,
+        controlnets=None, control_sources=None, control_archive=None, reference_origin=None,
     ):
         if wf.kind == "image_to_text":
             raise WorkflowError("请附图或回复图片并发送 /comfy prompt 进行反推。")
@@ -831,6 +836,7 @@ class ComfyUIBridge(Star):
                 owner, prompt, wf, negative, seed, image_data=data, image_folder=image_folder,
                 timeout_seconds=self.service.qq_timeout_for(wf), preset=preset_details,
                 allow_nsfw=allow_nsfw, control_sources=control_sources, control_archive=control_archive,
+                reference_origin=reference_origin,
             )
             if pending is not None and catalog.pending_loras.get(reservation) is pending:
                 catalog.pending_loras.pop(reservation)
@@ -1104,6 +1110,7 @@ class ComfyUIBridge(Star):
 
     async def _command_sweep(
         self, event, owner, argument, *, account="", allow_nsfw=None, image_data=QQ_REFERENCE, controlnets=None,
+        reference_origin=None,
     ):
         parts = argument.split(maxsplit=1)
         mode = parts[0].casefold() if parts else ""
@@ -1115,6 +1122,7 @@ class ComfyUIBridge(Star):
         if mode == "lora":
             return await self._sweep_loras(
                 event, owner, rest, account=account, allow_nsfw=allow_nsfw, image_data=image_data,
+                reference_origin=reference_origin,
                 controlnets=controlnets,
             )
         if controlnets not in (None, {}):
@@ -1155,6 +1163,7 @@ class ComfyUIBridge(Star):
 
     async def _sweep_loras(
         self, event, owner, argument, *, account="", allow_nsfw=None, image_data=QQ_REFERENCE, controlnets=None,
+        reference_origin=None,
     ):
         prompt, name, negative, seed, preset, raw, image_index, options = parse_generation(
             argument, require_prompt=False,
@@ -1231,6 +1240,7 @@ class ComfyUIBridge(Star):
             owner, workflows, prompts, seed, image_folder=image_folder,
             timeout_seconds=self.service.qq_timeout_for(workflow), allow_nsfw=allow_nsfw,
             image_data=reference, control_sources=sources, control_archive=archive,
+            reference_origin=reference_origin,
         )
         for job, parameters in zip(jobs, cycle(workflow_parameters)):
             job.qq_parameters = (*parameters, f"预设 {job.preset['name']}") if job.preset else parameters

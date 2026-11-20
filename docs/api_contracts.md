@@ -137,3 +137,10 @@
 ## 最终输出与 H3 定稿（v3.11.1）
 
 ComfyUI prompt 提交增加 `partial_execution_targets` 明确最终输出集合，发现 node_errors 时清除该 prompt 队列项并返回明确错误，不重试生成。工作台 task_inputs 新增可空的 h3_final 默认对象。`POST studio/queue` 在定稿工作流接受 `h3_final:{base_seed,second_seed,width,height,steps,denoise}`，双种子可用十进制字符串避免精度损失；base_seed 0..2^63-1，second_seed 可额外为 -1，宽高 32..16384 且为 32 倍数，步数 1..10000，降噪 0..1。只覆盖该次 Workflow 副本，保存默认不变；其他工作流拒绝该对象。
+
+## Detailer 原图关联（v3.12.0）
+
+- `POST studio/queue` 和 `studio/queue/command` 的图集参考图可附加 `reference_origin:{id,state}`。服务端在应用遮罩前校验图片字节与所选文件 SHA-256 一致，不能通过请求写入内部 `_reference_origin`。无该字段兼容原接口；旧 reference_id 按 favourite 校验。关联随普通任务、批次、LoRA 叠加／遍历传递，仅两个 Detailer 保存。
+- 图片列表的 `generation.refinement` 为 `{input_id,linked}`；linked 表示有可核实的图集来源，不承诺该源文件此刻仍存在。旧记录无该对象。`GET studio/images/refinement?id=结果图片ID&original=1` 返回 `{src:data_URI}`；不传 original 返回缩略图。沿用登录保护，未登录 401、非法 ID／无关联／文件不可用 400，不接受用户路径。
+- 关联结果通过原 `POST studio/images` 移入 hd 时，图集原图同步迁至 hd，原图与输出均校验后才移除来源；冲突或文件变化拒绝，复制／移除失败尝试回滚。图集来源被删除仍可保留快照并整理结果。本地／QQ 输入仅对同 owner 且唯一字节匹配的生成记录自动识别来源。
+- HD 图片列表和筛选不重复列出已成组的原图，预览中独立展示／下载输入和结果；ZIP 在结果目录下增加 `input/original.ext`。原图已有记录 ID 仍可读取，元数据不重写。移出结果不会同时移出原图；原图无其他高清结果关联时恢复独立卡片。

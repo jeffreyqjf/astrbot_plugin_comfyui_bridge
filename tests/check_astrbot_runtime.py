@@ -62,6 +62,43 @@ async def check_h3_final_inputs(instance):
     print("PASS: H3 final task inputs, exact base/second seeds, dimensions, validation and saved defaults")
 
 
+async def check_refinement_pairs(instance, root):
+    from astrbot.api.web import PluginRequest, bind_request_context
+    from PIL import Image
+    from starlette.requests import Request
+
+    review = instance.service.image_reviews
+    original, result = root / "detailer-original.png", root / "detailer-result.png"
+    Image.new("RGB", (20, 30), "red").save(original)
+    Image.new("RGB", (40, 60), "blue").save(result)
+    source_id, output_id = "d" * 32, "e" * 32
+    review.remember(source_id, "pair-test", "generator", "SFW", [original], [None])
+    review.rate(f"{source_id}:1", "favourite")
+    origin = review.verify_reference_origin(original.read_bytes(), {"id": f"{source_id}:1", "state": "favourite"})
+    review.remember(output_id, "pair-test", "Detailer_V40_AstrBot", "SFW", [result], [None], refinement=origin)
+
+    async def get(identity, username="test"):
+        incoming = Request({"type": "http", "method": "GET", "path": "/studio/images/refinement", "headers": [],
+                            "query_string": f"id={identity}&original=1".encode()})
+        with bind_request_context(PluginRequest(incoming, username=username)):
+            return await instance.remote_studio.routes["GET", "studio/images/refinement"]()
+
+    assert (await get(f"{output_id}:1", None)).status_code == 401
+    assert (await get("../invalid")).status_code == 400
+    review.rate(f"{output_id}:1", "hd")
+    response = await get(f"{output_id}:1")
+    assert response.status_code == 200, response.body
+    assert base64.b64decode(json.loads(response.body)["src"].split(",", 1)[1]) == original.read_bytes()
+    assert not any(item["id"] == f"{source_id}:1" for item in review.gallery("", 1)["images"])
+    assert [item["id"] for item in review.gallery("", 1, state="hd")["images"]] == [f"{output_id}:1"]
+    # Keep later isolated gallery assertions independent.
+    review.rate(f"{output_id}:1", "pass", source="hd")
+    review.delete(f"{output_id}:1", "pass")
+    review.rate(f"{source_id}:1", "pass", source="hd")
+    review.delete(f"{source_id}:1", "pass")
+    print("PASS: Detailer paired HD gallery, authenticated input preview and source relocation")
+
+
 async def check_reverse_history(instance):
     from astrbot.api.web import PluginRequest, bind_request_context
     from PIL import Image
@@ -565,6 +602,7 @@ async def check(root, archive, core, *, anima_workspace=None, anima_schemas=None
         assert service.data_dir.is_relative_to(root)
         assert not service.errors, service.errors
         await check_h3_final_inputs(instance)
+        await check_refinement_pairs(instance, root)
         await check_reverse_history(instance)
         await check_drawing_guidance(instance, module)
         assert len(service.workflows) == len(list((plugin / "workflows").glob("*.json")))

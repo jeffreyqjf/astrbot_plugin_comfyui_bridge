@@ -29,3 +29,9 @@ ControlNet 产物的媒体保存在 ComfyUI `input/my_input/{unevaluated,favouri
 ## 永久反推记录
 
 插件数据目录 `reverse_history/{UUID}.json` 保存 `id/prompt/source/created_at/suffix`；`{UUID}{suffix}` 保存输入原图独立副本，`{UUID}.thumb.jpg` 保存 480px 内缩略图。JSON 原子写入作为成功记录提交点；所有写入和删除使用同一锁，不设条数清理。列表按记录文件时间倒序分页。只删除请求 ID 对应的托管文件，其他目录／原图不受影响。新建目录按需生成，旧数据无需迁移。
+
+## Detailer 原图关联（v3.12.0）
+
+新 Detailer 记录增加可选 `generation.refinement:{input_id,suffix,source}`。input_id 使用结果任务 UUID；输入字节独立保存在 `image_reviews/detailer_inputs/{UUID}{suffix}`，缩略图为 `{UUID}.thumb.webp`。source 为 null 或 `{id,state,digest,relative}`，记录核验过的源图 ID、当时状态、SHA-256 及相对于状态根目录的路径；网页只返回 input_id/linked。
+
+移入 hd 时保持源图原相对路径，因此生成记录 ID／LoRA／预设继续有效。联动移动在图集锁内先校验、复制两张图，再移除旧路径，失败回滚。HD 隐藏来源卡片依赖仍有高清结果及相同摘要的来源文件；快照用于预览和导出，不依赖来源仍存在。旧记录缺省无关联，不迁移或猜测历史来源。图集 ZIP 同时包含对应输入副本。

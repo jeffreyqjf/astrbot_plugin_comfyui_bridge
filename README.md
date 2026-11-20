@@ -1,6 +1,6 @@
 # ComfyUI 工作台
 
-AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v3.11.1。
+AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v3.12.0。
 
 v3 新建任务按工作流选择本次启用的功能，支持 Advanced Gemma V40 的 RGB 区域遮罩与整套区域提示词预设。见[使用教程](user%20docs/REGIONAL_PROMPT.md)。
 
@@ -83,6 +83,8 @@ MiniMax H3 的 `h3-v3` 是独立的 Seed Hunter v3 完整版，可在工作台�
 在「管理 → 新建任务 → 简易添加」选 Detailer V40，从本地上传或从收藏选图。点击「编辑遮罩」，把要局部重绘的位置涂绿，应用遮罩后加入队列。支持画笔、橡皮、强度、硬度、撤销重做、反选、清空和缩放移动。遮罩按原图像素保存，可在提交前重复编辑。
 
 QQ 可附图或回复图片并发送 `/comfy gen --wf detailer detailed face --raw`。默认执行遮罩重绘，再做面部细化。普通不透明图片的手绘遮罩为空，保留自动面部细化。两段采样参数可在工作台的 Detailer V40 参数页调整。
+
+Detailer V40 和 Anima Detailer 的新任务保存输入原图与结果的关联。在新建任务从图集选图，修复完成后将满意的结果「移入高清」，所选原图也会从原图集移走，与结果在高清图集中成组展示。打开结果可对照修复前后、分别下载；本地上传或 QQ 附图也保存输入副本，仅在唯一匹配本会话图集原图时联动移动。旧结果不追溯补关联。
 
 两条 V40 的修脚均默认关闭。可在工作流的「局部修复 → 修脚」启用，也可在 QQ 指令加 `--feet on` 临时开启。使用 Impact Subpack 的 `models/ultralytics/bbox/foot_anime_yolo11m_v3.pt` 检测脚部，再以当前模型重绘检测区域。
 
