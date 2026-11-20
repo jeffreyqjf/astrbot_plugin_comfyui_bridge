@@ -1,9 +1,12 @@
 """MiniMax H3 reference images and Seed Hunter v3 workbench settings."""
 
 import json
+import re
+import secrets
+from copy import copy, deepcopy
 from sys import float_info
 
-from .workflow import H3_SEED_FULL, Workflow, WorkflowError, is_link
+from .workflow import H3_SEED_FINAL, H3_SEED_FULL, Workflow, WorkflowError, is_link
 from .workflow_fields import combo_options, editable_fields, widget_specs
 
 H3_V3_DEFAULT = "三路搜种"
@@ -13,6 +16,49 @@ H3_SWITCH_LABELS = {
     "593": {"1": "主提示词", "2": "备用提示词"},
     "600": {str(index): title for index, title in enumerate(H3_CANDIDATES.values(), 1)},
 }
+
+
+def h3_final_defaults(workflow):
+    if workflow.name != H3_SEED_FINAL:
+        return None
+    graph = workflow.graph
+    return {"base_seed": str(graph["16"]["inputs"]["value"]),
+            "second_seed": str(graph["63"]["inputs"]["noise_seed"]),
+            **{key: graph["61"]["inputs"][key] for key in ("width", "height")},
+            **{key: graph["62"]["inputs"][key] for key in ("steps", "denoise")}}
+
+
+def h3_final_inputs(workflow, values):
+    defaults = h3_final_defaults(workflow)
+    if defaults is None or not isinstance(values, dict) or values.keys() != defaults.keys():
+        raise WorkflowError("请选择视频放大定稿，并填写完整的定稿参数。")
+
+    def integer(key, minimum, maximum):
+        value = values[key]
+        if type(value) is not int and not (isinstance(value, str) and re.fullmatch(r"-?[0-9]{1,19}", value)):
+            raise WorkflowError(f"定稿参数 {key} 必须是整数。")
+        value = int(value)
+        if not minimum <= value <= maximum:
+            raise WorkflowError(f"定稿参数 {key} 须为 {minimum} 到 {maximum}。")
+        return value
+
+    base = integer("base_seed", 0, 2**63 - 1)
+    second = integer("second_seed", -1, 2**63 - 1)
+    width, height = integer("width", 32, 16384), integer("height", 32, 16384)
+    if width % 32 or height % 32:
+        raise WorkflowError("定稿宽高须为 32 的倍数。")
+    steps = integer("steps", 1, 10000)
+    denoise = values["denoise"]
+    if type(denoise) not in (int, float) or not 0 <= denoise <= 1:
+        raise WorkflowError("定稿降噪须为 0 到 1。")
+    result = copy(workflow)
+    result.graph = deepcopy(workflow.graph)
+    result.graph["16"]["inputs"]["value"] = base
+    result.graph["63"]["inputs"]["noise_seed"] = secrets.randbelow(2**63) if second == -1 else second
+    result.graph["61"]["inputs"].update(width=width, height=height)
+    result.graph["62"]["inputs"].update(steps=steps, denoise=denoise)
+    result.default_seed = base
+    return result
 
 
 def h3_v3_graphs(graph, settings):

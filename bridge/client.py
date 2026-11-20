@@ -188,7 +188,7 @@ class ComfyClient:
         except (ValueError, AttributeError, TypeError):
             return "请求被拒绝，请检查服务认证、模型文件和工作流节点。"
 
-    async def submit(self, graph, *, metadata=None):
+    async def submit(self, graph, *, metadata=None, outputs=None):
         # A submission is deliberately never retried: duplicate POSTs generate duplicate images.
         result = await self.request(
             "POST",
@@ -196,12 +196,16 @@ class ComfyClient:
             payload={
                 "prompt": graph,
                 "client_id": self.client_id,
+                **({"partial_execution_targets": list(outputs)} if outputs is not None else {}),
                 **({"extra_data": {"extra_pnginfo": {"astrbot": metadata}}} if metadata is not None else {}),
             },
         )
         prompt_id = result.get("prompt_id")
         if not isinstance(prompt_id, str) or not prompt_id:
             raise ComfyError("ComfyUI 未接受任务：" + self._api_error(json.dumps(result).encode()))
+        if result.get("node_errors"):
+            await self.delete_queued(prompt_id)
+            raise ComfyError("工作流输出校验失败：" + self._api_error(json.dumps(result).encode()))
         return prompt_id
 
     async def delete_queued(self, prompt_id):

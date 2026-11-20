@@ -133,3 +133,7 @@
 - `GET studio/reverse-history/image?id=UUID&original=1` 返回 `{src:data_URI}` 原图，省略 original 返回缩略图。
 - `POST studio/reverse-history/delete` 接受 `{id:UUID}`，删除该记录、原图副本与缩略图，返回 `{}`。正文最多 4096 字节；ID 为 32 位小写十六进制，拒绝路径／链接文件。
 - 三个接口均沿用工作台登录／远程鉴权，未登录 401，非法参数／文件不可用 400。不新增保留数量参数，API 不自动删除记录。反推文字成功后异步落盘，磁盘异常不使成功反推变为失败。
+
+## 最终输出与 H3 定稿（v3.11.1）
+
+ComfyUI prompt 提交增加 `partial_execution_targets` 明确最终输出集合，发现 node_errors 时清除该 prompt 队列项并返回明确错误，不重试生成。工作台 task_inputs 新增可空的 h3_final 默认对象。`POST studio/queue` 在定稿工作流接受 `h3_final:{base_seed,second_seed,width,height,steps,denoise}`，双种子可用十进制字符串避免精度损失；base_seed 0..2^63-1，second_seed 可额外为 -1，宽高 32..16384 且为 32 倍数，步数 1..10000，降噪 0..1。只覆盖该次 Workflow 副本，保存默认不变；其他工作流拒绝该对象。

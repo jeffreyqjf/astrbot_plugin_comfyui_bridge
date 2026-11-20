@@ -19,8 +19,11 @@ from .studio.reverse_history import ReverseHistory
 from .video_library import VideoLibrary
 from .workflows.anima_aio import AIO_MAPPING, AIO_WORKFLOW
 from .workflows.controlnet import CONTROL_BRANCHES
+from .workflows.detailer import prepare_detailer_models
 from .workflows.workflow import (
+    ANIMA_DETAILER_WORKFLOW,
     ANIMA_WORKFLOW,
+    DETAILER_WORKFLOW,
     SDXL_WORKFLOW,
     WAI_MAPPING,
     WAI_WORKFLOW,
@@ -477,7 +480,7 @@ class ComfyService:
                 raise WorkflowError("等待反推超时，请稍后重试。") from exc
             try:
                 graph[image_node]["inputs"]["image"] = await self.client.upload_image(image_data)
-                prompt_id = await self.client.submit(graph)
+                prompt_id = await self.client.submit(graph, outputs=[output_node])
                 try:
                     result = await self.client.wait(
                         prompt_id, self.generation_timeout()
@@ -501,13 +504,13 @@ class ComfyService:
 
     async def start_batch(
         self, owner, prompt, workflow, negative, count, *, timeout_seconds=None, preset=None,
-        image_data=None, control_sources=None, control_archive=None,
+        image_data=None, control_sources=None, control_archive=None, seed=None,
     ):
         await self.initialize()
         if type(count) is not int or not 1 <= count <= self.queue_limit:
             raise WorkflowError(f"生成批次须为 1 到 {self.queue_limit} 的整数。")
         wf = workflow if isinstance(workflow, Workflow) else self.resolve(owner, workflow)
-        request = (wf, prompt, negative, -1 if count > 1 else None, None, preset)
+        request = (wf, prompt, negative, seed if seed is not None else -1 if count > 1 else None, None, preset)
         return self._enqueue(
             owner, [request] * count, image_data, timeout_seconds=timeout_seconds,
             control_sources=control_sources, control_archive=control_archive,
@@ -694,7 +697,12 @@ class ComfyService:
             embedded = trace
             if job.preset:
                 embedded = {**trace, "preset": {key: value for key, value in job.preset.items() if key != "account"}}
-            job.prompt_id = await self.client.submit(graph, metadata=embedded)
+            if job.workflow in {DETAILER_WORKFLOW, ANIMA_DETAILER_WORKFLOW}:
+                types = {node["class_type"] for node in graph.values()} & {"ControlNetLoader", "ModelPatchLoader"}
+                if types:
+                    prepare_detailer_models(graph, await self.client.node_schemas(types, cached=True))
+            job.prompt_id = await self.client.submit(graph, metadata=embedded,
+                                                     outputs=list(dict.fromkeys([*outputs, *(control_outputs or {}).values()])))
             job.submission_done.set()
             record = await self.client.wait(job.prompt_id, job.timeout_seconds)
             job.paths, job.image_count = await self.client.download_outputs(
@@ -728,6 +736,8 @@ class ComfyService:
                     await self._archive_images(job, refs, image_folder, directory, trace["image_loras"], links)
             except (OSError, ValueError, ComfyError) as exc:
                 logger.warning("Could not archive media for %s: %s", job.short_id, exc)
+                if not video:
+                    job.error = "已生成图片，但未能写入待评价图集。可从任务结果取回图片，请检查 AstrBot 日志。"
             job.state = "completed"
         except asyncio.CancelledError:
             job.state = "cancelled"

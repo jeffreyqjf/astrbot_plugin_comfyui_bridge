@@ -30,7 +30,7 @@ class TestClient:
         self.upload_calls.append(data)
         return f"astrbot_bridge/fixture_{len(self.upload_calls)}.png"
 
-    async def submit(self, graph, *, metadata):
+    async def submit(self, graph, *, metadata, outputs=None):
         self.prompt = graph
         return "isolated-prompt"
 

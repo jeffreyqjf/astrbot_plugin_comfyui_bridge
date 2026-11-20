@@ -74,7 +74,14 @@ from ..workflows.lightning import (
     lightning_options,
     lightning_workflow,
 )
-from ..workflows.minimax_h3 import h3_v3_fields, h3_with_media, h3_with_reference, save_h3_v3_field
+from ..workflows.minimax_h3 import (
+    h3_final_defaults,
+    h3_final_inputs,
+    h3_v3_fields,
+    h3_with_media,
+    h3_with_reference,
+    save_h3_v3_field,
+)
 from ..workflows.parameter_layout import (
     preserve_parameter_layout,
     read_parameter_layout,
@@ -660,6 +667,7 @@ class StudioSettings:
             "reference": reference and not full_h3, "mask": reference and mask and not full_h3,
             "h3_prompt": full_h3 and bool(workflow.positive),
             "h3_media": full_h3 and "416" in workflow.active,
+            "h3_final": h3_final_defaults(workflow),
             "features": feature_catalog(workflow),
         }
 
@@ -1490,6 +1498,10 @@ class StudioSettings:
             if workflow is None:
                 raise WorkflowError("请选择可直接生成的工作流。需要参考图时可用命令表单上传。")
             inputs = self.task_inputs(workflow)
+            final_seed = None
+            if "h3_final" in data:
+                workflow = h3_final_inputs(workflow, data["h3_final"])
+                final_seed = workflow.default_seed
             regional = {"regional": data["regional"]} if "regional" in data else {}
             if "upscale" in data:
                 regional["upscale"] = data["upscale"]
@@ -1604,6 +1616,7 @@ class StudioSettings:
                 jobs = await self.service.start_batch(
                     owner, prompt, workflow, negative, count,
                     timeout_seconds=self.service.qq_timeout_for(workflow), preset=preset_details, image_data=image,
+                    seed=final_seed,
                     control_sources=sources, control_archive=control_archive,
                 )
                 if pending is not None and catalog.pending_loras.get(reservation) is pending:

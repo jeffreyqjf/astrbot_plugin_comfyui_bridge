@@ -3,6 +3,29 @@
 from copy import copy, deepcopy
 
 from .workflow import DETAILER_WORKFLOW, Workflow, WorkflowError, is_link
+from .workflow_fields import combo_options, validate_graph
+
+
+def prepare_detailer_models(graph, schemas):
+    """Resolve uniquely relocated weights without substituting another model."""
+    loaders = {}
+    for key, node in graph.items():
+        field = {"ControlNetLoader": "control_net_name", "ModelPatchLoader": "name"}.get(node["class_type"])
+        if not field:
+            continue
+        loaders[key] = node
+        spec = schemas.get(node["class_type"], {}).get("input", {}).get("required", {}).get(field)
+        choices = combo_options(spec)
+        value = node["inputs"].get(field)
+        if choices is not None and isinstance(value, str) and value not in choices:
+            normalized = value.replace("\\", "/")
+            matches = [item for item in choices if isinstance(item, str) and item.replace("\\", "/") == normalized]
+            if not matches:
+                matches = [item for item in choices if isinstance(item, str)
+                           and item.replace("\\", "/").rsplit("/", 1)[-1] == normalized.rsplit("/", 1)[-1]]
+            if len(matches) == 1:
+                node["inputs"][field] = matches[0]
+    validate_graph(loaders, schemas)
 
 DETAILER_TASK_BRANCHES = {"hires": "15", "inpaint": "27", "outpaint": "28", "mask": "mask", "upscale": "30"}
 

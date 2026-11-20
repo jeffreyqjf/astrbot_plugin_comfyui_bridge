@@ -2266,6 +2266,7 @@ const taskFeatures = mountTaskFeatures({
 });
 let taskControlWorkflow;
 let taskInputs = {};
+let finalDefaults = "";
 
 function renderQueueLoraChoices() {
   const previous = queueLoraChoice.value;
@@ -2449,6 +2450,13 @@ function renderTaskControlnets(selectedName = queueWorkflow.value, inputs) {
   const controls = get("queue-controlnets");
   const workflow = studio.workflows.find(({ name }) => name === selectedName);
   taskInputs = inputs ?? workflow?.task_inputs ?? {};
+  const final = !isCommand && taskInputs.h3_final;
+  get("queue-h3-final").hidden = !final;
+  for (const input of get("queue-h3-final").querySelectorAll("input")) {
+    input.disabled = !final;
+    if (final && finalDefaults !== JSON.stringify(final)) input.value = final[input.dataset.final];
+  }
+  finalDefaults = final ? JSON.stringify(final) : "";
   function field(id, visible) {
     const input = get(id);
     input.closest("label").hidden = !visible;
@@ -2858,6 +2866,11 @@ get("queue-form").addEventListener("submit", async (event) => {
     ...(taskInputs.negative ? {negative: get("queue-negative").value} : {}),
     count: get("queue-count").valueAsNumber,
   };
+  if (taskInputs.h3_final) {
+    data.h3_final = Object.fromEntries([...get("queue-h3-final").querySelectorAll("input")].map(input => [
+      input.dataset.final, input.type === "number" ? input.valueAsNumber : input.value,
+    ]));
+  }
   if (!queueLora.hidden) {
     const loras = [...queueLoras].map(([id, input]) => ({ id, strength: input.valueAsNumber }));
     if (loras.some(({ strength }) => !(strength >= -100 && strength <= 100))) {

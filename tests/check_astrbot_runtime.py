@@ -27,6 +27,41 @@ class PluginContext:
         self.routes.update((method, path) for method in methods)
 
 
+async def check_h3_final_inputs(instance):
+    from astrbot.api.web import PluginRequest, bind_request_context
+    from starlette.requests import Request
+
+    name = "MiniMax_H3_Seed_Final_AstrBot"
+    path = instance.service.workflow_dir / (name + ".json")
+    before = path.read_bytes()
+    capabilities = instance.studio.task_inputs(instance.service.workflows[name])
+    assert capabilities["reference"] and not capabilities["negative"] and capabilities["h3_final"]
+    settings = {**capabilities["h3_final"], "base_seed": "9007199254740999", "second_seed": "9007199254740997",
+                "width": 960, "height": 1632, "steps": 4, "denoise": 0.4}
+
+    async def post(data):
+        async def receive():
+            return {"type": "http.request", "body": json.dumps(data).encode()}
+        incoming = Request({"type": "http", "method": "POST", "path": "/studio/queue", "headers": [], "query_string": b""}, receive)
+        with bind_request_context(PluginRequest(incoming, username="final-test")):
+            return await instance.studio.add_jobs()
+
+    with patch.object(instance.service, "_run") as run:
+        response = await post({"workflow": name, "positive": "Final scene", "count": 2, "h3_final": settings})
+        assert response.status_code == 200, response.body
+        await asyncio.sleep(0)
+        assert run.call_count == 2
+        for call in run.call_args_list:
+            job, graph = call.args[:2]
+            assert job.seed == 9007199254740999 and graph["16"]["inputs"]["value"] == job.seed
+            assert graph["63"]["inputs"]["noise_seed"] == 9007199254740997
+            assert graph["61"]["inputs"]["width"] == 960 and graph["62"]["inputs"]["steps"] == 4
+        response = await post({"workflow": name, "positive": "Final scene", "h3_final": {**settings, "width": 111}})
+        assert response.status_code == 400 and run.call_count == 2
+    assert path.read_bytes() == before
+    print("PASS: H3 final task inputs, exact base/second seeds, dimensions, validation and saved defaults")
+
+
 async def check_reverse_history(instance):
     from astrbot.api.web import PluginRequest, bind_request_context
     from PIL import Image
@@ -529,6 +564,7 @@ async def check(root, archive, core, *, anima_workspace=None, anima_schemas=None
         service = instance.service
         assert service.data_dir.is_relative_to(root)
         assert not service.errors, service.errors
+        await check_h3_final_inputs(instance)
         await check_reverse_history(instance)
         await check_drawing_guidance(instance, module)
         assert len(service.workflows) == len(list((plugin / "workflows").glob("*.json")))

@@ -694,6 +694,18 @@
                 <div id="queue-lora-rows"></div>
                 <small id="queue-lora-status" role="status"></small>
               </details>
+              <section id="queue-h3-final" class="task-features" hidden>
+                <h3>视频放大定稿</h3>
+                <p>填写选中候选的实际种子，保持原提示词、参考图及首轮参数；工作流重新生成候选，再执行潜空间放大和二次采样。</p>
+                <div class="grid">
+                  <label class="field">原候选种子<input data-final="base_seed" type="text" inputmode="numeric" pattern="[0-9]{1,19}" required></label>
+                  <label class="field">二次采样种子<input data-final="second_seed" type="text" inputmode="numeric" pattern="-?[0-9]{1,19}" required><small>-1 使用随机种子</small></label>
+                  <label class="field">定稿宽度<input data-final="width" type="number" min="32" max="16384" step="32" required></label>
+                  <label class="field">定稿高度<input data-final="height" type="number" min="32" max="16384" step="32" required></label>
+                  <label class="field">二次采样步数<input data-final="steps" type="number" min="1" max="10000" required></label>
+                  <label class="field">二次采样降噪<input data-final="denoise" type="number" min="0" max="1" step="any" required></label>
+                </div>
+              </section>
               <section id="queue-features" class="wide task-features" hidden>
                 <h3>本次可选功能</h3>
                 <div data-feature-choices class="task-feature-choices" aria-label="选择本次启用的功能"></div>
