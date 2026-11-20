@@ -34,3 +34,9 @@
 
 - `templates/Detailer_V40_AstrBot.json`、`templates/Anima_Detailer_AstrBot.json`：带主要修复滑动比较的 AstrBot 画布，与本机同名画布同步。
 - `scripts/add_detailer_comparisons.py`：依据主要修复节点的实际输入／输出补齐比较，保留原位置、分组、处理连线及已有比较；处理原版需有用户明确授权。测试位于 `tests/test_detailer_comparisons.py`。
+
+## 反推记录
+
+- `bridge/studio/reverse_history.py`：提示词／原图副本持久保存、分页、删除与登录保护接口。
+- `bridge/service.py`：run_caption 成功出口统一记录 PixAI／TIPO、WD14 和 AI 反推结果。
+- `views/workbench/reverse_history.js`：管理侧边栏入口、缩略图、原图、复制、分页和删除确认。

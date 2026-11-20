@@ -41,6 +41,8 @@ def build(target=None):
         "views/workbench/task_features.js",
         "views/workbench/task_inspect.js",
         "bridge/studio/job_details.py",
+        "bridge/studio/reverse_history.py",
+        "views/workbench/reverse_history.js",
         "bridge/workflows/illustrious.py",
         "bridge/workflows/lightning.py",
         "bridge/workflows/minimax_h3.py",

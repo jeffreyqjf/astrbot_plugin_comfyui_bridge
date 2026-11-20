@@ -27,6 +27,40 @@ class PluginContext:
         self.routes.update((method, path) for method in methods)
 
 
+async def check_reverse_history(instance):
+    from astrbot.api.web import PluginRequest, bind_request_context
+    from PIL import Image
+    from starlette.requests import Request
+
+    history = instance.service.reverse_history
+    pixels = io.BytesIO()
+    Image.new("RGB", (40, 60)).save(pixels, "PNG")
+    identity = history.save("<b>literal prompt</b>", pixels.getvalue(), "WD14")
+
+    async def call(route, method="GET", query=b"", data=None, username="test"):
+        async def receive():
+            return {"type": "http.request", "body": json.dumps(data).encode()}
+        incoming = Request({"type": "http", "method": method, "path": "/" + route, "headers": [],
+                            "query_string": query}, receive)
+        with bind_request_context(PluginRequest(incoming, username=username)):
+            return await instance.remote_studio.routes[method, route]()
+
+    route = "studio/reverse-history"
+    for path, method in ((route, "GET"), (route + "/image", "GET"), (route + "/delete", "POST")):
+        assert (await call(path, method, username=None)).status_code == 401
+    response = await call(route)
+    saved = json.loads(response.body)
+    assert saved["total"] == 1 and saved["records"][0]["prompt"] == "<b>literal prompt</b>"
+    response = await call(route + "/image", query=f"id={identity}&original=1".encode())
+    assert response.status_code == 200
+    assert base64.b64decode(json.loads(response.body)["src"].split(",", 1)[1]) == pixels.getvalue()
+    assert (await call(route, query=b"page=invalid")).status_code == 400
+    assert (await call(route + "/delete", "POST", data={"id": "../elsewhere"})).status_code == 400
+    assert (await call(route + "/delete", "POST", data={"id": identity})).status_code == 200
+    assert history.list()["total"] == 0 and not list(history.root.iterdir())
+    print("PASS: reverse history persistence, authentication, original image, deletion and invalid paths")
+
+
 async def check_drawing_guidance(instance, module):
     from astrbot.api.provider import ProviderRequest
     from astrbot.core.agent.message import Message, TextPart, dump_messages_with_checkpoints
@@ -495,6 +529,7 @@ async def check(root, archive, core, *, anima_workspace=None, anima_schemas=None
         service = instance.service
         assert service.data_dir.is_relative_to(root)
         assert not service.errors, service.errors
+        await check_reverse_history(instance)
         await check_drawing_guidance(instance, module)
         assert len(service.workflows) == len(list((plugin / "workflows").glob("*.json")))
         assert ("GET", f"/{PLUGIN}/studio/images") in context.routes

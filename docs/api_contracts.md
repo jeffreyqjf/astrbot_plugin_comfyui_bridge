@@ -126,3 +126,10 @@
 ## 高清图集（v3.10.0）
 
 图片接口的 state/source 增加 `hd`：`POST studio/images` 从 unevaluate/favourite/pass 手动移入 hd，或从 hd 移回 favourite/pass。`GET studio/images`、图片读取、缩略图生成、筛选与图集导出支持 hd。导出参数 `kind=images&state=hd`，ZIP 按既有 SFW/NSFW 和子目录组织原图。认证、路径／摘要校验及错误语义沿用原接口，不开放自动归档或高清原图直接删除。控制图接口仍只接受原三种状态。
+
+## 反推记录（v3.11.0）
+
+- `GET studio/reverse-history?page=N` 返回 `{records:[{id,prompt,source,created_at}],total,page,page_size:12}`，按保存顺序倒序分页，越界页自动收敛，无保留条数限制。只读本页记录内容，提示词按文本显示。
+- `GET studio/reverse-history/image?id=UUID&original=1` 返回 `{src:data_URI}` 原图，省略 original 返回缩略图。
+- `POST studio/reverse-history/delete` 接受 `{id:UUID}`，删除该记录、原图副本与缩略图，返回 `{}`。正文最多 4096 字节；ID 为 32 位小写十六进制，拒绝路径／链接文件。
+- 三个接口均沿用工作台登录／远程鉴权，未登录 401，非法参数／文件不可用 400。不新增保留数量参数，API 不自动删除记录。反推文字成功后异步落盘，磁盘异常不使成功反推变为失败。

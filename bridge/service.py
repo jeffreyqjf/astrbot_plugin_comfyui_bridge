@@ -11,9 +11,11 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from astrbot.api import logger
+from PIL import Image
 
 from .client import VIDEO_MIME, ComfyCancelled, ComfyClient, ComfyError, output_refs
 from .image_archive import DEFAULT_ARCHIVE, ImageArchive, ImageFavorites, ImageReviews, folder_name
+from .studio.reverse_history import ReverseHistory
 from .video_library import VideoLibrary
 from .workflows.anima_aio import AIO_MAPPING, AIO_WORKFLOW
 from .workflows.controlnet import CONTROL_BRANCHES
@@ -126,6 +128,7 @@ class ComfyService:
             self.data_dir, self.output_dir, local_output, str(config.get("favorites_directory") or ""),
         )
         self.image_reviews = ImageReviews(self.data_dir, self.output_dir, local_output)
+        self.reverse_history = ReverseHistory(self.data_dir)
         self.video_library = VideoLibrary(self.output_dir, local_output)
         self.workflows, self.errors, self.selections, self.jobs = {}, {}, {}, {}
         self.ready = False
@@ -459,9 +462,9 @@ class ComfyService:
         graph_path = self.bundled_dir.parent / "templates/Anima_WD14_Caption_AstrBot.json"
         graph = json.loads(graph_path.read_text(encoding="utf-8"))
         graph["2"]["inputs"]["threshold"] = threshold
-        return await self.run_caption(graph, image_data, "1", "3")
+        return await self.run_caption(graph, image_data, "1", "3", source="WD14")
 
-    async def run_caption(self, graph, image_data, image_node, output_node):
+    async def run_caption(self, graph, image_data, image_node, output_node, *, source="PixAI / TIPO"):
         if self.closed or self.caption_pending >= self.queue_limit:
             raise ComfyError("暂时无法接收更多反推任务，请稍后重试。")
         self.caption_pending += 1
@@ -489,7 +492,12 @@ class ComfyService:
         texts = result.get("outputs", {}).get(output_node, {}).get("text", [])
         if not isinstance(texts, list) or not texts or not isinstance(texts[0], str) or not texts[0].strip():
             raise WorkflowError("没有识别到达到置信度阈值的标签，请尝试另一张图片。")
-        return texts[0].strip()
+        prompt = texts[0].strip()
+        try:
+            await asyncio.to_thread(self.reverse_history.save, prompt, image_data, source)
+        except (OSError, ValueError, Image.DecompressionBombError) as exc:
+            logger.warning("Could not save reverse prompt history: %s", exc)
+        return prompt
 
     async def start_batch(
         self, owner, prompt, workflow, negative, count, *, timeout_seconds=None, preset=None,

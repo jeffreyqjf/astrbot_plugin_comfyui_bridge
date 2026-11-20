@@ -5,6 +5,7 @@ import { mountH3Media } from "./h3_media.js";
 import { mountH3Prompt } from "./h3_prompt.js";
 import { mountTaskFeatures } from "./task_features.js";
 import { mountJobDetails, mountTaskPresets } from "./task_inspect.js";
+import { mountReverseHistory } from "./reverse_history.js";
 
 const remote = !window.AstrBotPluginView;
 const bridge = window.AstrBotPluginView || (await import("./remote.js")).bridge;
@@ -970,7 +971,7 @@ function activate(tab) {
 
 function showPanel(id, tab) {
   activate(tab);
-  for (const panel of ["settings", "archive", "persona", "lora-order", "presets", "queue", "create-task", "exports", "image-review", "image-gallery", "control-gallery", "controlnet-profiles", "videos"]) get(panel).hidden = panel !== id;
+  for (const panel of ["settings", "archive", "persona", "lora-order", "presets", "queue", "create-task", "exports", "image-review", "image-gallery", "control-gallery", "controlnet-profiles", "videos", "reverse-history"]) get(panel).hidden = panel !== id;
   if (remote) get("remote-workflow").value = id === "settings" ? selected.name : "";
 }
 
@@ -1985,6 +1986,7 @@ get("preset-form").addEventListener("submit", async (event) => {
 });
 
 mountPromptLibrary({ get, bridge, message, notify });
+mountReverseHistory({get, bridge, showPanel, notify, canOpen: () => studio && !loading && !get("save").disabled});
 
 const queueStates = { queued: "等待中", running: "处理中", completed: "已完成", failed: "失败", cancelled: "已取消" };
 const taskPresets = mountTaskPresets({bridge, select: get("queue-preset"), button: get("queue-preset-picker")});

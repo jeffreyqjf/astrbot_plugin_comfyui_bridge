@@ -12,3 +12,4 @@ tests/*
 !tests/test_detailer_comparisons.py
 !tests/test_task_details.py
 !tests/test_lora_previews.py
+!tests/test_reverse_history.py

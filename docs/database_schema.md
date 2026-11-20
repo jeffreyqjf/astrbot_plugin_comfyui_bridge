@@ -25,3 +25,7 @@ ControlNet 产物的媒体保存在 ComfyUI `input/my_input/{unevaluated,favouri
 ## 高清成品状态（v3.10.0）
 
 图片归档增加 `hd`，属于 REVIEW_STATES 和 GALLERY_STATES，目录 `hd/{SFW|NSFW}/…`。已有任务图片保持 `{job_id}:{index}` 标识，手动文件支持 `manual:hd:…`。状态仍由原图所在目录表示，不更改旧记录 schema；原图按原有摘要验证移动，任务与 LoRA 元数据不变。预设／LoRA 预览标识校验接受 manual:hd，图片查找枚举新状态。
+
+## 永久反推记录
+
+插件数据目录 `reverse_history/{UUID}.json` 保存 `id/prompt/source/created_at/suffix`；`{UUID}{suffix}` 保存输入原图独立副本，`{UUID}.thumb.jpg` 保存 480px 内缩略图。JSON 原子写入作为成功记录提交点；所有写入和删除使用同一锁，不设条数清理。列表按记录文件时间倒序分页。只删除请求 ID 对应的托管文件，其他目录／原图不受影响。新建目录按需生成，旧数据无需迁移。

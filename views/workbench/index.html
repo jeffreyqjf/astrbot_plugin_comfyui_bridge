@@ -38,6 +38,7 @@
           <button type="button" id="open-persona" class="workflow-tab" aria-controls="persona">绘图人格</button>
           <button type="button" id="open-lora-order" class="workflow-tab" aria-controls="lora-order">LoRA 编号</button>
           <button type="button" id="open-presets" class="workflow-tab" aria-controls="presets">提示词预设</button>
+          <button type="button" id="open-reverse-history" class="workflow-tab" aria-controls="reverse-history">反推记录</button>
           <button type="button" id="open-image-review" class="workflow-tab" aria-controls="image-review">待评价图片</button>
           <button type="button" id="open-image-gallery" class="workflow-tab" aria-controls="image-gallery">收藏图集</button>
           <button type="button" id="open-pass-gallery" class="workflow-tab" aria-controls="image-gallery">Pass 图集</button>
@@ -51,6 +52,15 @@
         </nav>
       </aside>
       <div class="workspace-main">
+        <section id="reverse-history" hidden>
+          <div class="panel-heading"><h2>反推记录</h2><button type="button" data-history-refresh>刷新</button></div>
+          <p>自动保存成功反推的提示词和对应图片，长期保留，直到手动删除。</p>
+          <p data-history-status role="status"></p>
+          <div class="reverse-history-list"></div>
+          <nav class="image-pages" aria-label="反推记录分页"><button type="button" data-history-prev>上一页</button><span data-history-page></span><button type="button" data-history-next>下一页</button></nav>
+        </section>
+        <dialog id="reverse-history-image" class="task-info-dialog"><div class="panel-heading"><h2>反推原图</h2><button type="button" data-history-close>关闭</button></div><p role="status"></p><img alt="反推时保存的原图" hidden></dialog>
+        <dialog id="reverse-history-delete" class="task-info-dialog"><h2>删除反推记录</h2><p>将删除这条提示词和记录中保存的图片副本，原始图片不受影响。</p><p data-delete-error role="alert"></p><div class="row-actions"><button type="button" data-delete-cancel>取消</button><button type="button" data-delete-confirm>删除</button></div></dialog>
         <p id="status" role="status" aria-live="polite">正在读取工作流…</p>
         <form id="settings" hidden>
           <div class="panel-heading">

@@ -18,7 +18,7 @@ from .mask_image import reference_body_limit
 from .studio_settings import COMMAND_IMPORT_LIMIT
 
 ASSETS = (
-    "style.css", "app.js", "image_review.js", "remote.js", "prompt_library.js", "mask_editor.js", "videos.js",
+    "style.css", "app.js", "image_review.js", "remote.js", "prompt_library.js", "mask_editor.js", "videos.js", "reverse_history.js",
     "h3_media.js", "h3_media_transport.js", "h3_media_vendor.js", "h3_media_vendor.css", "h3_media_LICENSE.txt",
     "h3_prompt.js", "h3_prompt_transport.js", "h3_prompt_vendor.js", "h3_prompt_vendor.css", "h3_prompt_LICENSE.txt",
     "h3_prompt_ide_core.mjs", "h3_prompt_completion_core.mjs", "h3_prompt_schema_core.mjs",
@@ -26,6 +26,7 @@ ASSETS = (
 )
 VIEW = PACKAGE_ROOT / "views" / "workbench"
 API_PATHS = frozenset({
+    "studio/reverse-history", "studio/reverse-history/image", "studio/reverse-history/delete",
     "studio", "studio/navigation-order", "studio/workflow", "studio/workflow/layout",
     "studio/presets", "studio/presets/accounts",
     "studio/workflow/alias",

@@ -12,6 +12,18 @@
   --error: #a42a44;
   --shadow: 0 10px 32px #2129440b;
 }
+.reverse-history-list { display: grid; gap: 16px; }
+.reverse-history-card { display: grid; grid-template-columns: minmax(100px, 180px) minmax(0, 1fr); gap: 16px; padding: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+.reverse-history-card > div { min-width: 0; }
+.reverse-history-card textarea { width: 100%; resize: vertical; margin-bottom: 10px; }
+.reverse-history-preview { padding: 4px; align-self: start; background: var(--soft); }
+.reverse-history-preview img { display: block; width: 100%; height: 180px; object-fit: contain; }
+.reverse-history-preview img:not([src]) { visibility: hidden; }
+#reverse-history-image img { width: 100%; max-height: 70vh; object-fit: contain; }
+@media (max-width: 520px) {
+  .reverse-history-card { grid-template-columns: minmax(0, 1fr); }
+  .reverse-history-preview { width: min(100%, 220px); justify-self: center; }
+}
 @media (prefers-color-scheme: dark) {
   :root {
     color: #eceefa; background: #141825;
