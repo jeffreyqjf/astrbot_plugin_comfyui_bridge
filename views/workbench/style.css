@@ -645,3 +645,21 @@ button.image-download {
 .model-download-job progress { display: block; width: 100%; margin: 10px 0; accent-color: var(--accent); }
 .model-links-editor textarea { width: 100%; overflow-wrap: anywhere; }
 .model-links-editor p { overflow-wrap: anywhere; }
+.model-links-editor > .field { margin-top: 10px; }
+.model-link-layout { display: grid; grid-template-columns: minmax(0, 1fr) 94px; gap: 12px; margin-top: 8px; }
+.model-link-list { min-width: 0; min-height: 180px; max-height: 310px; overflow-y: auto; border: 1px solid var(--line); border-radius: 9px; padding: 5px; background: var(--surface); }
+.model-link-row { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 4px; border: 1px solid transparent; border-radius: 6px; }
+.model-link-row.selected { border-color: var(--accent); background: var(--tint); }
+.model-link-row small { flex: 0 0 30px; text-align: center; color: var(--muted); font-size: 11px; }
+.model-link-row input { min-width: 0; width: 100%; padding: 8px; font-size: 13px; }
+.model-link-row input[readonly] { background: transparent; border-color: transparent; cursor: pointer; text-overflow: ellipsis; }
+.model-link-tools { display: flex; flex-direction: column; gap: 8px; }
+.model-link-tools button { width: 100%; }
+.model-link-empty { padding: 12px; font-size: 13px; color: var(--muted); }
+@media (max-width: 520px) {
+  .model-link-layout { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .model-link-list { min-height: 140px; max-height: 235px; }
+  .model-link-row input { font-size: 16px; }
+  .model-link-tools { display: flex; flex-flow: row wrap; gap: 6px; }
+  .model-link-tools button { width: auto; flex: 1 0 auto; padding: 8px 10px; }
+}

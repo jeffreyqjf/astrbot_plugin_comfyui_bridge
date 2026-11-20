@@ -6,11 +6,20 @@ export function mountModelCatalog({get, bridge, showPanel, workflowTitle, canOpe
   const editor = document.createElement("dialog"); editor.className = "task-info-dialog model-links-editor";
   const editorTitle = document.createElement("h2"); editorTitle.textContent = "编辑模型信息";
   const modelName = document.createElement("p"); modelName.className = "model-download-description";
-  const label = document.createElement("label"); label.className = "field"; label.textContent = "发布／下载链接（每行一个，第一行作为发布页入口）";
-  const input = document.createElement("textarea"); input.dataset.modelLinks = ""; input.rows = 5; input.maxLength = 41000; input.spellcheck = false; label.append(input);
+  const label = document.createElement("div"); label.className = "field"; label.textContent = "发布／下载链接（首选链接作为发布页入口）";
+  const linkLayout = document.createElement("div"); linkLayout.className = "model-link-layout";
+  const linkRows = document.createElement("div"); linkRows.className = "model-link-list"; linkRows.setAttribute("role", "listbox"); linkRows.setAttribute("aria-label", "模型链接");
+  const linkTools = document.createElement("div"); linkTools.className = "model-link-tools";
+  linkLayout.append(linkRows, linkTools); label.append(linkLayout);
+  let draftLinks = [], selectedLink = -1, editingLink = -1, originalLink = "", linkBusy = false;
+  const tools = {};
+  for (const [action, text] of [["add","新建"],["edit","编辑"],["delete","删除"],["up","上移"],["down","下移"]]) {
+    const button = document.createElement("button"); button.type = "button"; button.textContent = text; button.dataset.linkAction = action;
+    tools[action] = button; linkTools.append(button);
+  }
   const descriptionLabel = document.createElement("label"); descriptionLabel.className = "field"; descriptionLabel.textContent = "模型简介";
   const descriptionInput = document.createElement("textarea"); descriptionInput.dataset.modelDescription = ""; descriptionInput.rows = 3; descriptionInput.maxLength = 4000; descriptionInput.placeholder = "填写作用、适用场景或注意事项，可留空"; descriptionLabel.append(descriptionInput);
-  const editorNote = document.createElement("p"); editorNote.textContent = "可添加第二、第三链接，调整行序即可更换主要链接；用于浏览器打开，不会自动变成后台下载直链。清空可移除入口。";
+  const editorNote = document.createElement("p"); editorNote.textContent = "选中一项后编辑或调整顺序，双击／F2 也可编辑，Enter 完成。第一项为首选，最多 10 项；删除所有项可移除入口。链接用于浏览器打开。";
   const linkList = document.createElement("div"); linkList.className = "model-guide-actions";
   const editorError = document.createElement("p"); editorError.setAttribute("role", "status");
   const editorActions = document.createElement("div"); editorActions.className = "row-actions";
@@ -34,20 +43,84 @@ export function mountModelCatalog({get, bridge, showPanel, workflowTitle, canOpe
     }
     return link;
   }
+  function renderLinkOpen() {
+    linkList.replaceChildren();
+    const value = draftLinks[selectedLink]?.trim();
+    if (!value || linkBusy) return;
+    try {
+      const url = new URL(value);
+      if (["http:", "https:"].includes(url.protocol) && !url.username && !url.password) linkList.append(pageLink(value, "打开所选链接 ↗"));
+    } catch { /* Incomplete drafts are editable, but cannot be opened. */ }
+  }
+  function renderLinkRows(focus = false) {
+    linkRows.replaceChildren();
+    draftLinks.forEach((value, index) => {
+      const row = document.createElement("div"); row.className = "model-link-row"; row.classList.toggle("selected", index === selectedLink);
+      row.dataset.linkIndex = index; row.setAttribute("role", "option"); row.setAttribute("aria-selected", String(index === selectedLink)); row.tabIndex = index === selectedLink ? 0 : -1;
+      const number = document.createElement("small"); number.textContent = index === 0 ? "首选" : String(index + 1);
+      const input = document.createElement("input"); input.type = "text"; input.inputMode = "url"; input.maxLength = 4096; input.spellcheck = false;
+      input.dataset.linkValue = index; input.value = value; input.readOnly = editingLink !== index; input.disabled = linkBusy;
+      input.tabIndex = editingLink === index ? 0 : -1; input.setAttribute("aria-label", `链接 ${index + 1}`); input.title = value;
+      input.oninput = () => { draftLinks[index] = input.value; input.title = input.value; editorError.textContent = ""; renderLinkOpen(); };
+      row.onclick = () => { if (!linkBusy && selectedLink !== index) { selectedLink = index; editingLink = -1; renderLinkRows(true); } };
+      row.ondblclick = () => { if (!linkBusy) { selectedLink = index; beginLinkEdit(); } };
+      row.onkeydown = event => {
+        if (linkBusy) return;
+        if (editingLink === index) {
+          if (event.key === "Enter" || event.key === "Escape") {
+            event.preventDefault(); event.stopPropagation();
+            if (event.key === "Escape") draftLinks[index] = originalLink;
+            editingLink = -1; renderLinkRows(true);
+          }
+        } else if (["ArrowUp", "ArrowDown", "F2", "Enter", "Delete"].includes(event.key)) {
+          event.preventDefault();
+          if (event.key === "Delete") tools.delete.click();
+          else if (event.key === "F2" || event.key === "Enter") beginLinkEdit();
+          else { selectedLink = Math.max(0, Math.min(draftLinks.length - 1, index + (event.key === "ArrowUp" ? -1 : 1))); renderLinkRows(true); }
+        }
+      };
+      row.append(number, input); linkRows.append(row);
+    });
+    if (!draftLinks.length) { const empty = document.createElement("p"); empty.className = "model-link-empty"; empty.textContent = "暂无链接，点击新建添加"; linkRows.append(empty); }
+    tools.add.disabled = linkBusy || draftLinks.length >= 10;
+    tools.edit.disabled = tools.delete.disabled = linkBusy || selectedLink < 0;
+    tools.up.disabled = linkBusy || selectedLink <= 0;
+    tools.down.disabled = linkBusy || selectedLink < 0 || selectedLink >= draftLinks.length - 1;
+    renderLinkOpen();
+    if (focus) {
+      const row = linkRows.querySelector(`[data-link-index="${selectedLink}"]`);
+      const field = editingLink === selectedLink ? row?.querySelector("input") : row;
+      field?.focus(); if (editingLink === selectedLink) field?.select();
+    }
+  }
+  function beginLinkEdit() { if (selectedLink < 0 || linkBusy) return; editingLink = selectedLink; originalLink = draftLinks[selectedLink]; renderLinkRows(true); }
+  tools.add.onclick = () => { draftLinks.push(""); selectedLink = draftLinks.length - 1; beginLinkEdit(); };
+  tools.edit.onclick = beginLinkEdit;
+  tools.delete.onclick = () => { draftLinks.splice(selectedLink, 1); selectedLink = Math.min(selectedLink, draftLinks.length - 1); editingLink = -1; editorError.textContent = ""; renderLinkRows(true); };
+  function moveLink(delta) {
+    const next = selectedLink + delta;
+    [draftLinks[selectedLink], draftLinks[next]] = [draftLinks[next], draftLinks[selectedLink]];
+    selectedLink = next; editingLink = -1; renderLinkRows(true);
+  }
+  tools.up.onclick = () => moveLink(-1); tools.down.onclick = () => moveLink(1);
+  editor.addEventListener("cancel", event => { if (linkBusy) event.preventDefault(); });
   let editing;
   function showEditor(row) {
     editing = {workflow: choice.value, name: row.name, folder: row.folder};
-    modelName.textContent = row.name; descriptionInput.value = row.note ?? ""; input.value = (row.links ?? (row.url ? [row.url] : [])).join("\n"); editorError.textContent = "";
-    linkList.replaceChildren(...(row.links ?? (row.url ? [row.url] : [])).map((url, index) => pageLink(url, `打开链接 ${index + 1} ↗`)));
+    modelName.textContent = row.name; descriptionInput.value = row.note ?? ""; draftLinks = [...(row.links ?? (row.url ? [row.url] : []))]; selectedLink = draftLinks.length ? 0 : -1; editingLink = -1; editorError.textContent = "";
+    renderLinkRows();
     editor.showModal();
   }
   saveLinks.onclick = async () => {
+    const blank = draftLinks.findIndex(value => !value.trim());
+    if (blank >= 0) { editorError.textContent = `链接 ${blank + 1} 为空，请填写或删除该项。`; selectedLink = blank; beginLinkEdit(); return; }
     saveLinks.disabled = closeEditor.disabled = true; editorError.textContent = "";
+    linkBusy = descriptionInput.disabled = true; renderLinkRows();
     try {
-      await bridge.apiPost("studio/model-links", {...editing, action:"save", note: descriptionInput.value, links: input.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean), revision: catalog.links_revision});
+      await bridge.apiPost("studio/model-links", {...editing, action:"save", note: descriptionInput.value, links: draftLinks.map(value => value.trim()), revision: catalog.links_revision});
       editor.close(); await load();
     } catch (error) { editorError.textContent = error.message; }
-    finally { saveLinks.disabled = closeEditor.disabled = false; }
+    finally { saveLinks.disabled = closeEditor.disabled = linkBusy = descriptionInput.disabled = false; renderLinkRows(); }
   };
   let pending, polling = false;
   const finished = new Set();

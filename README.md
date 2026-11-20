@@ -1,6 +1,6 @@
 # ComfyUI 工作台
 
-AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v3.17.0。
+AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v3.17.1。
 
 v3 新建任务按工作流选择本次启用的功能，支持 Advanced Gemma V40 的 RGB 区域遮罩与整套区域提示词预设。见[使用教程](user%20docs/REGIONAL_PROMPT.md)。
 
