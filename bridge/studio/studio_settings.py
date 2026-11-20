@@ -259,6 +259,8 @@ class StudioSettings:
             return error_response(str(exc), status_code=400)
 
     def __init__(self, service, anima):
+        from .model_downloads import ModelDownloads
+        self.model_downloads = ModelDownloads(self)
         self.service = service
         self.anima = anima
         self.input_library = InputLibrary(service, anima.workspace)

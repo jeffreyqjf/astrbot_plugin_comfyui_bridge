@@ -35,3 +35,7 @@ ControlNet 产物的媒体保存在 ComfyUI `input/my_input/{unevaluated,favouri
 新 Detailer 记录增加可选 `generation.refinement:{input_id,suffix,source}`。input_id 使用结果任务 UUID；输入字节独立保存在 `image_reviews/detailer_inputs/{UUID}{suffix}`，缩略图为 `{UUID}.thumb.webp`。source 为 null 或 `{id,state,digest,relative}`，记录核验过的源图 ID、当时状态、SHA-256 及相对于状态根目录的路径；网页只返回 input_id/linked。
 
 移入 hd 时保持源图原相对路径，因此生成记录 ID／LoRA／预设继续有效。联动移动在图集锁内先校验、复制两张图，再移除旧路径，失败回滚。HD 隐藏来源卡片依赖仍有高清结果及相同摘要的来源文件；快照用于预览和导出，不依赖来源仍存在。旧记录缺省无关联，不迁移或猜测历史来源。图集 ZIP 同时包含对应输入副本。
+
+## 模型下载状态（v3.15.0）
+
+模型存在检查只读目录与 extra_model_paths.yaml，无索引落盘。下载历史为 ModelDownloads.jobs 的当前进程内记录（最多约 20 项），各用户仅能列出和取消自己的任务。临时模型位于目标目录 `.{文件名}.{UUID}.part`，完整后排他发布为目标名称；取消、失败、插件退出时清理。既有模型不覆盖，下载完成不自动修改工作流。断电等进程外强制终止可能留下 part 文件，不会被作为正式模型识别；本轮未迁移现有数据。

@@ -291,6 +291,8 @@ class ComfyUIBridge(Star):
             ("studio/queue", self.studio.queue, "GET"),
             ("studio/queue/details", self.studio.queue_details, "GET"),
             ("studio/model-catalog", self.studio.model_catalog, "GET"),
+            ("studio/model-downloads", self.studio.model_downloads.api, "GET"),
+            ("studio/model-downloads", self.studio.model_downloads.api, "POST"),
             ("studio/reverse-history", self.service.reverse_history.records_api, "GET"),
             ("studio/reverse-history/image", self.service.reverse_history.image_api, "GET"),
             ("studio/reverse-history/delete", self.service.reverse_history.delete_api, "POST"),
@@ -1765,6 +1767,7 @@ class ComfyUIBridge(Star):
 
     async def terminate(self):
         await self.remote_studio.stop()
+        await self.studio.model_downloads.close()
         tasks = list(self._delivery_tasks)
         for task in tasks:
             task.cancel()

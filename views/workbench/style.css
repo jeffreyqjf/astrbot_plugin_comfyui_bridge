@@ -633,3 +633,13 @@ button.image-download {
 .model-guide-card h3 { margin: 10px 0; font-size: 1rem; }
 .model-guide-card code { display: block; padding: 10px; background: var(--tint); border-radius: 8px; }
 .model-source-link { display: inline-block; margin: 8px 0; font-weight: 600; }
+.model-guide-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.model-guide-actions .model-source-link, .model-download-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 14px; border-radius: 10px; font-size: .9rem; font-weight: 600; text-decoration: none; margin: 0; }
+.model-guide-actions .model-source-link { background: var(--accent); color: white; border: 1px solid var(--accent); }
+.model-guide-actions .model-source-link:hover { filter: brightness(1.12); }
+.model-download-button { background: var(--tint); color: var(--accent); border: 1px solid var(--line); }
+.model-presence { font-size: .9rem; color: var(--muted); }
+.model-presence.installed { color: #187349; font-weight: 600; }
+.model-locations, .model-download-description { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; }
+.model-download-job { padding: 12px; margin: 12px 0; border: 1px solid var(--line); border-radius: 12px; overflow-wrap: anywhere; }
+.model-download-job progress { display: block; width: 100%; margin: 10px 0; accent-color: var(--accent); }

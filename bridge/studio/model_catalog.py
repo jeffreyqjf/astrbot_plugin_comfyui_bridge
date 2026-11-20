@@ -1,5 +1,6 @@
 """Read-only model inventory from installed workflows, with reviewed release sources."""
 
+import asyncio
 import json
 from fnmatch import fnmatchcase
 from pathlib import PurePosixPath
@@ -100,9 +101,7 @@ def inventory(workflow, sources, canvas=None, saved_graph=None):
     return sorted(rows.values(), key=lambda row: (not row["required"], not row["connected"], row["folder"], row["name"]))
 
 
-async def catalog_api(service, anima):
-    if not request.username:
-        return error_response("请登录 AstrBot 面板。", status_code=401)
+async def catalog_data(service, anima):
     data = json.loads((PACKAGE_ROOT / "templates/model_sources.json").read_text(encoding="utf-8"))
     await service.initialize()
     workflows = []
@@ -114,4 +113,24 @@ async def catalog_api(service, anima):
             saved_graph, _ = profile_parts(json.loads(workflow_path(service.workflow_dir, name).read_bytes()))
             rows = inventory(workflow, data["sources"], canvas, saved_graph)
             workflows.append({"name": name, "models": rows})
-    return json_response({"checked_at": data["checked_at"], "workflows": workflows})
+    from .model_downloads import local_status
+    def annotate():
+        cache = {}
+        for workflow in workflows:
+            for row in workflow["models"]:
+                try:
+                    workspace = anima.workspace.resolve()
+                    if not (workspace / "folder_paths.py").is_file():
+                        raise ValueError("未确认本机 ComfyUI 目录，无法检测模型。")
+                    row.update(local_status(workspace, row, cache))
+                except (OSError, ValueError, AttributeError) as exc:
+                    row.update(installed=False, local_checked=False, locations=[], local_error=str(exc))
+                row["download_url"] = data.get("downloads", {}).get(PurePosixPath(row["name"]).name)
+    await asyncio.to_thread(annotate)
+    return {"checked_at": data["checked_at"], "workflows": workflows}
+
+
+async def catalog_api(service, anima):
+    if not request.username:
+        return error_response("请登录 AstrBot 面板。", status_code=401)
+    return json_response(await catalog_data(service, anima))

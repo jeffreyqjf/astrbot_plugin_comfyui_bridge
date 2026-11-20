@@ -43,6 +43,7 @@ def build(target=None):
         "bridge/studio/job_details.py",
         "bridge/studio/reverse_history.py",
         "bridge/studio/model_catalog.py",
+        "bridge/studio/model_downloads.py",
         "templates/model_sources.json",
         "views/workbench/model_catalog.js",
         "views/workbench/reverse_history.js",

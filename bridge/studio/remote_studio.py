@@ -27,6 +27,7 @@ ASSETS = (
 VIEW = PACKAGE_ROOT / "views" / "workbench"
 API_PATHS = frozenset({
     "studio/model-catalog",
+    "studio/model-downloads",
     "studio/reverse-history", "studio/reverse-history/image", "studio/reverse-history/delete",
     "studio", "studio/navigation-order", "studio/workflow", "studio/workflow/layout",
     "studio/presets", "studio/presets/accounts",

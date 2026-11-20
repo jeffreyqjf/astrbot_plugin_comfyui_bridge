@@ -113,6 +113,13 @@ async def check_model_catalog(instance):
     assert len(data["workflows"]) == len(instance.service.workflows)
     for workflow in data["workflows"]:
         assert workflow["models"], workflow["name"]
+        assert all("installed" in row and "locations" in row for row in workflow["models"])
+    for method in ("GET", "POST"):
+        with bind_request_context(PluginRequest(incoming, username=None)):
+            assert (await instance.remote_studio.routes[method, "studio/model-downloads"]()).status_code == 401
+    with bind_request_context(PluginRequest(incoming, username="test")):
+        response = await instance.remote_studio.routes["GET", "studio/model-downloads"]()
+        assert json.loads(response.body)["jobs"] == []
     print("PASS: model catalog authentication, all installed workflows and source metadata")
 
 

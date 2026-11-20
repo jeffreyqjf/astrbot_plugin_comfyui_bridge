@@ -148,3 +148,11 @@ ComfyUI prompt 提交增加 `partial_execution_targets` 明确最终输出集合
 ## 模型配置指南（v3.14.0）
 
 `GET studio/model-catalog` 需要工作台登录，未登录返回 401，读取错误返回 400。返回 `{checked_at,workflows:[{name,models:[{name,folder,purpose,required,connected,nodes,url,source,note}]}]}`。required 是基础加载器且连至当前输出；connected 为结构连线引用，并非节点运行时旁路状态。保存 API 中的备用模型与 Anima 画布旁路纳入列表。无权威来源 url 为 null，文字不可当成路径读取。该接口只读，不联网、不查验磁盘模型、不安装文件。
+
+## 模型存在检查与确认下载（v3.15.0）
+
+`GET studio/model-catalog` 增加 installed/local_checked/locations/local_error 及可空 download_url；只读本机目录及 extra_model_paths.yaml，递归子目录，按非空同名文件检测，不验证权重哈希。download_url 仅来自随包精确文件清单。
+
+`GET studio/model-downloads` 返回当前登录用户的 `{jobs:[{id,owner,name,destination,state,received,total,error}]}`，state 为 queued/downloading/completed/cancelled/failed，total 可空；任务只留内存。`POST studio/model-downloads` 正文上限 4096 字节，开始接受 `{workflow,name,folder,confirmed:true}`，后端重读清单、复查存在状态、确认本机目录并确定 URL／路径；不接受任意外部链接和保存路径。取消接受 `{action:"cancel",id}`，只能取消自己的活动任务，重复取消已结束任务不改结果。未登录 401，未确认／重复／其他非法请求 400。全插件同时一个下载。无需确认的 GET 不启动任何下载。
+
+网络会话不复用 ComfyUI 的认证信息，限制 HTTPS 发布站点及 CDN、公网 DNS 和逐跳重定向；网页／错误响应不写成模型。完整流暂存 part，独占创建正式文件，不覆盖原模型；取消与退出清理临时文件。无需下载的发布页链接仍由浏览器正常打开。

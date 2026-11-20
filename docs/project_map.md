@@ -44,3 +44,5 @@
 ## 工作流模型指南
 
 `bridge/studio/model_catalog.py` 只读合并运行图、完整保存图和 Anima 旁路画布中的加载节点；`templates/model_sources.json` 维护人工核对的作者／官方／转换来源。`views/workbench/model_catalog.js` 渲染管理侧模型配置指南；`user docs/MODEL_GUIDE.md` 保存来源索引。新增模块、来源 JSON、前端脚本和用户说明均列入 build_zip.py 白名单。
+
+模型指南的存在检查、目录别名／extra_model_paths.yaml 和经过确认的可取消下载由 bridge/studio/model_downloads.py 管理；生命周期在插件 terminate 中停止。该模块不复用 ComfyUI 的认证会话。源清单 downloads 仅登记经核对的精确文件直链。

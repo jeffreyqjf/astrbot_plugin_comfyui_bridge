@@ -16,3 +16,4 @@ tests/*
 !tests/test_task_output_fixes.py
 !tests/test_refinement_pairs.py
 !tests/test_model_catalog.py
+!tests/test_model_downloads.py
