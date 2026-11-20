@@ -55,7 +55,7 @@
       <div class="workspace-main">
         <section id="model-catalog" hidden>
           <div class="panel-heading"><h2>模型配置指南</h2><button type="button" data-model-refresh>刷新清单</button></div>
-          <p>优先打开模型发布页查看并下载。已核对直链的文件也可确认后下载到 ComfyUI，支持进度查看和取消。已存在模型会显示实际路径，包括子文件夹。</p>
+          <p>优先打开模型发布页查看并下载。每个模型可编辑多个链接，发布页打开第一个；已存在状态统一显示按钮。AstrBot 内嵌页在插件电脑的默认浏览器打开，手机独立网页在本机打开。</p>
           <div class="grid"><label class="field">工作流<select data-model-workflow></select></label><label class="field">查找模型<input type="search" data-model-search placeholder="输入模型名、用途或文件夹"></label><label class="field">范围<select data-model-scope><option value="">全部模型</option><option value="required">基础必需</option><option value="optional">分支／可选</option><option value="unknown">来源待核实</option></select></label></div>
           <p class="section-note">存在检查按文件名搜索对应模型目录、子目录及 extra_model_paths.yaml，不代表文件哈希／兼容性已验证。“当前分支依赖”按 API 连线判断，FP8／GGUF 按模式选一套。没有精确直链的模型请打开发布页；预处理器可能首次运行时下载额外权重。</p>
           <p data-model-status role="status"></p><div class="model-catalog-list"></div>
@@ -397,6 +397,13 @@
             </footer>
             <small class="section-note">导入后可在对应工作流里应用。同名配置会自动加上序号。</small>
             <input type="file" id="workflow-config-file" accept=".json,application/json" hidden>
+          </section>
+          <section>
+            <h2>工作流模型链接</h2>
+            <label class="field">工作流<select id="transfer-model-workflow"></select></label>
+            <footer><button type="button" id="import-model-links">导入模型链接 JSON</button><button type="button" id="export-model-links">导出模型链接 JSON</button></footer>
+            <small class="section-note">导出所选工作流的全部模型链接及顺序。导入合并同一工作流的链接设置，不改变模型文件、工作流或后台下载直链。</small>
+            <input type="file" id="model-links-file" accept=".json,application/json" hidden>
           </section>
           <section>
             <h2>提示词预设</h2>

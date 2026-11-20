@@ -156,3 +156,9 @@ ComfyUI prompt 提交增加 `partial_execution_targets` 明确最终输出集合
 `GET studio/model-downloads` 返回当前登录用户的 `{jobs:[{id,owner,name,destination,state,received,total,error}]}`，state 为 queued/downloading/completed/cancelled/failed，total 可空；任务只留内存。`POST studio/model-downloads` 正文上限 4096 字节，开始接受 `{workflow,name,folder,confirmed:true}`，后端重读清单、复查存在状态、确认本机目录并确定 URL／路径；不接受任意外部链接和保存路径。取消接受 `{action:"cancel",id}`，只能取消自己的活动任务，重复取消已结束任务不改结果。未登录 401，未确认／重复／其他非法请求 400。全插件同时一个下载。无需确认的 GET 不启动任何下载。
 
 网络会话不复用 ComfyUI 的认证信息，限制 HTTPS 发布站点及 CDN、公网 DNS 和逐跳重定向；网页／错误响应不写成模型。完整流暂存 part，独占创建正式文件，不覆盖原模型；取消与退出清理临时文件。无需下载的发布页链接仍由浏览器正常打开。
+
+## 模型自定义链接（v3.16.0）
+
+模型清单增加 links（有序数组）／custom_links；url 等于第一个链接或 null，links_revision 为配置文件摘要。GET studio/model-links?workflow=名称 返回 `{format:"comfy-model-links",version:1,workflow,models:[{name,folder,links}],revision}`，可直接导出为 JSON。POST studio/model-links 接受 `{action:"save",workflow,name,folder,links,revision}` 或 `{action:"import",workflow,document,revision}`，导入核对 format/version/workflow 后合并。最多 2000 项、每项 10 链接、正文 2 MiB；revision 冲突 409，非法或无工作流 400，未登录 401。仅接受不含账号密码的 HTTP／HTTPS 网页链接，保存不影响下载直链与本机模型。
+
+POST studio/model-links/open 仅注册到 AstrBot 面板，未加入独立远程工作台路由。正文 `{url}` 上限 8192 字节，需要登录并验证网页协议，Windows 下用系统默认浏览器打开；非 Windows 或打开失败返回 400，前端展示复制地址。独立网页直接使用安全的新标签链接，无此后端调用。

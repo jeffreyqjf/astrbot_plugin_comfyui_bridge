@@ -3217,6 +3217,10 @@ function renderTransferWorkflows(preferred) {
   configWorkflows.replaceChildren(...Array.from(names.options, (option) => new Option(option.text, option.value)));
   if (studio.workflows.some(({ name }) => name === configWorkflow)) configWorkflows.value = configWorkflow;
   loadTransferConfigs();
+  const modelWorkflows = get("transfer-model-workflow");
+  const modelWorkflow = modelWorkflows.value || preferred;
+  modelWorkflows.replaceChildren(...Array.from(names.options, option => new Option(option.text, option.value)));
+  if (studio.workflows.some(({name}) => name === modelWorkflow)) modelWorkflows.value = modelWorkflow;
 }
 
 let transferConfigRequest = 0;
@@ -3265,6 +3269,17 @@ get("export-workflow-config").addEventListener("click", async () => {
 function renderTransferPresetButtons() {
   get("preset-import").disabled = get("export-presets").disabled = !get("export-preset-account").value;
 }
+
+get("export-model-links").onclick = async () => {
+  const button = get("export-model-links"); button.disabled = true;
+  try {
+    const workflow = get("transfer-model-workflow").value;
+    const data = await bridge.apiGet("studio/model-links", {workflow});
+    downloadJson(data, `${workflow}-model-links.json`);
+    completed("已导出该工作流的模型链接。");
+  } catch (error) { message(error.message, true); }
+  finally { button.disabled = false; }
+};
 
 get("open-exports").addEventListener("click", async () => {
   if (!studio || loading || get("save").disabled || !get("exports").hidden) return;
@@ -3460,6 +3475,13 @@ bindImport("import-workflow-config", "workflow-config-file", 9, async (file) => 
   completed(`已导入「${workflowTitle(workflow)}」的配置「${name}」。`);
 });
 bindImport("preset-import", "preset-file", 1, importPresets);
+bindImport("import-model-links", "model-links-file", 2, async file => {
+  const document = await readImportJson(file);
+  const workflow = get("transfer-model-workflow").value;
+  const {revision} = await bridge.apiGet("studio/model-links", {workflow});
+  const {imported} = await bridge.apiPost("studio/model-links", {workflow, document, revision, action:"import"});
+  completed(`已导入「${workflowTitle(workflow)}」的 ${imported} 项模型链接。`);
+});
 bindImport("import-commands", "commands-import-file", 6, async (file) => {
   const replace = get("replace-commands");
   const { templates, imported, skipped } = await bridge.apiPost("studio/queue/templates/import", {

@@ -120,6 +120,25 @@ async def check_model_catalog(instance):
     with bind_request_context(PluginRequest(incoming, username="test")):
         response = await instance.remote_studio.routes["GET", "studio/model-downloads"]()
         assert json.loads(response.body)["jobs"] == []
+    assert ("POST", "studio/model-links/open") not in instance.remote_studio.routes
+    links_request = Request({"type": "http", "method": "GET", "path": "/studio/model-links", "headers": [],
+                             "query_string": b"workflow=SDXL_Turbo_T2I_AstrBot"})
+    with bind_request_context(PluginRequest(links_request, username=None)):
+        assert (await instance.studio.model_links.api()).status_code == 401
+    with bind_request_context(PluginRequest(links_request, username="test")):
+        exported = await instance.studio.model_links.api()
+        document = json.loads(exported.body)
+        assert exported.status_code == 200 and document["models"]
+    payload = {"workflow": document["workflow"], **document["models"][0], "action": "save",
+               "revision": document["revision"], "links": ["https://example.com/first", "https://example.com/second"]}
+    async def receive_links():
+        return {"type": "http.request", "body": json.dumps(payload).encode()}
+    posted = Request({"type": "http", "method": "POST", "path": "/studio/model-links", "headers": [], "query_string": b""}, receive_links)
+    with bind_request_context(PluginRequest(posted, username="test")):
+        assert (await instance.studio.model_links.api()).status_code == 200
+    with bind_request_context(PluginRequest(links_request, username="test")):
+        updated = json.loads((await instance.studio.model_links.api()).body)
+        assert updated["models"][0]["links"] == payload["links"]
     print("PASS: model catalog authentication, all installed workflows and source metadata")
 
 

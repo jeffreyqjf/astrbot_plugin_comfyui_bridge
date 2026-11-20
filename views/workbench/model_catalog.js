@@ -3,10 +3,54 @@ export function mountModelCatalog({get, bridge, showPanel, workflowTitle, canOpe
   const choice = panel.querySelector("[data-model-workflow]"), search = panel.querySelector("[data-model-search]");
   const scope = panel.querySelector("[data-model-scope]"), status = panel.querySelector("[data-model-status]");
   let catalog, version = 0;
+  const editor = document.createElement("dialog"); editor.className = "task-info-dialog model-links-editor";
+  const editorTitle = document.createElement("h2"); editorTitle.textContent = "编辑模型链接";
+  const modelName = document.createElement("p"); modelName.className = "model-download-description";
+  const label = document.createElement("label"); label.className = "field"; label.textContent = "发布／下载链接（每行一个，第一行作为发布页入口）";
+  const input = document.createElement("textarea"); input.rows = 5; input.maxLength = 41000; input.spellcheck = false; label.append(input);
+  const editorNote = document.createElement("p"); editorNote.textContent = "可添加第二、第三链接，调整行序即可更换主要链接；用于浏览器打开，不会自动变成后台下载直链。清空可移除入口。";
+  const linkList = document.createElement("div"); linkList.className = "model-guide-actions";
+  const editorError = document.createElement("p"); editorError.setAttribute("role", "status");
+  const editorActions = document.createElement("div"); editorActions.className = "row-actions";
+  const closeEditor = document.createElement("button"); closeEditor.type = "button"; closeEditor.textContent = "关闭"; closeEditor.onclick = () => editor.close();
+  const saveLinks = document.createElement("button"); saveLinks.type = "button"; saveLinks.className = "primary"; saveLinks.textContent = "保存链接";
+  editorActions.append(closeEditor, saveLinks); editor.append(editorTitle, modelName, label, editorNote, linkList, editorError, editorActions); panel.append(editor);
+  const copyDialog = document.createElement("dialog"); copyDialog.className = "task-info-dialog";
+  const copyHint = document.createElement("p"); const copyInput = document.createElement("input"); copyInput.readOnly = true;
+  const copyClose = document.createElement("button"); copyClose.textContent = "关闭"; copyClose.onclick = () => copyDialog.close();
+  copyDialog.append(copyHint, copyInput, copyClose); panel.append(copyDialog);
+  async function openOnHost(url) {
+    try { await bridge.apiPost("studio/model-links/open", {url}); }
+    catch (error) { copyHint.textContent = `${error.message} 可复制下方地址到浏览器打开。`; copyInput.value = url; copyDialog.showModal(); copyInput.select(); }
+  }
+  function pageLink(url, title) {
+    const link = document.createElement("a"); link.href = url; link.target = "_blank"; link.rel = "noopener noreferrer";
+    link.className = "model-source-link"; link.textContent = title;
+    if (window.AstrBotPluginView) {
+      link.title = "在插件电脑的默认浏览器打开";
+      link.onclick = event => { event.preventDefault(); openOnHost(url); };
+    }
+    return link;
+  }
+  let editing;
+  function showEditor(row) {
+    editing = {workflow: choice.value, name: row.name, folder: row.folder};
+    modelName.textContent = row.name; input.value = (row.links ?? (row.url ? [row.url] : [])).join("\n"); editorError.textContent = "";
+    linkList.replaceChildren(...(row.links ?? (row.url ? [row.url] : [])).map((url, index) => pageLink(url, `打开链接 ${index + 1} ↗`)));
+    editor.showModal();
+  }
+  saveLinks.onclick = async () => {
+    saveLinks.disabled = closeEditor.disabled = true; editorError.textContent = "";
+    try {
+      await bridge.apiPost("studio/model-links", {...editing, action:"save", links: input.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean), revision: catalog.links_revision});
+      editor.close(); await load();
+    } catch (error) { editorError.textContent = error.message; }
+    finally { saveLinks.disabled = closeEditor.disabled = false; }
+  };
   let pending, polling = false;
   const finished = new Set();
   const jobs = document.createElement("div"); jobs.className = "model-download-jobs"; list.before(jobs);
-  const dialog = document.createElement("dialog"); dialog.className = "task-info-dialog";
+  const dialog = document.createElement("dialog"); dialog.className = "task-info-dialog model-download-confirm";
   const heading = document.createElement("h2"); heading.textContent = "确认下载模型";
   const description = document.createElement("p"); description.className = "model-download-description";
   const confirmationError = document.createElement("p"); confirmationError.setAttribute("role", "alert");
@@ -78,22 +122,24 @@ export function mountModelCatalog({get, bridge, showPanel, workflowTitle, canOpe
       summary.textContent = `对应加载节点 · ${row.nodes.length} 处`; nodes.append(summary);
       const names = document.createElement("p"); names.textContent = row.nodes.join("；"); nodes.append(names);
       card.append(badge, title, purpose, folder, note);
-      const present = document.createElement("p"); present.className = `model-presence ${row.installed ? "installed" : ""}`;
-      present.textContent = row.installed ? "✓ 已存在，请勿重复下载" : row.local_checked ? "未发现同名模型" : "本机文件状态未确认";
-      card.append(present);
+      if (!row.installed) {
+        const present = document.createElement("p"); present.className = "model-presence";
+        present.textContent = row.local_checked ? "未发现同名模型" : "本机文件状态未确认"; card.append(present);
+      }
       if (row.locations?.length) { const paths = document.createElement("p"); paths.className = "model-locations"; paths.textContent = row.locations.join("\n"); card.append(paths); }
       const buttons = document.createElement("div"); buttons.className = "model-guide-actions"; card.append(buttons);
-      if (row.url) {
-        const url = new URL(row.url);
-        if (url.protocol === "https:") {
-          const link = document.createElement("a"); link.href = url.href; link.target = "_blank"; link.rel = "noopener noreferrer";
-          link.className = "model-source-link"; link.textContent = "打开发布页 ↗"; link.title = row.source; buttons.append(link);
+      const primary = row.links?.[0] ?? row.url;
+      if (primary) {
+        const url = new URL(primary);
+        if (["https:", "http:"].includes(url.protocol)) {
+          buttons.append(pageLink(url.href, "打开发布页 ↗"));
         }
-      } else { const missing = document.createElement("p"); missing.textContent = "下载来源待核实"; card.append(missing); }
-      if (row.download_url) {
+      } else { const missing = document.createElement("p"); missing.textContent = row.custom_links ? "未设置链接，可点击编辑链接补充" : "下载来源待核实"; card.append(missing); }
+      if (row.download_url || row.installed) {
         const download = document.createElement("button"); download.type = "button"; download.className = "model-download-button";
         download.textContent = row.installed ? "已存在" : "↓ 下载模型";
         download.disabled = row.installed || !row.local_checked;
+        if (row.installed) download.title = "模型已存在，请勿重复下载";
         download.onclick = () => {
           pending = {workflow: choice.value, name: row.name, folder: row.folder};
           description.textContent = `文件：${row.name}\n保存至 ComfyUI：${row.folder}\n来源：${row.download_url}\n下载在运行插件的电脑上进行，文件可能较大。确认后才开始，可随时取消，不覆盖已有模型。`;
@@ -101,6 +147,7 @@ export function mountModelCatalog({get, bridge, showPanel, workflowTitle, canOpe
         };
         buttons.append(download);
       }
+      const edit = document.createElement("button"); edit.type = "button"; edit.textContent = "编辑链接"; edit.onclick = () => showEditor(row); buttons.append(edit);
       const attribution = document.createElement("small"); attribution.textContent = row.source; card.append(attribution);
       card.append(nodes); list.append(card);
     }

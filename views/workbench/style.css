@@ -643,3 +643,5 @@ button.image-download {
 .model-locations, .model-download-description { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .85rem; }
 .model-download-job { padding: 12px; margin: 12px 0; border: 1px solid var(--line); border-radius: 12px; overflow-wrap: anywhere; }
 .model-download-job progress { display: block; width: 100%; margin: 10px 0; accent-color: var(--accent); }
+.model-links-editor textarea { width: 100%; overflow-wrap: anywhere; }
+.model-links-editor p { overflow-wrap: anywhere; }

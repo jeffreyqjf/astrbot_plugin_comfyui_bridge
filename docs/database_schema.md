@@ -39,3 +39,7 @@ ControlNet 产物的媒体保存在 ComfyUI `input/my_input/{unevaluated,favouri
 ## 模型下载状态（v3.15.0）
 
 模型存在检查只读目录与 extra_model_paths.yaml，无索引落盘。下载历史为 ModelDownloads.jobs 的当前进程内记录（最多约 20 项），各用户仅能列出和取消自己的任务。临时模型位于目标目录 `.{文件名}.{UUID}.part`，完整后排他发布为目标名称；取消、失败、插件退出时清理。既有模型不覆盖，下载完成不自动修改工作流。断电等进程外强制终止可能留下 part 文件，不会被作为正式模型识别；本轮未迁移现有数据。
+
+## 模型自定义链接（v3.16.0）
+
+plugin_data/model_links.json 为 `{工作流名:{SHA256([name,folder]):{name,folder,links:[URL…]}}}`，UTF-8 JSON 原子写入，读写限制 8 MiB、revision 为文件字节摘要。无配置时沿用随包来源链接；显式空数组移除入口；配置与权重／工作流图独立，不变更随包来源清单或已核对下载 URL。按工作流导出使用带 format/version 的模型行列表，导入同模型合并。未命中的旧模型条目保存在配置文件中但不影响新图。

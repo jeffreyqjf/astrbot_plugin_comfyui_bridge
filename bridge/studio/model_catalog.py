@@ -127,7 +127,9 @@ async def catalog_data(service, anima):
                     row.update(installed=False, local_checked=False, locations=[], local_error=str(exc))
                 row["download_url"] = data.get("downloads", {}).get(PurePosixPath(row["name"]).name)
     await asyncio.to_thread(annotate)
-    return {"checked_at": data["checked_at"], "workflows": workflows}
+    from .model_links import ModelLinks
+    revision = await asyncio.to_thread(ModelLinks(service, anima).apply, workflows)
+    return {"checked_at": data["checked_at"], "workflows": workflows, "links_revision": revision}
 
 
 async def catalog_api(service, anima):

@@ -263,6 +263,8 @@ class StudioSettings:
         self.model_downloads = ModelDownloads(self)
         self.service = service
         self.anima = anima
+        from .model_links import ModelLinks
+        self.model_links = ModelLinks(service, anima)
         self.input_library = InputLibrary(service, anima.workspace)
         self.h3_media = H3Media(service)
         self.regional_presets = RegionalPresets(service)
