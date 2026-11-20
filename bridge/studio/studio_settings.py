@@ -251,6 +251,13 @@ finally:
 
 
 class StudioSettings:
+    async def model_catalog(self):
+        from .model_catalog import catalog_api
+        try:
+            return await catalog_api(self.service, self.anima)
+        except (OSError, ValueError, KeyError) as exc:
+            return error_response(str(exc), status_code=400)
+
     def __init__(self, service, anima):
         self.service = service
         self.anima = anima

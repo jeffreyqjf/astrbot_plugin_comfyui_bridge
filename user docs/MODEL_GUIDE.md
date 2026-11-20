@@ -1,0 +1,56 @@
+# 模型配置指南
+
+在工作台 **管理 → 模型配置指南** 查看当前安装的每条工作流。清单根据实际加载节点、API 连线和保存图生成；Anima T2I 另外读取画布的旁路加载器。更改节点模型并刷新即可更新名称。
+
+先准备基础模型，再按需配置分支模型；“当前分支依赖”表示输出连线引用，不保证运行时旁路一定执行。WAN 续写的 FP8 与 GGUF 为候选模式，选择对应高低噪声一套。未识别的第三方加载器及运行时自动下载的预处理权重，以节点作者说明为准。清单不是磁盘安装检测，也不下载或更改模型。
+
+目录相对于 ComfyUI 根目录，保留名称中的子文件夹；使用 extra_model_paths.yaml 时可映射到外部磁盘。下载后刷新 ComfyUI 模型列表，在工作流参数页选择实际文件名并保存，再刷新指南。不能仅重命名文件把不同模型、精度或格式互相替代。
+
+发布链接优先使用模型作者、官方组织或 Comfy 官方转换页。部分本机文件为旧版或别名，页面会标明转换／转载／待核实，绝不将镜像标作官方。页面提供发布页入口供核对版本，不承诺精确文件始终可下载；下载权限和许可证以发布页为准。
+
+## 来源索引
+
+人工核对日期：2026-11-20。维护清单见 templates/model_sources.json，网页运行时不联网搜索。
+
+| 对应文件 | 来源 | 下载／发布页 | 简要用途与兼容说明 |
+| --- | --- | --- | --- |
+| `minimax_h3_ref2v_turbo_silver*` | 合并作者 | [发布页](https://huggingface.co/silveroxides/MiniMax-H3_tests/tree/main/silver_official_releases) | H3 Silver DARE-TIES 加速 LoRA；选择 pruned v2 Ref2V 文件。 |
+| `minimax_h3_video_vae_int8_convrot*` | 转换作者 | [发布页](https://huggingface.co/Kijai/MiniMax-H3-experimental) | H3 INT8 视频 VAE，和音频 VAE 不可互换。 |
+| `SVI_v2_PRO*` | 节点维护者配套转换 | [发布页](https://huggingface.co/Kijai/WanVideo_comfy/tree/main/LoRAs/Stable-Video-Infinity/v2.0) | SVI v2 PRO 续写 LoRA，使用匹配的 HIGH／LOW。 |
+| `*lightx2v*` | 作者 | [发布页](https://huggingface.co/lightx2v/Wan2.2-Lightning) | WAN 加速 LoRA；高低噪声及步数要配套。 |
+| `Wan2.2-Lightning*` | 作者 | [发布页](https://huggingface.co/lightx2v/Wan2.2-Lightning) | WAN Lightning 加速 LoRA。 |
+| `noobIPAMARK1*` | 配套转载（非原作者） | [发布页](https://huggingface.co/r3gm/noob-ipa) | IP-Adapter；该分发由 Krita AI 官方模型清单引用。 |
+| `CLIP-ViT-bigG*` | 作者配套 | [发布页](https://huggingface.co/h94/IP-Adapter) | SDXL IP-Adapter 的 bigG 图像编码器；节点文件名可能是本机别名。 |
+| `clip_vision_g*` | 作者配套 | [发布页](https://huggingface.co/h94/IP-Adapter) | IP-Adapter 图像编码器；核对模型架构及本机命名。 |
+| `openpose_noob*` | 作者候选（别名未核实） | [发布页](https://huggingface.co/Laxhar/noob_openpose) | Noob OpenPose；本机文件名是别名，下载前核对原文件及工作流模型设置。 |
+| `noobaiInpainting*` | 原作者发布页 | [发布页](https://civitai.com/models/1376234) | NoobAI／Illustrious 补绘控制模型；本机别名需在节点选择实际文件。 |
+| `anima-lllite-*` | 作者 | [发布页](https://huggingface.co/kohya-ss/Anima-LLLite) | LLLite 控制／遮罩补绘；v1 和 v2 不自动互换。 |
+| `qwen_3_06b_base.safetensors` | 官方配套 | [发布页](https://huggingface.co/circlestone-labs/Anima) | Anima 文本编码器。 |
+| `qwen_image_vae.safetensors` | 官方配套 | [发布页](https://huggingface.co/circlestone-labs/Anima) | Anima 图像编解码。 |
+| `sd_xl_turbo*` | 官方 | [发布页](https://huggingface.co/stabilityai/sdxl-turbo) | SDXL Turbo 快速文生图主模型。 |
+| `sdxl_vae*` | 官方 | [发布页](https://huggingface.co/stabilityai/sdxl-vae) | SDXL 图像编解码。 |
+| `*Illustrious-17*` | 作者发布页 | [发布页](https://civitai.com/models/827184/wai-illustrious-sdxl?modelVersionId=2883731) | WAI v17；本机文件名可能改过，请在节点选择实际下载的文件名。 |
+| `gemma4_e4b*` | Comfy 官方转换 | [发布页](https://huggingface.co/Comfy-Org/gemma-4) | 提示词增强；并非基础绘图模型。 |
+| `*Singularity*` | 微调作者 | [发布页](https://huggingface.co/WarmBloodAban/Minimax-h3_Singularity) | H3 Singularity 微调版；本机旧 v1.3 文件名可能不同，请核对 Ref2VA 与量化格式。 |
+| `qwen3vl_32b_minimax*` | Comfy 官方转换 | [发布页](https://huggingface.co/Comfy-Org/MiniMax-H3) | H3 文本／视觉编码器，量化格式需节点与硬件支持。 |
+| `minimax_h3_*vae*` | Comfy 官方转换 | [发布页](https://huggingface.co/Comfy-Org/MiniMax-H3) | H3 视频或音频编解码，二者不可混用。 |
+| `minimax_h3_latent*` | Comfy 官方转换 | [发布页](https://huggingface.co/Comfy-Org/MiniMax-H3) | H3 潜空间视频放大。 |
+| `Wan2_2-*_fp8*` | 转换作者 | [发布页](https://huggingface.co/Kijai/WanVideo_comfy_fp8_scaled) | WAN 高低噪声配对模型；区分 I2V/T2V。 |
+| `umt5_xxl*` | Comfy 官方转换 | [发布页](https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged) | WAN 文本编码器。 |
+| `wan_2.1_vae*` | Comfy 官方转换 | [发布页](https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged) | WAN 视频编解码。 |
+| `sam3.1*` | Comfy 官方转换 | [发布页](https://huggingface.co/Comfy-Org/sam3.1) | SAM 3.1 分割；此加载器使用 checkpoints 目录。 |
+| `sam_vit_b*` | 官方 | [发布页](https://github.com/facebookresearch/segment-anything) | SAM ViT-B 分割，按作者说明下载 checkpoint。 |
+| `control-lora-canny*` | 官方 | [发布页](https://huggingface.co/stabilityai/control-lora) | SDXL 边缘控制；不是 Anima LLLite。 |
+| `RealESRGAN*` | 官方 | [发布页](https://github.com/xinntao/Real-ESRGAN/releases) | 像素空间超分；anime_6B 为动漫优化版。 |
+| `foot_anime_yolo*` | 作者 | [发布页](https://huggingface.co/Claquasse/foot_anime_yolo) | 脚部区域检测，供修脚分支使用。 |
+| `face_yolov9c*` | 作者 | [发布页](https://huggingface.co/Bingsu/adetailer) | 脸部区域检测。 |
+| `hand_yolov9c*` | 作者 | [发布页](https://huggingface.co/Bingsu/adetailer) | 手部区域检测。 |
+| `4x_foolhardy_Remacri*` | 模型索引／原始来源入口 | [发布页](https://openmodeldb.info/models/4x-Remacri) | 4 倍超分。工作流使用 pth，不要把其他格式只改后缀冒充。 |
+| `TIPO*` | 作者 | [发布页](https://huggingface.co/KBlueLeaf/TIPO-v2.1-1B-A200M) | 提示词补全／扩写；按节点选择 GGUF 版本。 |
+| `pixai-tagger-v1.0` | 官方 | [发布页](https://huggingface.co/pixai-labs/pixai-tagger-v1.0) | 图片标签反推；需同时下载 model.safetensors 和 config.json。 |
+| `VOSR2` | 作者 | [发布页](https://huggingface.co/CSWRY/VOSR) | 视觉超分模型包，包含 checkpoint、DINOv2 与 Qwen VAE，按节点说明保持子目录。 |
+| `taesdxl` | 作者 | [发布页](https://github.com/madebyollin/taesd) | 快速 VAE 预览；需 taesdxl_encoder 和 decoder 配套文件，按 ComfyUI 安装说明放置。 |
+| `anima-aesthetic-v1.1.safetensors` | 官方 | [发布页](https://huggingface.co/circlestone-labs/Anima) | Anima 扩散模型；选择与工作流匹配的版本。 |
+| `rife49` | 加载节点作者说明 | [发布页](https://github.com/filliptm/ComfyUI_Fill-Nodes) | FL_RIFE 首次运行下载 rife49.pth 到自身缓存；不要误放 checkpoints。 |
+
+未找到权威来源的精确文件保留在各工作流页面，标为来源待核实，例如部分 Eyeful／NSFW 检测器、本机改名的 WAN GGUF 和人物 LoRA；不会凭文件名猜一个官方链接。

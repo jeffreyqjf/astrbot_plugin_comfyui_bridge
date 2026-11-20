@@ -40,3 +40,7 @@
 - `bridge/studio/reverse_history.py`：提示词／原图副本持久保存、分页、删除与登录保护接口。
 - `bridge/service.py`：run_caption 成功出口统一记录 PixAI／TIPO、WD14 和 AI 反推结果。
 - `views/workbench/reverse_history.js`：管理侧边栏入口、缩略图、原图、复制、分页和删除确认。
+
+## 工作流模型指南
+
+`bridge/studio/model_catalog.py` 只读合并运行图、完整保存图和 Anima 旁路画布中的加载节点；`templates/model_sources.json` 维护人工核对的作者／官方／转换来源。`views/workbench/model_catalog.js` 渲染管理侧模型配置指南；`user docs/MODEL_GUIDE.md` 保存来源索引。新增模块、来源 JSON、前端脚本和用户说明均列入 build_zip.py 白名单。

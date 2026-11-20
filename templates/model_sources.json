@@ -1,0 +1,233 @@
+{
+  "checked_at": "2026-11-20",
+  "sources": [
+    {
+      "pattern": "minimax_h3_ref2v_turbo_silver*",
+      "url": "https://huggingface.co/silveroxides/MiniMax-H3_tests/tree/main/silver_official_releases",
+      "source": "合并作者",
+      "note": "H3 Silver DARE-TIES 加速 LoRA；选择 pruned v2 Ref2V 文件。"
+    },
+    {
+      "pattern": "minimax_h3_video_vae_int8_convrot*",
+      "url": "https://huggingface.co/Kijai/MiniMax-H3-experimental",
+      "source": "转换作者",
+      "note": "H3 INT8 视频 VAE，和音频 VAE 不可互换。"
+    },
+    {
+      "pattern": "SVI_v2_PRO*",
+      "url": "https://huggingface.co/Kijai/WanVideo_comfy/tree/main/LoRAs/Stable-Video-Infinity/v2.0",
+      "source": "节点维护者配套转换",
+      "note": "SVI v2 PRO 续写 LoRA，使用匹配的 HIGH／LOW。"
+    },
+    {
+      "pattern": "*lightx2v*",
+      "url": "https://huggingface.co/lightx2v/Wan2.2-Lightning",
+      "source": "作者",
+      "note": "WAN 加速 LoRA；高低噪声及步数要配套。"
+    },
+    {
+      "pattern": "Wan2.2-Lightning*",
+      "url": "https://huggingface.co/lightx2v/Wan2.2-Lightning",
+      "source": "作者",
+      "note": "WAN Lightning 加速 LoRA。"
+    },
+    {
+      "pattern": "noobIPAMARK1*",
+      "url": "https://huggingface.co/r3gm/noob-ipa",
+      "source": "配套转载（非原作者）",
+      "note": "IP-Adapter；该分发由 Krita AI 官方模型清单引用。"
+    },
+    {
+      "pattern": "CLIP-ViT-bigG*",
+      "url": "https://huggingface.co/h94/IP-Adapter",
+      "source": "作者配套",
+      "note": "SDXL IP-Adapter 的 bigG 图像编码器；节点文件名可能是本机别名。"
+    },
+    {
+      "pattern": "clip_vision_g*",
+      "url": "https://huggingface.co/h94/IP-Adapter",
+      "source": "作者配套",
+      "note": "IP-Adapter 图像编码器；核对模型架构及本机命名。"
+    },
+    {
+      "pattern": "openpose_noob*",
+      "url": "https://huggingface.co/Laxhar/noob_openpose",
+      "source": "作者候选（别名未核实）",
+      "note": "Noob OpenPose；本机文件名是别名，下载前核对原文件及工作流模型设置。"
+    },
+    {
+      "pattern": "noobaiInpainting*",
+      "url": "https://civitai.com/models/1376234",
+      "source": "原作者发布页",
+      "note": "NoobAI／Illustrious 补绘控制模型；本机别名需在节点选择实际文件。"
+    },
+    {
+      "pattern": "anima-lllite-*",
+      "url": "https://huggingface.co/kohya-ss/Anima-LLLite",
+      "source": "作者",
+      "note": "LLLite 控制／遮罩补绘；v1 和 v2 不自动互换。"
+    },
+    {
+      "pattern": "qwen_3_06b_base.safetensors",
+      "url": "https://huggingface.co/circlestone-labs/Anima",
+      "source": "官方配套",
+      "note": "Anima 文本编码器。"
+    },
+    {
+      "pattern": "qwen_image_vae.safetensors",
+      "url": "https://huggingface.co/circlestone-labs/Anima",
+      "source": "官方配套",
+      "note": "Anima 图像编解码。"
+    },
+    {
+      "pattern": "sd_xl_turbo*",
+      "url": "https://huggingface.co/stabilityai/sdxl-turbo",
+      "source": "官方",
+      "note": "SDXL Turbo 快速文生图主模型。"
+    },
+    {
+      "pattern": "sdxl_vae*",
+      "url": "https://huggingface.co/stabilityai/sdxl-vae",
+      "source": "官方",
+      "note": "SDXL 图像编解码。"
+    },
+    {
+      "pattern": "*Illustrious-17*",
+      "url": "https://civitai.com/models/827184/wai-illustrious-sdxl?modelVersionId=2883731",
+      "source": "作者发布页",
+      "note": "WAI v17；本机文件名可能改过，请在节点选择实际下载的文件名。"
+    },
+    {
+      "pattern": "gemma4_e4b*",
+      "url": "https://huggingface.co/Comfy-Org/gemma-4",
+      "source": "Comfy 官方转换",
+      "note": "提示词增强；并非基础绘图模型。"
+    },
+    {
+      "pattern": "*Singularity*",
+      "url": "https://huggingface.co/WarmBloodAban/Minimax-h3_Singularity",
+      "source": "微调作者",
+      "note": "H3 Singularity 微调版；本机旧 v1.3 文件名可能不同，请核对 Ref2VA 与量化格式。"
+    },
+    {
+      "pattern": "qwen3vl_32b_minimax*",
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3",
+      "source": "Comfy 官方转换",
+      "note": "H3 文本／视觉编码器，量化格式需节点与硬件支持。"
+    },
+    {
+      "pattern": "minimax_h3_*vae*",
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3",
+      "source": "Comfy 官方转换",
+      "note": "H3 视频或音频编解码，二者不可混用。"
+    },
+    {
+      "pattern": "minimax_h3_latent*",
+      "url": "https://huggingface.co/Comfy-Org/MiniMax-H3",
+      "source": "Comfy 官方转换",
+      "note": "H3 潜空间视频放大。"
+    },
+    {
+      "pattern": "Wan2_2-*_fp8*",
+      "url": "https://huggingface.co/Kijai/WanVideo_comfy_fp8_scaled",
+      "source": "转换作者",
+      "note": "WAN 高低噪声配对模型；区分 I2V/T2V。"
+    },
+    {
+      "pattern": "umt5_xxl*",
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+      "source": "Comfy 官方转换",
+      "note": "WAN 文本编码器。"
+    },
+    {
+      "pattern": "wan_2.1_vae*",
+      "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+      "source": "Comfy 官方转换",
+      "note": "WAN 视频编解码。"
+    },
+    {
+      "pattern": "sam3.1*",
+      "url": "https://huggingface.co/Comfy-Org/sam3.1",
+      "source": "Comfy 官方转换",
+      "note": "SAM 3.1 分割；此加载器使用 checkpoints 目录。"
+    },
+    {
+      "pattern": "sam_vit_b*",
+      "url": "https://github.com/facebookresearch/segment-anything",
+      "source": "官方",
+      "note": "SAM ViT-B 分割，按作者说明下载 checkpoint。"
+    },
+    {
+      "pattern": "control-lora-canny*",
+      "url": "https://huggingface.co/stabilityai/control-lora",
+      "source": "官方",
+      "note": "SDXL 边缘控制；不是 Anima LLLite。"
+    },
+    {
+      "pattern": "RealESRGAN*",
+      "url": "https://github.com/xinntao/Real-ESRGAN/releases",
+      "source": "官方",
+      "note": "像素空间超分；anime_6B 为动漫优化版。"
+    },
+    {
+      "pattern": "foot_anime_yolo*",
+      "url": "https://huggingface.co/Claquasse/foot_anime_yolo",
+      "source": "作者",
+      "note": "脚部区域检测，供修脚分支使用。"
+    },
+    {
+      "pattern": "face_yolov9c*",
+      "url": "https://huggingface.co/Bingsu/adetailer",
+      "source": "作者",
+      "note": "脸部区域检测。"
+    },
+    {
+      "pattern": "hand_yolov9c*",
+      "url": "https://huggingface.co/Bingsu/adetailer",
+      "source": "作者",
+      "note": "手部区域检测。"
+    },
+    {
+      "pattern": "4x_foolhardy_Remacri*",
+      "url": "https://openmodeldb.info/models/4x-Remacri",
+      "source": "模型索引／原始来源入口",
+      "note": "4 倍超分。工作流使用 pth，不要把其他格式只改后缀冒充。"
+    },
+    {
+      "pattern": "TIPO*",
+      "url": "https://huggingface.co/KBlueLeaf/TIPO-v2.1-1B-A200M",
+      "source": "作者",
+      "note": "提示词补全／扩写；按节点选择 GGUF 版本。"
+    },
+    {
+      "pattern": "pixai-tagger-v1.0",
+      "url": "https://huggingface.co/pixai-labs/pixai-tagger-v1.0",
+      "source": "官方",
+      "note": "图片标签反推；需同时下载 model.safetensors 和 config.json。"
+    },
+    {
+      "pattern": "VOSR2",
+      "url": "https://huggingface.co/CSWRY/VOSR",
+      "source": "作者",
+      "note": "视觉超分模型包，包含 checkpoint、DINOv2 与 Qwen VAE，按节点说明保持子目录。"
+    },
+    {
+      "pattern": "taesdxl",
+      "url": "https://github.com/madebyollin/taesd",
+      "source": "作者",
+      "note": "快速 VAE 预览；需 taesdxl_encoder 和 decoder 配套文件，按 ComfyUI 安装说明放置。"
+    },
+    {
+      "pattern": "anima-aesthetic-v1.1.safetensors",
+      "url": "https://huggingface.co/circlestone-labs/Anima",
+      "source": "官方",
+      "note": "Anima 扩散模型；选择与工作流匹配的版本。"
+    },
+    {
+      "pattern": "rife49",
+      "url": "https://github.com/filliptm/ComfyUI_Fill-Nodes",
+      "source": "加载节点作者说明",
+      "note": "FL_RIFE 首次运行下载 rife49.pth 到自身缓存；不要误放 checkpoints。"
+    }
+  ]
+}

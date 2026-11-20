@@ -99,6 +99,23 @@ async def check_refinement_pairs(instance, root):
     print("PASS: Detailer paired HD gallery, authenticated input preview and source relocation")
 
 
+async def check_model_catalog(instance):
+    from astrbot.api.web import PluginRequest, bind_request_context
+    from starlette.requests import Request
+    route = "studio/model-catalog"
+    incoming = Request({"type": "http", "method": "GET", "path": "/" + route, "headers": [], "query_string": b""})
+    with bind_request_context(PluginRequest(incoming, username=None)):
+        assert (await instance.remote_studio.routes["GET", route]()).status_code == 401
+    with bind_request_context(PluginRequest(incoming, username="test")):
+        response = await instance.remote_studio.routes["GET", route]()
+    assert response.status_code == 200, response.body
+    data = json.loads(response.body)
+    assert len(data["workflows"]) == len(instance.service.workflows)
+    for workflow in data["workflows"]:
+        assert workflow["models"], workflow["name"]
+    print("PASS: model catalog authentication, all installed workflows and source metadata")
+
+
 async def check_reverse_history(instance):
     from astrbot.api.web import PluginRequest, bind_request_context
     from PIL import Image
@@ -603,6 +620,7 @@ async def check(root, archive, core, *, anima_workspace=None, anima_schemas=None
         assert not service.errors, service.errors
         await check_h3_final_inputs(instance)
         await check_refinement_pairs(instance, root)
+        await check_model_catalog(instance)
         await check_reverse_history(instance)
         await check_drawing_guidance(instance, module)
         assert len(service.workflows) == len(list((plugin / "workflows").glob("*.json")))

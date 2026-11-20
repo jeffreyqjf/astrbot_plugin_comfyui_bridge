@@ -1,5 +1,14 @@
 # 开发状态
 
+## v3.14.0 · 管理侧模型配置指南
+
+- 新增「管理 → 模型配置指南」，按已安装工作流展示加载节点中的模型名、基础必需／当前分支依赖／备用分类、ComfyUI 相对目录、作用、来源类型和下载发布页，支持工作流选择、关键词与分类筛选。节点详情折叠，长文件名在手机换行。列表只读，不下载模型、不改运行参数。
+- 从实际运行图与保存的完整 API 图合并模型加载项，补齐 Anima T2I 画布旁路加载器，按目录与文件名去重；区分 checkpoints、diffusion_models、text_encoders、vae、controlnet、model_patches、ultralytics、sams、upscale_models、latent_upscale_models、loras、PixAI／TIPO 及 FL_RIFE 缓存。支持 H3 Pixaroma LoRA 状态与 LoRA Manager，主图没有连线的模型归为可选／备用。
+- 网上核对官方／作者／Comfy 转换仓库，随包 templates/model_sources.json 保存来源与 2026-11-20 核对日期。明确标记转换、配套转载和别名候选；无法确认的 Eyeful、部分 NSFW 检测器、改名 GGUF、人物 LoRA 等保留清单并标为来源待核实，不伪造官方下载入口。用户文档 MODEL_GUIDE.md 附来源索引。
+- “当前分支依赖”仅表示实际输出连线引用，运行时旁路以节点为准；WAN FP8／GGUF 为候选模式，并非全部必需。清单不是文件存在／完整性检测，自动下载的预处理辅助权重、未识别自定义加载器仍以作者说明为准。新接口需要工作台登录，网页仅文本渲染模型名称，外链采用 HTTPS 与 noopener。
+- 74 项回归检查通过；1200px／360px 浏览器验证菜单、列表、筛选、用途搜索、未知来源、外链及长名称／HTML 文本处理。最终安装包通过隔离 AstrBot 的模型指南鉴权及全工作流清单检查，加载 15 条工作流／78 条接口。Ruff、JS 语法及差异检查通过。Minor v3.14.0；未下载安装模型、未修改 ComfyUI 画布或 API，未同步／重载生产插件，未运行 GPU 生成或 QQ 投递，未提交 Git。
+- Git Commit Message：`feat: add workflow model setup guide with reviewed download sources`。
+
 ## v3.13.0 · 新建任务选择并记忆工作流配置
 
 - 简易添加增加工作流配置选择，复用现有保存配置列表、revision 校验及应用接口。选择后应用到工作流默认参数，每条工作流分别记住最后成功选用的配置，重新打开页面／切换工作流后自动恢复并应用，直到再次选择其他配置或当前参数。浏览器 localStorage 保存名称，手机／电脑及不同浏览器独立；配置实际内容仍由服务器管理。

@@ -39,6 +39,7 @@
           <button type="button" id="open-lora-order" class="workflow-tab" aria-controls="lora-order">LoRA 编号</button>
           <button type="button" id="open-presets" class="workflow-tab" aria-controls="presets">提示词预设</button>
           <button type="button" id="open-reverse-history" class="workflow-tab" aria-controls="reverse-history">反推记录</button>
+          <button type="button" id="open-model-catalog" class="workflow-tab" aria-controls="model-catalog">模型配置指南</button>
           <button type="button" id="open-image-review" class="workflow-tab" aria-controls="image-review">待评价图片</button>
           <button type="button" id="open-image-gallery" class="workflow-tab" aria-controls="image-gallery">收藏图集</button>
           <button type="button" id="open-pass-gallery" class="workflow-tab" aria-controls="image-gallery">Pass 图集</button>
@@ -52,6 +53,13 @@
         </nav>
       </aside>
       <div class="workspace-main">
+        <section id="model-catalog" hidden>
+          <div class="panel-heading"><h2>模型配置指南</h2><button type="button" data-model-refresh>刷新清单</button></div>
+          <p>先准备基础必需模型，再按需要启用修复、ControlNet、放大等功能。目录相对于 ComfyUI 根目录，文件名以加载节点中选择的名称为准。</p>
+          <div class="grid"><label class="field">工作流<select data-model-workflow></select></label><label class="field">查找模型<input type="search" data-model-search placeholder="输入模型名、用途或文件夹"></label><label class="field">范围<select data-model-scope><option value="">全部模型</option><option value="required">基础必需</option><option value="optional">分支／可选</option><option value="unknown">来源待核实</option></select></label></div>
+          <p class="section-note">“当前分支依赖”按实际 API 连线判断，分支关闭时可能不需要；FP8／GGUF 主模型候选按模式选一套，不要求全部下载。链接指向发布页或文件列表，核对版本后下载；未验证文件哈希，改名不等于模型兼容。预处理器可能由对应节点首次运行时下载额外权重。</p>
+          <p data-model-status role="status"></p><div class="model-catalog-list"></div>
+        </section>
         <section id="reverse-history" hidden>
           <div class="panel-heading"><h2>反推记录</h2><button type="button" data-history-refresh>刷新</button></div>
           <p>自动保存成功反推的提示词和对应图片，长期保留，直到手动删除。</p>

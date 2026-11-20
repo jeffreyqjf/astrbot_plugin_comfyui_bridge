@@ -144,3 +144,7 @@ ComfyUI prompt 提交增加 `partial_execution_targets` 明确最终输出集合
 - 图片列表的 `generation.refinement` 为 `{input_id,linked}`；linked 表示有可核实的图集来源，不承诺该源文件此刻仍存在。旧记录无该对象。`GET studio/images/refinement?id=结果图片ID&original=1` 返回 `{src:data_URI}`；不传 original 返回缩略图。沿用登录保护，未登录 401、非法 ID／无关联／文件不可用 400，不接受用户路径。
 - 关联结果通过原 `POST studio/images` 移入 hd 时，图集原图同步迁至 hd，原图与输出均校验后才移除来源；冲突或文件变化拒绝，复制／移除失败尝试回滚。图集来源被删除仍可保留快照并整理结果。本地／QQ 输入仅对同 owner 且唯一字节匹配的生成记录自动识别来源。
 - HD 图片列表和筛选不重复列出已成组的原图，预览中独立展示／下载输入和结果；ZIP 在结果目录下增加 `input/original.ext`。原图已有记录 ID 仍可读取，元数据不重写。移出结果不会同时移出原图；原图无其他高清结果关联时恢复独立卡片。
+
+## 模型配置指南（v3.14.0）
+
+`GET studio/model-catalog` 需要工作台登录，未登录返回 401，读取错误返回 400。返回 `{checked_at,workflows:[{name,models:[{name,folder,purpose,required,connected,nodes,url,source,note}]}]}`。required 是基础加载器且连至当前输出；connected 为结构连线引用，并非节点运行时旁路状态。保存 API 中的备用模型与 Anima 画布旁路纳入列表。无权威来源 url 为 null，文字不可当成路径读取。该接口只读，不联网、不查验磁盘模型、不安装文件。

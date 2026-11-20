@@ -290,6 +290,7 @@ class ComfyUIBridge(Star):
             ("studio/prompt-tags/preview", self.studio.prompt_preview, "GET"),
             ("studio/queue", self.studio.queue, "GET"),
             ("studio/queue/details", self.studio.queue_details, "GET"),
+            ("studio/model-catalog", self.studio.model_catalog, "GET"),
             ("studio/reverse-history", self.service.reverse_history.records_api, "GET"),
             ("studio/reverse-history/image", self.service.reverse_history.image_api, "GET"),
             ("studio/reverse-history/delete", self.service.reverse_history.delete_api, "POST"),
