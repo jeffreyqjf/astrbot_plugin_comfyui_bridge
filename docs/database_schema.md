@@ -43,3 +43,5 @@ ControlNet 产物的媒体保存在 ComfyUI `input/my_input/{unevaluated,favouri
 ## 模型自定义链接（v3.16.0）
 
 plugin_data/model_links.json 为 `{工作流名:{SHA256([name,folder]):{name,folder,links:[URL…]}}}`，UTF-8 JSON 原子写入，读写限制 8 MiB、revision 为文件字节摘要。无配置时沿用随包来源链接；显式空数组移除入口；配置与权重／工作流图独立，不变更随包来源清单或已核对下载 URL。按工作流导出使用带 format/version 的模型行列表，导入同模型合并。未命中的旧模型条目保存在配置文件中但不影响新图。
+
+v3.17.0：model_links.json 中的模型项可附加 note（简介，最多 4000 字）。缺失为沿用既有说明，空字符串为显式清空；保存／导入缺失字段时保留当前自定义值。导出附带有效简介，仍兼容 version:1 链接配置，无需旧数据迁移。

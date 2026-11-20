@@ -4,17 +4,19 @@ export function mountModelCatalog({get, bridge, showPanel, workflowTitle, canOpe
   const scope = panel.querySelector("[data-model-scope]"), status = panel.querySelector("[data-model-status]");
   let catalog, version = 0;
   const editor = document.createElement("dialog"); editor.className = "task-info-dialog model-links-editor";
-  const editorTitle = document.createElement("h2"); editorTitle.textContent = "编辑模型链接";
+  const editorTitle = document.createElement("h2"); editorTitle.textContent = "编辑模型信息";
   const modelName = document.createElement("p"); modelName.className = "model-download-description";
   const label = document.createElement("label"); label.className = "field"; label.textContent = "发布／下载链接（每行一个，第一行作为发布页入口）";
-  const input = document.createElement("textarea"); input.rows = 5; input.maxLength = 41000; input.spellcheck = false; label.append(input);
+  const input = document.createElement("textarea"); input.dataset.modelLinks = ""; input.rows = 5; input.maxLength = 41000; input.spellcheck = false; label.append(input);
+  const descriptionLabel = document.createElement("label"); descriptionLabel.className = "field"; descriptionLabel.textContent = "模型简介";
+  const descriptionInput = document.createElement("textarea"); descriptionInput.dataset.modelDescription = ""; descriptionInput.rows = 3; descriptionInput.maxLength = 4000; descriptionInput.placeholder = "填写作用、适用场景或注意事项，可留空"; descriptionLabel.append(descriptionInput);
   const editorNote = document.createElement("p"); editorNote.textContent = "可添加第二、第三链接，调整行序即可更换主要链接；用于浏览器打开，不会自动变成后台下载直链。清空可移除入口。";
   const linkList = document.createElement("div"); linkList.className = "model-guide-actions";
   const editorError = document.createElement("p"); editorError.setAttribute("role", "status");
   const editorActions = document.createElement("div"); editorActions.className = "row-actions";
   const closeEditor = document.createElement("button"); closeEditor.type = "button"; closeEditor.textContent = "关闭"; closeEditor.onclick = () => editor.close();
-  const saveLinks = document.createElement("button"); saveLinks.type = "button"; saveLinks.className = "primary"; saveLinks.textContent = "保存链接";
-  editorActions.append(closeEditor, saveLinks); editor.append(editorTitle, modelName, label, editorNote, linkList, editorError, editorActions); panel.append(editor);
+  const saveLinks = document.createElement("button"); saveLinks.type = "button"; saveLinks.className = "primary"; saveLinks.textContent = "保存信息";
+  editorActions.append(closeEditor, saveLinks); editor.append(editorTitle, modelName, descriptionLabel, label, editorNote, linkList, editorError, editorActions); panel.append(editor);
   const copyDialog = document.createElement("dialog"); copyDialog.className = "task-info-dialog";
   const copyHint = document.createElement("p"); const copyInput = document.createElement("input"); copyInput.readOnly = true;
   const copyClose = document.createElement("button"); copyClose.textContent = "关闭"; copyClose.onclick = () => copyDialog.close();
@@ -35,14 +37,14 @@ export function mountModelCatalog({get, bridge, showPanel, workflowTitle, canOpe
   let editing;
   function showEditor(row) {
     editing = {workflow: choice.value, name: row.name, folder: row.folder};
-    modelName.textContent = row.name; input.value = (row.links ?? (row.url ? [row.url] : [])).join("\n"); editorError.textContent = "";
+    modelName.textContent = row.name; descriptionInput.value = row.note ?? ""; input.value = (row.links ?? (row.url ? [row.url] : [])).join("\n"); editorError.textContent = "";
     linkList.replaceChildren(...(row.links ?? (row.url ? [row.url] : [])).map((url, index) => pageLink(url, `打开链接 ${index + 1} ↗`)));
     editor.showModal();
   }
   saveLinks.onclick = async () => {
     saveLinks.disabled = closeEditor.disabled = true; editorError.textContent = "";
     try {
-      await bridge.apiPost("studio/model-links", {...editing, action:"save", links: input.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean), revision: catalog.links_revision});
+      await bridge.apiPost("studio/model-links", {...editing, action:"save", note: descriptionInput.value, links: input.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean), revision: catalog.links_revision});
       editor.close(); await load();
     } catch (error) { editorError.textContent = error.message; }
     finally { saveLinks.disabled = closeEditor.disabled = false; }
@@ -134,7 +136,7 @@ export function mountModelCatalog({get, bridge, showPanel, workflowTitle, canOpe
         if (["https:", "http:"].includes(url.protocol)) {
           buttons.append(pageLink(url.href, "打开发布页 ↗"));
         }
-      } else { const missing = document.createElement("p"); missing.textContent = row.custom_links ? "未设置链接，可点击编辑链接补充" : "下载来源待核实"; card.append(missing); }
+      } else { const missing = document.createElement("p"); missing.textContent = row.custom_links ? "未设置链接，可点击编辑模型信息补充" : "下载来源待核实"; card.append(missing); }
       if (row.download_url || row.installed) {
         const download = document.createElement("button"); download.type = "button"; download.className = "model-download-button";
         download.textContent = row.installed ? "已存在" : "↓ 下载模型";
@@ -147,7 +149,7 @@ export function mountModelCatalog({get, bridge, showPanel, workflowTitle, canOpe
         };
         buttons.append(download);
       }
-      const edit = document.createElement("button"); edit.type = "button"; edit.textContent = "编辑链接"; edit.onclick = () => showEditor(row); buttons.append(edit);
+      const edit = document.createElement("button"); edit.type = "button"; edit.textContent = "编辑模型信息"; edit.onclick = () => showEditor(row); buttons.append(edit);
       const attribution = document.createElement("small"); attribution.textContent = row.source; card.append(attribution);
       card.append(nodes); list.append(card);
     }

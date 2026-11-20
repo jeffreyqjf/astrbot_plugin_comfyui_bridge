@@ -34,6 +34,12 @@ def model_key(name, folder):
     return hashlib.sha256(json.dumps([name, folder], ensure_ascii=False).encode()).hexdigest()
 
 
+def validate_note(note):
+    if not isinstance(note, str) or len(note) > 4000 or "\x00" in note:
+        raise ValueError("模型简介须为不超过 4000 字的文本。")
+    return note
+
+
 class ModelLinks:
     def __init__(self, service, anima):
         self.service = service
@@ -65,6 +71,8 @@ class ModelLinks:
                 row["custom_links"] = entry is not None
                 if entry is not None:
                     row["source"] = "自定义链接"
+                    if "note" in entry:
+                        row["note"] = validate_note(entry["note"])
                 row["url"] = next(iter(row["links"]), None)
         return revision
 
@@ -80,7 +88,7 @@ class ModelLinks:
                 if workflow is None:
                     raise ValueError("请选择工作流。")
                 return json_response({"format": "comfy-model-links", "version": 1, "workflow": name,
-                                      "models": [{key: row[key] for key in ("name", "folder", "links")} for row in workflow["models"]],
+                                      "models": [{**{key: row[key] for key in ("name", "folder", "links")}, "note": row.get("note", "")} for row in workflow["models"]],
                                       "revision": catalog["links_revision"]})
             body = await request.body()
             if len(body) > 2 * 1024**2:
@@ -104,11 +112,15 @@ class ModelLinks:
             for row in entries:
                 key = model_key(row["name"], row["folder"])
                 updates[key] = {"name": row["name"], "folder": row["folder"], "links": validate_links(row["links"])}
+                if "note" in row:
+                    updates[key]["note"] = validate_note(row["note"])
             async with self.service.state_lock:
                 saved, revision = await asyncio.to_thread(self.read)
                 if payload.get("revision") != revision:
                     return error_response("模型链接已变化，请刷新后重试。", status_code=409)
-                saved.setdefault(name, {}).update(updates)
+                entries = saved.setdefault(name, {})
+                for key, row in updates.items():
+                    entries[key] = {**entries.get(key, {}), **row}
                 raw = profile_bytes(saved)
                 if len(raw) > 8 * 1024**2:
                     raise ValueError("模型链接配置超过容量上限。")

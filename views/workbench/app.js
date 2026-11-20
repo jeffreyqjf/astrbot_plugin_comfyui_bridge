@@ -3276,7 +3276,7 @@ get("export-model-links").onclick = async () => {
     const workflow = get("transfer-model-workflow").value;
     const data = await bridge.apiGet("studio/model-links", {workflow});
     downloadJson(data, `${workflow}-model-links.json`);
-    completed("已导出该工作流的模型链接。");
+    completed("已导出该工作流的模型信息。");
   } catch (error) { message(error.message, true); }
   finally { button.disabled = false; }
 };
@@ -3480,7 +3480,7 @@ bindImport("import-model-links", "model-links-file", 2, async file => {
   const workflow = get("transfer-model-workflow").value;
   const {revision} = await bridge.apiGet("studio/model-links", {workflow});
   const {imported} = await bridge.apiPost("studio/model-links", {workflow, document, revision, action:"import"});
-  completed(`已导入「${workflowTitle(workflow)}」的 ${imported} 项模型链接。`);
+  completed(`已导入「${workflowTitle(workflow)}」的 ${imported} 项模型信息。`);
 });
 bindImport("import-commands", "commands-import-file", 6, async (file) => {
   const replace = get("replace-commands");

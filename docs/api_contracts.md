@@ -162,3 +162,7 @@ ComfyUI prompt 提交增加 `partial_execution_targets` 明确最终输出集合
 模型清单增加 links（有序数组）／custom_links；url 等于第一个链接或 null，links_revision 为配置文件摘要。GET studio/model-links?workflow=名称 返回 `{format:"comfy-model-links",version:1,workflow,models:[{name,folder,links}],revision}`，可直接导出为 JSON。POST studio/model-links 接受 `{action:"save",workflow,name,folder,links,revision}` 或 `{action:"import",workflow,document,revision}`，导入核对 format/version/workflow 后合并。最多 2000 项、每项 10 链接、正文 2 MiB；revision 冲突 409，非法或无工作流 400，未登录 401。仅接受不含账号密码的 HTTP／HTTPS 网页链接，保存不影响下载直链与本机模型。
 
 POST studio/model-links/open 仅注册到 AstrBot 面板，未加入独立远程工作台路由。正文 `{url}` 上限 8192 字节，需要登录并验证网页协议，Windows 下用系统默认浏览器打开；非 Windows 或打开失败返回 400，前端展示复制地址。独立网页直接使用安全的新标签链接，无此后端调用。
+
+## 模型简介扩展（v3.17.0）
+
+studio/model-links 的 save 和导入模型行增加可选 note 字符串，最多 4000 字，允许空字符串覆盖为空，拒绝非字符串与 NUL。读取模型清单时覆盖对应卡片 note；导出模型行包含当前有效 note。旧版 version:1 文档不含 note 时保留已有简介，缺省沿用随包说明。字段为兼容扩展，接口路径和格式版本不变；链接、下载直链与实际模型文件不受影响。

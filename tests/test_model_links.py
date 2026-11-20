@@ -83,3 +83,21 @@ class ModelLinksTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((await self.call({"url": "https://example.com"}, user=None, opener=True)).status_code, 401)
             self.assertEqual((await self.call(user=None)).status_code, 401)
             self.assertEqual(open_file.call_count, 1)
+
+    async def test_description_persists_exports_and_legacy_import_preserves_it(self):
+        text = "模型用途与注意事项\n<img src=x onerror=alert(1)>"
+        payload = {**self.row, "workflow": "first", "action": "save", "links": [self.row["url"]],
+                   "note": text, "revision": self.links.read()[1]}
+        self.assertEqual((await self.call(payload)).status_code, 200)
+        with patch("bridge.studio.model_catalog.catalog_data", new=AsyncMock(side_effect=self.catalog)):
+            exported = json.loads((await self.call(method="GET", query=b"workflow=first")).body)
+        self.assertEqual(exported["models"][0]["note"], text)
+        old = {**exported, "models": [{key: value for key, value in row.items() if key != "note"} for row in exported["models"]]}
+        self.assertEqual((await self.call({"workflow":"first", "action":"import", "document":old, "revision":exported["revision"]})).status_code, 200)
+        result = await self.catalog()
+        self.assertEqual(result["workflows"][0]["models"][0]["note"], text)
+        self.assertNotIn("note", result["workflows"][1]["models"][0])
+        for invalid in (None, 42, "x" * 4001):
+            self.assertEqual((await self.call({**payload, "note": invalid, "revision":self.links.read()[1]})).status_code, 400)
+        self.assertEqual((await self.call({**payload, "note":"", "revision":self.links.read()[1]})).status_code, 200)
+        self.assertEqual((await self.catalog())["workflows"][0]["models"][0]["note"], "")
