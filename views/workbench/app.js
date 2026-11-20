@@ -2239,6 +2239,68 @@ commandTemplateDelete.addEventListener("click", () =>
 
 const queueMode = get("queue-create-mode");
 const queueWorkflow = get("queue-workflow");
+const queueConfig = get("queue-workflow-config");
+let queueConfigReady = Promise.resolve();
+let queueConfigError = "";
+const queueConfigKey = name => `comfy-task-config:${name}`;
+function rememberedQueueConfig(name) {
+  try { return localStorage.getItem(queueConfigKey(name)) || ""; } catch { return ""; }
+}
+function rememberQueueConfig(name, value) {
+  try { localStorage.setItem(queueConfigKey(name), value); } catch { /* Browser storage may be disabled. */ }
+}
+async function applyQueueConfig() {
+  const workflow = queueWorkflow.value, name = queueConfig.value;
+  queueConfigError = "";
+  queueWorkflow.disabled = queueConfig.disabled = get("queue-add").disabled = true;
+  try {
+    if (name) {
+      if (unsaved.length) throw new Error("工作流参数尚未保存，请先保存或放弃更改。");
+      const route = animaRoute(workflow);
+      const settings = await bridge.apiGet(route ? route + "/settings" : "studio/workflow", {name: workflow});
+      const result = await bridge.apiPost(workflowConfigRoute, {action: "apply", workflow, name, revision: settings.revision});
+      const refreshed = await bridge.apiGet("studio");
+      Object.assign(studio.workflows.find(row => row.name === workflow), refreshed.workflows.find(row => row.name === workflow) ?? result.workflow);
+      activeConfigs.set(workflow, result.name);
+      // Re-read the settings page next time it opens instead of displaying stale values.
+      if (current?.workflow === workflow) current = null;
+      taskControlWorkflow = undefined;
+      renderTaskControlnets();
+      renderQueueLoras();
+    }
+    if (!name) { taskControlWorkflow = undefined; renderTaskControlnets(); }
+    rememberQueueConfig(workflow, name);
+    createTaskMessage(name ? `已选用「${name}」，下次继续使用。` : "使用当前参数，可调整本次功能。");
+  } catch (error) {
+    queueConfigError = error.message;
+    createTaskMessage(`配置未应用：${error.message}，请重新选择或选择当前参数。`, true);
+  } finally {
+    queueWorkflow.disabled = queueConfig.disabled = false;
+    get("queue-add").disabled = Boolean(queueConfigError) || queueWriting;
+    get("queue-features").hidden = Boolean(queueConfig.value) || !taskInputs.features?.length;
+    if (queueConfig.value) get("queue-controlnets").hidden = true;
+  }
+}
+async function loadQueueConfigs() {
+  const workflow = queueWorkflow.value;
+  queueConfigError = "";
+  queueWorkflow.disabled = queueConfig.disabled = get("queue-add").disabled = true;
+  try {
+    const {names} = await bridge.apiGet(workflowConfigRoute, {workflow});
+    const cached = rememberedQueueConfig(workflow);
+    queueConfig.replaceChildren(new Option("当前参数（自行调整）", ""), ...names.map(name => new Option(name, name)));
+    if (cached && !names.includes(cached)) queueConfig.add(new Option(`${cached}（已失效，请重新选择）`, cached));
+    queueConfig.value = cached;
+    await applyQueueConfig();
+  } catch (error) {
+    queueConfigError = error.message;
+    createTaskMessage(`读取配置失败：${error.message}，请重新打开新建任务重试。`, true);
+  } finally {
+    queueWorkflow.disabled = queueConfig.disabled = false;
+    get("queue-add").disabled = Boolean(queueConfigError) || queueWriting;
+  }
+}
+queueConfig.addEventListener("change", () => { queueConfigReady = applyQueueConfig(); });
 const queueLora = get("queue-lora");
 const queueLoraMode = get("queue-lora-mode");
 const queueLoraChoice = get("queue-lora-choice");
@@ -2750,6 +2812,7 @@ controlProfileForm.addEventListener("submit", (event) => {
 queueWorkflow.addEventListener("change", () => {
   renderQueueLoras();
   renderTaskControlnets();
+  queueConfigReady = loadQueueConfigs();
 });
 async function showCreateMode() {
   const mode = queueMode.value;
@@ -2792,6 +2855,7 @@ function openCreateTask() {
     get("queue-add").disabled = !queueWorkflow.options.length || queueWriting;
   }
   showCreateMode();
+  queueConfigReady = loadQueueConfigs();
 }
 
 function openQueue() {
@@ -2844,6 +2908,8 @@ get("queue-qq-timeout-form").addEventListener("submit", (event) => {
 });
 get("queue-form").addEventListener("submit", async (event) => {
   event.preventDefault();
+  await queueConfigReady;
+  if (queueConfigError) { createTaskMessage(queueConfigError, true); return; }
   try { await h3Prompt.ready(); }
   catch (error) { createTaskMessage(error.message, true); return; }
   const preset = taskInputs.presets ? get("queue-preset").value : "";
@@ -2863,7 +2929,7 @@ get("queue-form").addEventListener("submit", async (event) => {
     workflow,
     ...(taskInputs.positive ? {positive} : {}),
     ...(taskInputs.presets ? {preset, preset_account: get("queue-preset-account").value} : {}),
-    ...(taskInputs.negative ? {negative: get("queue-negative").value} : {}),
+    ...(taskInputs.negative && (!queueConfig.value || get("queue-negative").value.trim()) ? {negative: get("queue-negative").value} : {}),
     count: get("queue-count").valueAsNumber,
   };
   if (taskInputs.h3_final) {
@@ -2884,10 +2950,10 @@ get("queue-form").addEventListener("submit", async (event) => {
   changeQueue("studio/queue", async () => {
     const [reference, controlnets, media] = await Promise.all([
       taskInputs.reference ? queueReferencePayload(taskInputs.mask) : {},
-      queueControlnetPayload(),
+      queueConfig.value ? {} : queueControlnetPayload(),
       h3Media.payload(),
     ]);
-    return { ...data, ...reference, ...controlnets, ...media, ...taskFeatures.payload() };
+    return { ...data, ...reference, ...controlnets, ...media, ...(queueConfig.value ? {} : taskFeatures.payload()) };
   }, get("queue-add"), (result) => `已加入 ${result.jobs.length} 项生成任务。`, { create: true, opensQueue: () => true });
 });
 setInterval(refreshQueue, 2500);
