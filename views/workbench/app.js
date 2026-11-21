@@ -7,6 +7,7 @@ import { mountTaskFeatures } from "./task_features.js";
 import { mountJobDetails, mountTaskPresets } from "./task_inspect.js";
 import { mountReverseHistory } from "./reverse_history.js";
 import { mountModelCatalog } from "./model_catalog.js";
+import { initializePageMemory } from "./page_memory.js";
 
 const remote = !window.AstrBotPluginView;
 const bridge = window.AstrBotPluginView || (await import("./remote.js")).bridge;
@@ -3500,6 +3501,7 @@ bindImport("lora-tags-import", "lora-tags-file", 2, async (file) => {
 
 try {
   await bridge.ready();
+  await initializePageMemory(bridge, notify);
   studio = await bridge.apiGet("studio");
   mountNavigationOrder(get("management-list"), "management", (tab) => tab.id, get("remote-logout"));
   renderArchive(studio.archive);

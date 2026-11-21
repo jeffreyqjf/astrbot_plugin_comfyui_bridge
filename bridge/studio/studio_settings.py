@@ -251,6 +251,48 @@ finally:
 
 
 class StudioSettings:
+    async def gallery_pages(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        try:
+            import hashlib
+            owner = hashlib.sha256(str(request.username).encode()).hexdigest()
+            path = self.service.data_dir / "gallery_pages" / f"{owner}.json"
+            if path.resolve() != path.absolute():
+                raise WorkflowError("页码记忆目录不能使用链接。")
+            def read():
+                if not path.exists():
+                    return {}
+                if path.stat().st_size > 5 * 1024**2:
+                    raise WorkflowError("页码记忆数据过大。")
+                data = json.loads(path.read_bytes())
+                if not isinstance(data, dict):
+                    raise WorkflowError("页码记忆格式无效。")
+                return data
+            if request.method == "GET":
+                return json_response({"pages": await asyncio.to_thread(read)})
+            body = await request.body()
+            if len(body) > 8192:
+                raise WorkflowError("页码记忆请求过大。")
+            data = json.loads(body)
+            key, page = data.get("key"), data.get("page")
+            if not isinstance(key, str) or not key.startswith("comfy-gallery-page:") or len(key) > 4096 or type(page) is not int or not 1 <= page <= 1000000:
+                raise WorkflowError("页码记忆参数无效。")
+            async with self.service.state_lock:
+                saved = await asyncio.to_thread(read)
+                saved.pop(key, None)
+                saved[key] = page
+                saved = dict(list(saved.items())[-1000:])
+                raw = profile_bytes(saved)
+                while len(raw) > 5 * 1024**2:
+                    saved.pop(next(iter(saved)))
+                    raw = profile_bytes(saved)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                await asyncio.to_thread(atomic_write, path, raw)
+            return json_response({})
+        except (OSError, ValueError, AttributeError) as exc:
+            return error_response(str(exc), status_code=400)
+
     async def model_catalog(self):
         from .model_catalog import catalog_api
         try:

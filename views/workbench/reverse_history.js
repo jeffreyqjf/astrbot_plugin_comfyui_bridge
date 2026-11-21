@@ -1,10 +1,13 @@
+import { pageKey, readPage, savePage } from "./page_memory.js";
+
 export function mountReverseHistory({get, bridge, showPanel, canOpen, notify}) {
   const panel = get("reverse-history"), list = panel.querySelector(".reverse-history-list");
   const status = panel.querySelector("[data-history-status]");
   const previous = panel.querySelector("[data-history-prev]"), next = panel.querySelector("[data-history-next]");
   const imageDialog = get("reverse-history-image"), image = imageDialog.querySelector("img");
   const deletion = get("reverse-history-delete"), confirm = deletion.querySelector("[data-delete-confirm]");
-  let page = 1, version = 0, pictureVersion = 0, deleteId;
+  const memoryKey = pageKey("reverse-history");
+  let page = readPage(memoryKey), version = 0, pictureVersion = 0, deleteId;
   const previews = new IntersectionObserver(entries => {
     for (const {target, isIntersecting} of entries) {
       if (!isIntersecting) continue;
@@ -34,7 +37,8 @@ export function mountReverseHistory({get, bridge, showPanel, canOpen, notify}) {
       notify("反推提示词已复制。");
     } catch { textarea.focus(); textarea.select(); notify("已选中提示词，请手动复制。"); }
   }
-  async function load(requested = page) {
+  async function load(requested) {
+    requested ??= readPage(memoryKey);
     const request = ++version;
     previews.disconnect(); list.replaceChildren();
     previous.disabled = next.disabled = true;
@@ -43,6 +47,7 @@ export function mountReverseHistory({get, bridge, showPanel, canOpen, notify}) {
       const data = await bridge.apiGet("studio/reverse-history", {page: requested});
       if (request !== version) return;
       page = data.page;
+      savePage(memoryKey, page);
       const pages = Math.max(1, Math.ceil(data.total / data.page_size));
       panel.querySelector("[data-history-page]").textContent = `第 ${page} / ${pages} 页`;
       previous.disabled = page <= 1; next.disabled = page >= pages;
@@ -80,7 +85,7 @@ export function mountReverseHistory({get, bridge, showPanel, canOpen, notify}) {
   };
   get("open-reverse-history").onclick = () => {
     if (!canOpen()) return;
-    showPanel("reverse-history", get("open-reverse-history")); load(1);
+    showPanel("reverse-history", get("open-reverse-history")); load();
   };
   panel.querySelector("[data-history-refresh]").onclick = () => load();
   previous.onclick = () => load(page - 1); next.onclick = () => load(page + 1);

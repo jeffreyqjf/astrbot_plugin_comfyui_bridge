@@ -48,3 +48,5 @@
 模型指南的存在检查、目录别名／extra_model_paths.yaml 和经过确认的可取消下载由 bridge/studio/model_downloads.py 管理；生命周期在插件 terminate 中停止。该模块不复用 ComfyUI 的认证会话。源清单 downloads 仅登记经核对的精确文件直链。
 
 bridge/studio/model_links.py 维护用户按工作流保存的有序模型网页链接、revision 与 JSON 导入导出，以及仅 AstrBot 面板使用的 Windows 浏览器打开入口。链接不参与后台自动下载 URL 解析。
+
+views/workbench/page_memory.js 统一处理图集上下文页码、本地备用与插件记忆同步，app.js 在工作台初始化前载入。studio_settings.gallery_pages 负责按账号持久化，image_review／videos／reverse_history 在成功加载后记忆有效页。

@@ -1,3 +1,5 @@
+import { pageKey, readPage, savePage } from "./page_memory.js";
+
 export function mountVideos({ get, bridge, showPanel, message, notify, canOpen }) {
   const panel = get("videos");
   const list = get("videos-list");
@@ -13,7 +15,8 @@ export function mountVideos({ get, bridge, showPanel, message, notify, canOpen }
   const deleteCancel = get("video-delete-cancel");
   const deleteStatus = get("video-delete-status");
   const date = new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium", timeStyle: "short" });
-  let page = 1;
+  const memoryKey = pageKey("videos");
+  let page = readPage(memoryKey);
   let pages = 1;
   let loading = false;
   let playing = 0;
@@ -88,13 +91,15 @@ export function mountVideos({ get, bridge, showPanel, message, notify, canOpen }
     return article;
   }
 
-  async function refresh(target = page) {
+  async function refresh(target) {
+    target ??= readPage(memoryKey);
     if (loading) return;
     loading = refreshButton.disabled = previous.disabled = next.disabled = true;
     list.inert = true;
     try {
       const data = await bridge.apiGet("studio/videos", { page: target });
       page = data.page;
+      savePage(memoryKey, page);
       pages = data.pages;
       list.replaceChildren(...data.videos.map(row));
       get("videos-empty").hidden = data.videos.length > 0;

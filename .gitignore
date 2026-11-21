@@ -18,3 +18,5 @@ tests/*
 !tests/test_model_catalog.py
 !tests/test_model_downloads.py
 !tests/test_model_links.py
+!tests/test_page_memory.mjs
+!tests/test_gallery_pages.py

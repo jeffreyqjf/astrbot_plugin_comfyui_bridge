@@ -1,3 +1,5 @@
+import { pageKey, readPage, savePage } from "./page_memory.js";
+
 const controlBranches = { openpose: "OpenPose", any: "Any", lllite: "LLLite" };
 const controlTypes = { openpose: "OpenPose", canny: "Canny", depth: "Depth" };
 const controlStates = { unevaluated: "待评价", favourite: "收藏", pass: "Pass" };
@@ -240,15 +242,15 @@ export function mountImageReviews({
     if (!pending.hidden) return { state: "unevaluate" };
     if (!gallery.hidden) return { state: galleryList.state, rating: get("image-gallery-rating").value };
   }, () => {
-    if (!pending.hidden) refreshList(pendingList, 1);
-    else if (!gallery.hidden) refreshList(galleryList, 1);
+    if (!pending.hidden) refreshList(pendingList);
+    else if (!gallery.hidden) refreshList(galleryList);
   });
   const { query: filterQuery, load: loadFacets } = galleryFilters;
   const resourceFilters = mountFilters(pickerFilters, "picker-", () => {
     if (!resourcePicker.open || resourceRequest?.source === "input") return;
     const [kind, state] = resourceGallery.value.split("/");
     if (kind === "images") return { state, rating: resourceRating(state) };
-  }, () => loadResources(1));
+  }, () => loadResources());
 
   function resourceRating(state) {
     return state === "unevaluate" ? "" : get("task-resource-rating").value;
@@ -301,6 +303,8 @@ export function mountImageReviews({
   }
 
   async function loadReferences(page) {
+    const key = pageKey("legacy-reference", {rating: get("queue-reference-rating").value});
+    page ??= readPage(key);
     const version = ++referenceVersion;
     const note = get("queue-reference-note");
     note.textContent = "正在读取收藏图集…";
@@ -312,6 +316,8 @@ export function mountImageReviews({
         state: "favourite", rating: get("queue-reference-rating").value, page,
       });
       if (!referencePicker.open || version !== referenceVersion) return;
+      const last = Math.max(1, Math.ceil(data.total / data.page_size));
+      if (page > last) return loadReferences(last);
       for (const item of data.images) {
         const label = imageLabel(item);
         const button = document.createElement("button");
@@ -331,6 +337,7 @@ export function mountImageReviews({
         previews.observe(image);
       }
       referencePage = page;
+      savePage(key, page);
       note.textContent = data.images.length ? `第 ${page} 页 · 点击缩略图选择` : "这一页没有收藏图片。";
       referencePrev.disabled = page <= 1;
       referenceNext.disabled = !data.has_more;
@@ -347,7 +354,7 @@ export function mountImageReviews({
     chooseFavourite = onSelect;
     get("queue-reference-title").textContent = title;
     referencePicker.showModal();
-    loadReferences(1);
+    loadReferences();
   }
 
   get("queue-reference-open").addEventListener("click", () => {
@@ -377,7 +384,7 @@ export function mountImageReviews({
     }, {useControls: true, gallery: "images/favourite", title: "从图集选择参考图"});
   });
   get("queue-reference-close").addEventListener("click", () => referencePicker.close());
-  get("queue-reference-rating").addEventListener("change", () => loadReferences(1));
+  get("queue-reference-rating").addEventListener("change", () => loadReferences());
   referencePrev.addEventListener("click", () => loadReferences(referencePage - 1));
   referenceNext.addEventListener("click", () => loadReferences(referencePage + 1));
   get("queue-reference-upload").addEventListener("click", () => referenceFile.click());
@@ -503,7 +510,7 @@ export function mountImageReviews({
       if (index === resourceRequest.path.length - 1) button.setAttribute("aria-current", "location");
       button.addEventListener("click", () => {
         resourceRequest.path.splice(index + 1);
-        loadResources(1);
+        loadResources();
       });
       pathBar.append(button);
     }
@@ -515,6 +522,11 @@ export function mountImageReviews({
     const isInput = request.source === "input";
     const status = get("task-resource-status");
     const [kind, state] = isInput ? ["input"] : resourceGallery.value.split("/");
+    const query = isInput ? {directory: request.path.at(-1).id} : {
+      state, ...(kind === "controls" ? {type: request.type} : {rating: resourceRating(state), ...resourceFilters.query()}),
+    };
+    const key = pageKey(`resources/${kind}`, query);
+    page ??= readPage(key);
     request.entry = null;
     clearResourcePreview();
     drawResourcePath();
@@ -523,13 +535,11 @@ export function mountImageReviews({
     status.textContent = "正在读取素材…";
     try {
       const data = isInput
-        ? await bridge.apiGet("studio/input", { directory: request.path.at(-1).id, page })
-        : await bridge.apiGet(kind === "controls" ? "studio/control-assets" : "studio/images", {
-          state, page, ...(kind === "controls" ? { type: request.type } : {
-            rating: resourceRating(state), ...resourceFilters.query(),
-          }),
-        });
+        ? await bridge.apiGet("studio/input", {...query, page})
+        : await bridge.apiGet(kind === "controls" ? "studio/control-assets" : "studio/images", {...query, page});
       if (version !== resourceVersion || !resourcePicker.open) return;
+      const last = Math.max(1, Math.ceil(data.total / data.page_size));
+      if (page > last) return loadResources(last);
       const entries = data.entries ?? data.assets ?? data.images ?? data.jobs.flatMap((job) => job.images);
       const thumbnails = [];
       for (const entry of entries) {
@@ -548,7 +558,7 @@ export function mountImageReviews({
         button.addEventListener("click", () => {
           if (isInput && entry.kind === "directory") {
             request.path.push(entry);
-            loadResources(1);
+            loadResources();
           } else previewResource(entry, kind, state);
         });
         resourceList.append(button);
@@ -565,6 +575,7 @@ export function mountImageReviews({
         input: "此目录没有素材。", controls: "此图集没有匹配控制类型的图片。", images: "此图集暂无图片。",
       }[kind];
       request.page = data.page;
+      savePage(key, request.page);
       request.last = Math.max(1, Math.ceil(data.total / data.page_size));
       resourcePager(request.page, request.last, false);
       for (let start = 0; start < thumbnails.length && version === resourceVersion && resourcePicker.open; start += 4) {
@@ -630,7 +641,7 @@ export function mountImageReviews({
     get("task-resource-filters").hidden = resourceRequest.source === "input" || kind !== "images";
     get("task-resource-rating-field").hidden = state === "unevaluate";
     resourceFilters.resetOptions();
-    loadResources(1);
+    loadResources();
   }
 
   resourceGallery.addEventListener("change", changeResourceGallery);
@@ -648,9 +659,11 @@ export function mountImageReviews({
     }
   });
 
-  async function loadControlGallery(page = controlPage) {
+  async function loadControlGallery(page) {
     const version = ++controlGalleryVersion;
     const state = get("control-gallery-state").value;
+    const key = pageKey("control-gallery", {state});
+    page ??= readPage(key);
     const status = get("control-gallery-status");
     const grid = get("control-gallery-grid");
     for (const image of grid.querySelectorAll("img")) previews.unobserve(image);
@@ -666,6 +679,7 @@ export function mountImageReviews({
         return;
       }
       controlPage = data.page;
+      savePage(key, controlPage);
       for (const asset of data.assets) {
         const frame = document.createElement("article");
         frame.className = "review-card";
@@ -829,10 +843,10 @@ export function mountImageReviews({
     if (!canOpen()) return;
     showPanel("control-gallery", get("open-control-gallery"));
     message("");
-    loadControlGallery(1);
+    loadControlGallery();
   });
   get("control-gallery-refresh").addEventListener("click", () => loadControlGallery());
-  get("control-gallery-state").addEventListener("change", () => loadControlGallery(1));
+  get("control-gallery-state").addEventListener("change", () => loadControlGallery());
 
   function renderOriginalControls() {
     if (!openedImage) return;
@@ -1086,13 +1100,15 @@ export function mountImageReviews({
     get("image-review-empty").hidden = groups.length !== 0;
   }
 
-  async function refreshList(list, next = list.page, { background = false, pick, keepPreview = false } = {}) {
+  async function refreshList(list, next, { background = false, pick, keepPreview = false } = {}) {
     const previewing = () => dialog.open && openedImage?.list === list;
     if (list.panel.hidden || (background && (list.loading || previewing()))) return false;
     const version = ++list.version;
     const preview = openedImage;
     const query = { state: list.state, ...filterQuery() };
     if (list === galleryList) query.rating = get("image-gallery-rating").value;
+    const key = pageKey("images", query);
+    next ??= readPage(key);
     list.loading = true;
     list.navigating = !background;
     list.pager(list.page, list.last, list.navigating);
@@ -1113,6 +1129,7 @@ export function mountImageReviews({
       const oldPage = list.page;
       const oldItems = list.items;
       list.page = data.page ?? next;
+      savePage(key, list.page);
       list.last = last;
       const snapshot = JSON.stringify(data);
       if (snapshot !== list.snapshot) {
@@ -1158,7 +1175,7 @@ export function mountImageReviews({
     placeFilters("image-review-filter-slot");
     message("");
     pendingList.snapshot = "";
-    refreshList(pendingList, 1);
+    refreshList(pendingList);
   });
   for (const [id, state, title] of [
     ["open-image-gallery", "favourite", "收藏图集"],
@@ -1183,7 +1200,7 @@ export function mountImageReviews({
       showPanel("image-gallery", tab);
       placeFilters("image-gallery-filter-slot");
       message("");
-      refreshList(galleryList, 1);
+      refreshList(galleryList);
     });
   }
   get("image-review-refresh").addEventListener("click", () => {
@@ -1216,7 +1233,7 @@ export function mountImageReviews({
   });
   get("image-gallery-rating").addEventListener("change", () => {
     loadFacets();
-    refreshList(galleryList, 1);
+    refreshList(galleryList);
   });
   async function refreshAfterRemoval(item, state) {
     const list = state === "unevaluate" ? pendingList : galleryList;

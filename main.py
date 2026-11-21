@@ -291,6 +291,8 @@ class ComfyUIBridge(Star):
             ("studio/queue", self.studio.queue, "GET"),
             ("studio/queue/details", self.studio.queue_details, "GET"),
             ("studio/model-catalog", self.studio.model_catalog, "GET"),
+            ("studio/gallery-pages", self.studio.gallery_pages, "GET"),
+            ("studio/gallery-pages", self.studio.gallery_pages, "POST"),
             ("studio/model-links", self.studio.model_links.api, "GET"),
             ("studio/model-links", self.studio.model_links.api, "POST"),
             ("studio/model-links/open", self.studio.model_links.open_page, "POST"),

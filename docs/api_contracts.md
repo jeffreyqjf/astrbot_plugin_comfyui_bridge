@@ -166,3 +166,7 @@ POST studio/model-links/open 仅注册到 AstrBot 面板，未加入独立远程
 ## 模型简介扩展（v3.17.0）
 
 studio/model-links 的 save 和导入模型行增加可选 note 字符串，最多 4000 字，允许空字符串覆盖为空，拒绝非字符串与 NUL。读取模型清单时覆盖对应卡片 note；导出模型行包含当前有效 note。旧版 version:1 文档不含 note 时保留已有简介，缺省沿用随包说明。字段为兼容扩展，接口路径和格式版本不变；链接、下载直链与实际模型文件不受影响。
+
+## 图集页码记忆（v3.18.0）
+
+GET studio/gallery-pages 返回当前登录身份的 `{pages:{context_key:page}}`。POST 接受 `{key,page}`，key 以 comfy-gallery-page: 开头且最长 4096 字，page 为 1..1000000 的整数，正文最多 8192 字节。未登录 401、非法／读取错误 400。记录按账号摘要隔离，使用 state_lock 和原子写入，保留最近 1000 个上下文并限制数据 5 MiB。前端成功加载有效页后写入，当前页未变不重复写入；保存失败保留本地记忆并提示。

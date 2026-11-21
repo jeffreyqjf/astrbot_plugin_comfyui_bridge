@@ -105,6 +105,16 @@ async def check_model_catalog(instance):
     route = "studio/model-catalog"
     incoming = Request({"type": "http", "method": "GET", "path": "/" + route, "headers": [], "query_string": b""})
     with bind_request_context(PluginRequest(incoming, username=None)):
+        assert (await instance.studio.gallery_pages()).status_code == 401
+    payload_page = {"key": 'comfy-gallery-page:["images",[["state","hd"]]]', "page": 3}
+    async def receive_page():
+        return {"type":"http.request", "body":json.dumps(payload_page).encode()}
+    page_request = Request({"type":"http", "method":"POST", "path":"/pages", "headers":[], "query_string":b""}, receive_page)
+    with bind_request_context(PluginRequest(page_request, username="page-test")):
+        assert (await instance.studio.gallery_pages()).status_code == 200
+    with bind_request_context(PluginRequest(incoming, username="page-test")):
+        assert json.loads((await instance.studio.gallery_pages()).body)["pages"][payload_page["key"]] == 3
+    with bind_request_context(PluginRequest(incoming, username=None)):
         assert (await instance.remote_studio.routes["GET", route]()).status_code == 401
     with bind_request_context(PluginRequest(incoming, username="test")):
         response = await instance.remote_studio.routes["GET", route]()
