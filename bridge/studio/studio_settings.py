@@ -1950,8 +1950,8 @@ class StudioSettings:
                     counts[label] = counts.get(label, 0) + 1
                 for identity, label in facets["preset"].items():
                     if counts[label] > 1:
-                        account, _, preset_id = identity[3:].rpartition(":") if identity.startswith("id:") else ("", "", "")
-                        suffix = f"{account} · {preset_id[:6]}" if account else "历史名称"
+                        _, _, preset_id = identity[3:].rpartition(":") if identity.startswith("id:") else ("", "", "")
+                        suffix = preset_id[:6] if preset_id else "历史"
                         facets["preset"][identity] = f"{label} · {suffix}"
                 missing = {"preset": "未使用预设 / 无记录", "workflow": "未记录工作流", "lora": "未使用 LoRA / 无记录"}
                 return json_response({"facets": {

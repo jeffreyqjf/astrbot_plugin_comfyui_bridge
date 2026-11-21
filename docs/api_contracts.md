@@ -170,3 +170,5 @@ studio/model-links 的 save 和导入模型行增加可选 note 字符串，最�
 ## 图集页码记忆（v3.18.0）
 
 GET studio/gallery-pages 返回当前登录身份的 `{pages:{context_key:page}}`。POST 接受 `{key,page}`，key 以 comfy-gallery-page: 开头且最长 4096 字，page 为 1..1000000 的整数，正文最多 8192 字节。未登录 401、非法／读取错误 400。记录按账号摘要隔离，使用 state_lock 和原子写入，保留最近 1000 个上下文并限制数据 5 MiB。前端成功加载有效页后写入，当前页未变不重复写入；保存失败保留本地记忆并提示。
+
+v3.18.1：GET studio/images?facets=1 的 preset label 不再追加所属用户；同名预设使用 ID 前六位区分，历史同名项使用「历史」。完整 id、筛选参数及页码上下文保持不变，不合并不同用户的预设。

@@ -20,3 +20,4 @@ tests/*
 !tests/test_model_links.py
 !tests/test_page_memory.mjs
 !tests/test_gallery_pages.py
+!tests/test_gallery_filters.py

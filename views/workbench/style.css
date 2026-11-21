@@ -381,10 +381,12 @@ body:has(#error-notice:not([hidden]) #unsaved-actions:not([hidden])) main {
 .image-filter-panel > .row-actions { align-items: end; justify-content: space-between; margin-bottom: 7px; }
 .image-lora-match { display: flex; align-items: center; gap: 5px; margin-top: 6px; }
 .image-filter-panel fieldset { margin: 8px 0 0; padding: 0; border: 0; min-width: 0; }
-.image-filter-panel legend { font-weight: 650; margin-bottom: 2px; }
-.image-filter-values { display: flex; flex-wrap: wrap; gap: 1px 9px; max-height: 10rem; overflow: auto; }
-.image-filter-values button { padding: 4px 2px; border: 0; background: transparent; color: var(--muted); font: inherit; text-align: left; overflow-wrap: anywhere; }
-.image-filter-values button[aria-pressed=true] { font-weight: 750; color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
+.image-filter-panel legend { font-weight: 650; margin-bottom: 7px; }
+.image-filter-values { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; max-height: 12rem; overflow: auto; padding: 3px; }
+.image-filter-values button { max-width: 100%; min-height: 34px; padding: 6px 13px; border: 1px solid var(--line); border-radius: 999px; background: var(--soft); color: var(--muted); font: inherit; line-height: 1.4; text-align: center; overflow-wrap: anywhere; }
+.image-filter-values button:hover { border-color: var(--accent); color: var(--accent); background: var(--tint); }
+.image-filter-values button[aria-pressed=true] { font-weight: 650; color: #fff; background: var(--accent); border-color: var(--accent); text-decoration: none; }
+.image-filter-values button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .image-generation-info { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 10px; margin: 8px 0 12px; font-size: .88rem; }
 .image-generation-info dt { font-weight: 650; }
 .image-generation-info dd { margin: 0; overflow-wrap: anywhere; }
