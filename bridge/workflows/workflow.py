@@ -151,6 +151,7 @@ class Workflow:
         if not isinstance(settings, dict) or not isinstance(settings.get("positive_prefix", ""), str):
             raise WorkflowError("AstrBot 工作流设置格式无效。")
         self.sweep_lora_family = sweep_lora_family(name, settings)
+        self.workflow_config = settings.get("workflow_config") if isinstance(settings.get("workflow_config"), str) else None
         if not isinstance(data, dict) or not data or "nodes" in data:
             raise WorkflowError("需要 ComfyUI 导出的 API 格式 JSON，不能使用画布格式。")
         self.graph = copy.deepcopy(data)

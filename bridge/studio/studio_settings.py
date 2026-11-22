@@ -1084,6 +1084,10 @@ class StudioSettings:
                     raise WorkflowError("配置和所选工作流不匹配。")
                 raw, canvas_raw, candidate = self._validate_config(saved)
                 profile = preserve_parameter_layout(saved["profile"], json.loads(current))
+                if "prompt" not in profile:
+                    profile = {"prompt": profile, "astrbot": {}}
+                profile.setdefault("astrbot", {})["workflow_config"] = path.stem
+                candidate.workflow_config = path.stem
                 graph, settings = profile_parts(profile)
                 raw = profile_bytes(profile)
                 files = {live: raw}
@@ -1939,11 +1943,12 @@ class StudioSettings:
                 filters = {key: set(values) for key, values in selected.items() if values}
             rating = request.query.get("rating", "")
             lora_match = request.query.get("lora_match", "any")
+            include_sources = request.query.get("include_sources") == "1"
             if (state not in ("unevaluate", *GALLERY_STATES) or rating not in ("", *REVIEW_RATINGS)
                     or lora_match not in ("any", "all")):
                 raise WorkflowError("图片列表参数无效。")
             if request.query.get("facets") == "1":
-                facets = await asyncio.to_thread(review.filter_options, state, rating)
+                facets = await asyncio.to_thread(review.filter_options, state, rating, include_sources=include_sources)
                 facets["preset"], _ = await self._gallery_preset_labels(facets["preset"])
                 counts = {}
                 for label in facets["preset"].values():
@@ -1971,6 +1976,7 @@ class StudioSettings:
             else:
                 result = await asyncio.to_thread(
                     review.gallery, rating, page or 1, state=state, filters=filters, lora_match=lora_match,
+                    include_sources=include_sources,
                 )
             items = result.get("images")
             if items is None:
@@ -2102,6 +2108,22 @@ class StudioSettings:
             "Content-Length": str(size),
             "Cache-Control": "no-store",
         })
+
+    async def detach_refinement(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        try:
+            await self.service.initialize()
+            body = await request.body()
+            if len(body) > 8192:
+                raise WorkflowError("解除关联数据过大。")
+            data = json.loads(body)
+            if not isinstance(data, dict) or not all(isinstance(data.get(key), str) for key in ("id", "state")):
+                raise WorkflowError("解除关联格式无效。")
+            await asyncio.to_thread(self.service.image_reviews.detach_refinement, data["id"], data["state"])
+            return json_response({})
+        except (OSError, ValueError) as exc:
+            return error_response(str(exc), status_code=400)
 
     async def refinement_image(self):
         if not request.username:

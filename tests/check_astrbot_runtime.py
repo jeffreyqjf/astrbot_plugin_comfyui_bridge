@@ -91,12 +91,31 @@ async def check_refinement_pairs(instance, root):
     assert base64.b64decode(json.loads(response.body)["src"].split(",", 1)[1]) == original.read_bytes()
     assert not any(item["id"] == f"{source_id}:1" for item in review.gallery("", 1)["images"])
     assert [item["id"] for item in review.gallery("", 1, state="hd")["images"]] == [f"{output_id}:1"]
+    async def call(method, route, *, query=b"", payload=None, username="test"):
+        async def receive():
+            return {"type": "http.request", "body": json.dumps(payload).encode()}
+        incoming = Request({"type": "http", "method": method, "path": "/" + route, "headers": [],
+                            "query_string": query}, receive)
+        with bind_request_context(PluginRequest(incoming, username=username)):
+            return await instance.remote_studio.routes[method, route]()
+
+    gallery = await call("GET", "studio/images", query=b"state=hd&include_sources=1")
+    assert gallery.status_code == 200, gallery.body
+    assert any(item.get("refinement_source") for item in json.loads(gallery.body)["images"])
+    route = "studio/images/refinement/detach"
+    payload = {"id": f"{output_id}:1", "state": "hd"}
+    assert (await call("POST", route, payload=payload, username=None)).status_code == 401
+    assert (await call("POST", route, payload={"id": "../invalid", "state": "hd"})).status_code == 400
+    response = await call("POST", route, payload=payload)
+    assert response.status_code == 200, response.body
+    assert len(review.gallery("", 1, state="hd")["images"]) == 2
+    response = await call("POST", "studio/images/delete", payload=payload)
+    assert response.status_code == 200, response.body
+    assert review.read(f"{source_id}:1", True, 1000000, state="hd")[1] == original.read_bytes()
     # Keep later isolated gallery assertions independent.
-    review.rate(f"{output_id}:1", "pass", source="hd")
-    review.delete(f"{output_id}:1", "pass")
     review.rate(f"{source_id}:1", "pass", source="hd")
     review.delete(f"{source_id}:1", "pass")
-    print("PASS: Detailer paired HD gallery, authenticated input preview and source relocation")
+    print("PASS: Detailer paired HD gallery, selectable low-res input, authenticated detach and independent delete")
 
 
 async def check_model_catalog(instance):

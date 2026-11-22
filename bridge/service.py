@@ -639,6 +639,7 @@ class ComfyService:
                 job_id, owner, wf.name, actual_seed, kind=wf.kind,
                 timeout_seconds=timeout_seconds, preset=preset,
                 configuration={
+                    "workflow_config": getattr(self.workflows.get(wf.name), "workflow_config", None),
                     "graph": graph, "outputs": list(wf.outputs), "active": list(wf.active),
                     "positive": [(item.node, item.name) for item in wf.positive],
                     "negative": [(item.node, item.name) for item in wf.negative],
@@ -667,6 +668,7 @@ class ComfyService:
         trace = {
             "id": job.id, "workflow": job.workflow, "kind": job.kind, "seed": job.seed,
             "preset": job.preset, "timeout_seconds": job.timeout_seconds, "started_at_unix": time.time(),
+            "workflow_config": (job.configuration or {}).get("workflow_config"),
             "reference_sha256": hashlib.sha256(image_data).hexdigest() if image_data else None,
         }
         metadata_path = self.metadata_dir / f"{job.id}.json"
@@ -842,6 +844,7 @@ class ComfyService:
             refinement=refinement,
             metadata={
                 "seed": job.seed, "preset": job.preset,
+                "workflow_config": (job.configuration or {}).get("workflow_config"),
                 "loras": [loras[ref["output_node"]] for ref in refs],
                 **({"controlnets": [controlnets] * len(refs)} if controlnets else {}),
             },

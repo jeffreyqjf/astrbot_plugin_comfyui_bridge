@@ -14,7 +14,7 @@ class GalleryFilterLabelsTests(unittest.IsolatedAsyncioTestCase):
         studio = StudioSettings.__new__(StudioSettings)
         presets = {"id:qq-long-account-111:abcdef001": "人物预设", "id:qq-long-account-222:fedcba002": "人物预设", "legacy": "普通预设"}
         studio.service = SimpleNamespace(initialize=AsyncMock(), image_reviews=SimpleNamespace(
-            filter_options=lambda state, rating: {"preset": dict(presets), "workflow": {}, "lora": {}},
+            filter_options=lambda state, rating, **kwargs: {"preset": dict(presets), "workflow": {}, "lora": {}},
         ))
         studio._gallery_preset_labels = AsyncMock(return_value=(dict(presets), set(presets)))
         for state in ("favourite", "pass", "hd", "unevaluate"):

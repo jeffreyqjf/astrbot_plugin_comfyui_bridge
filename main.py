@@ -329,6 +329,7 @@ class ComfyUIBridge(Star):
             ("studio/images/delete", self.studio.delete_image, "POST"),
             ("studio/images/file", self.studio.image_file, "GET"),
             ("studio/images/refinement", self.studio.refinement_image, "GET"),
+            ("studio/images/refinement/detach", self.studio.detach_refinement, "POST"),
             ("studio/images/export", self.studio.export_gallery, "GET"),
             ("studio/images/thumbnails", self.studio.generate_thumbnails, "POST"),
             ("studio/videos", self.studio.videos, "GET"),

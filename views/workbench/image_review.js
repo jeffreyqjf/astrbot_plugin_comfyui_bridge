@@ -249,7 +249,7 @@ export function mountImageReviews({
   const resourceFilters = mountFilters(pickerFilters, "picker-", () => {
     if (!resourcePicker.open || resourceRequest?.source === "input") return;
     const [kind, state] = resourceGallery.value.split("/");
-    if (kind === "images") return { state, rating: resourceRating(state) };
+    if (kind === "images") return { state, rating: resourceRating(state), include_sources: "1" };
   }, () => loadResources());
 
   function resourceRating(state) {
@@ -269,6 +269,7 @@ export function mountImageReviews({
     ));
     return [
       ["工作流", info.workflow ? workflowTitle(info.workflow) : "无记录"],
+      ["工作流配置预设", info.workflow_config || "未使用 / 无记录"],
       ["提示词预设", info.preset?.name ?? "未使用 / 无记录"],
       ["LoRA", loras?.length ? loras.join(" · ") : "未使用 / 无记录"],
       ...(info.seed == null ? [] : [["种子", info.seed]]),
@@ -523,7 +524,7 @@ export function mountImageReviews({
     const status = get("task-resource-status");
     const [kind, state] = isInput ? ["input"] : resourceGallery.value.split("/");
     const query = isInput ? {directory: request.path.at(-1).id} : {
-      state, ...(kind === "controls" ? {type: request.type} : {rating: resourceRating(state), ...resourceFilters.query()}),
+      state, ...(kind === "controls" ? {type: request.type} : {rating: resourceRating(state), include_sources: "1", ...resourceFilters.query()}),
     };
     const key = pageKey(`resources/${kind}`, query);
     page ??= readPage(key);
@@ -593,7 +594,8 @@ export function mountImageReviews({
 
   function resourceLabel(entry, kind) {
     if (kind === "input") return entry.name;
-    return kind === "controls" ? entry.source_label || controlAssetTitle(entry) : imageLabel(entry);
+    return kind === "controls" ? entry.source_label || controlAssetTitle(entry)
+      : `${entry.refinement_source ? "修复前原图 · " : ""}${imageLabel(entry)}`;
   }
 
   function readResourcePreview(entry, kind, state) {
@@ -901,6 +903,31 @@ export function mountImageReviews({
     const image = document.createElement("img"); image.alt = "细化输入原图"; image.hidden = true; media.append(image);
     const status = document.createElement("p"); status.setAttribute("role", "status"); status.textContent = "正在读取细化原图…";
     frame.append(heading, media, status); container.append(frame);
+    if (!openedImage?.readOnly) {
+      const detach = document.createElement("button"); detach.type = "button"; detach.textContent = "解除关联";
+      detach.onclick = async () => {
+        const preview = openedImage;
+        if (!isCurrent() || preview?.reviewing || preview?.loading || preview?.list?.navigating) return;
+        if (!confirm("解除当前结果与输入原图的关联？原图会保留，两张图可独立管理；其他结果的关联不变。")) return;
+        preview.reviewing = true; detach.disabled = true; renderOriginalControls();
+        status.textContent = "正在解除关联并保留原图…";
+        try {
+          await bridge.apiPost("studio/images/refinement/detach", {id: item.id, state: preview.state});
+          delete item.generation.refinement;
+          notify("已解除关联，原图已保留。高清结果可单独删除。");
+          if (isCurrent()) {
+            if (preview.list) await refreshList(preview.list, preview.list.page, {keepPreview: true});
+            if (openedImage === preview) await openOriginal(item, preview.state, {readOnly: preview.readOnly, list: preview.list});
+            loadFacets();
+          }
+        } catch (error) { if (isCurrent()) status.textContent = error.message; }
+        finally {
+          preview.reviewing = false;
+          if (openedImage === preview) { detach.disabled = false; renderOriginalControls(); }
+        }
+      };
+      frame.append(detach);
+    }
     try {
       const {src} = await bridge.apiGet("studio/images/refinement", {id: item.id, original: "1"});
       if (!isCurrent() || !container.contains(frame)) return;
@@ -998,6 +1025,7 @@ export function mountImageReviews({
       summary.className = "image-generation-summary";
       summary.textContent = [
         item.generation.preset?.name, item.generation.workflow && workflowTitle(item.generation.workflow),
+        item.generation.workflow_config && `配置：${item.generation.workflow_config}`,
         ...new Set((item.generation.loras ?? []).map((row) => loraLabel(row.name))),
       ].filter(Boolean).join(" · ");
       if (summary.textContent) footer.append(summary);
@@ -1035,7 +1063,7 @@ export function mountImageReviews({
         actions.append(button);
       }
     }
-    if (state === "unevaluate" || state === "pass") {
+    if (state === "unevaluate" || state === "pass" || state === "hd") {
       const remove = document.createElement("button");
       remove.type = "button";
       remove.textContent = "删除";

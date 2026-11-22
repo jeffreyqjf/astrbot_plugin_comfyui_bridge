@@ -43,6 +43,7 @@ API_PATHS = frozenset({
     "studio/queue/qq-timeout", "studio/queue/loras",
     "studio/queue/cancel-all", "studio/images", "studio/images/file", "studio/images/export",
     "studio/images/thumbnails", "studio/images/delete", "studio/images/refinement",
+    "studio/images/refinement/detach",
     "studio/input", "studio/input/preview", "studio/control-assets", "studio/control-assets/preview",
     "studio/prompt-tags", "studio/prompt-tags/preview",
     "studio/videos", "studio/videos/play", "studio/videos/delete",

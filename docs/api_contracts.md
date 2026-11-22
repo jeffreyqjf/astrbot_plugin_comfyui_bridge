@@ -1,5 +1,7 @@
 # API 契约
 
+v3.20.0：图片列表 generation 增加可选 workflow_config 字符串，表示任务受理时所基于的命名工作流配置，与 preset（提示词预设）独立。未应用命名配置或历史未记录时不提供，界面显示「未使用 / 无记录」。配置应用接口与现有返回格式保持兼容，名称作为生成历史快照，不随预设后续改名而更新。
+
 ## 任务预设预览与配置详情（v3.7.0）
 
 - 预设列表沿用 `GET studio/presets?account=…` 返回的 `preview` 图片 ID。长按时按需调用 `GET studio/images/file?id=…`，不在加载预设时读取全库图片；无预览、失效图片或松开后的迟到响应不影响选择。
@@ -125,7 +127,7 @@
 
 ## 高清图集（v3.10.0）
 
-图片接口的 state/source 增加 `hd`：`POST studio/images` 从 unevaluate/favourite/pass 手动移入 hd，或从 hd 移回 favourite/pass。`GET studio/images`、图片读取、缩略图生成、筛选与图集导出支持 hd。导出参数 `kind=images&state=hd`，ZIP 按既有 SFW/NSFW 和子目录组织原图。认证、路径／摘要校验及错误语义沿用原接口，不开放自动归档或高清原图直接删除。控制图接口仍只接受原三种状态。
+图片接口的 state/source 增加 `hd`：`POST studio/images` 从 unevaluate/favourite/pass 手动移入 hd，或从 hd 移回 favourite/pass。`GET studio/images`、图片读取、缩略图生成、筛选与图集导出支持 hd。导出参数 `kind=images&state=hd`，ZIP 按既有 SFW/NSFW 和子目录组织原图。认证、路径／摘要校验及错误语义沿用原接口，不开放自动归档；v3.19.0 起允许确认后单独删除高清图片。控制图接口仍只接受原三种状态。
 
 ## 反推记录（v3.11.0）
 
@@ -172,3 +174,9 @@ studio/model-links 的 save 和导入模型行增加可选 note 字符串，最�
 GET studio/gallery-pages 返回当前登录身份的 `{pages:{context_key:page}}`。POST 接受 `{key,page}`，key 以 comfy-gallery-page: 开头且最长 4096 字，page 为 1..1000000 的整数，正文最多 8192 字节。未登录 401、非法／读取错误 400。记录按账号摘要隔离，使用 state_lock 和原子写入，保留最近 1000 个上下文并限制数据 5 MiB。前端成功加载有效页后写入，当前页未变不重复写入；保存失败保留本地记忆并提示。
 
 v3.18.1：GET studio/images?facets=1 的 preset label 不再追加所属用户；同名预设使用 ID 前六位区分，历史同名项使用「历史」。完整 id、筛选参数及页码上下文保持不变，不合并不同用户的预设。
+
+## 原图选用与解除关联（v3.19.0）
+
+- GET studio/images 的 include_sources=1 用于选图窗口；高清列表及 facets 包含仍关联的来源图片，列表以 refinement_source:true 标记其修复前身份。默认列表继续隐藏来源卡片；完整图片 ID、state、读取接口与参考图来源校验不变。
+- POST studio/images/refinement/detach 接受 `{id,state}`（正文上限 8192 字节），需登录并校验结果仍在当前状态且摘要一致。解除当前索引，重复调用幂等，不影响同任务其他结果；必要时先将输入快照保留为高清原图，来源位置冲突／写入失败不提交解除。返回 `{}`，未登录 401、非法格式／ID／状态／文件冲突 400。桌面及远程工作台都注册该接口。
+- 解除后的图片列表不再返回 generation.refinement，原图预览接口对该结果返回 400；ZIP 不再为它输出关联 input/original。POST studio/images/delete 允许 state=hd，沿用确认、路径和摘要校验，仅移除当前文件及其缩略图，不级联删除输入／其他结果。

@@ -1,5 +1,7 @@
 # 持久数据结构
 
+v3.20.0：运行图 astrbot.workflow_config 保存最后应用的配置名称。任务受理时快照到 Job.configuration.workflow_config，生成 metadata 和归档 generation 同步保存；图片列表的 generation.workflow_config 是可选字符串，缺省为无记录。名称作为当时使用的配置来源保留，单次参数覆盖不改变该来源，不根据现有配置反推旧图片，无数据迁移。
+
 v3 新增 `regional_prompt_presets.json`：`{version:1,presets:{名称:{regions:[{text,strength},...],base_strength}}}`。最多 64 套、2 MB，按文件摘要处理并发冲突。遮罩不存入预设，由任务上传到 ComfyUI input，已提交图中记录各 LoadImage 文件名及三区文本。旧持久数据无需迁移。
 
 当前插件使用 JSON、媒体文件和内存任务状态。源码中未发现用于插件记录的关系数据库或 SQL schema。以下路径以 AstrBot 插件数据目录为根，媒体根目录另行说明。
@@ -35,6 +37,8 @@ ControlNet 产物的媒体保存在 ComfyUI `input/my_input/{unevaluated,favouri
 新 Detailer 记录增加可选 `generation.refinement:{input_id,suffix,source}`。input_id 使用结果任务 UUID；输入字节独立保存在 `image_reviews/detailer_inputs/{UUID}{suffix}`，缩略图为 `{UUID}.thumb.webp`。source 为 null 或 `{id,state,digest,relative}`，记录核验过的源图 ID、当时状态、SHA-256 及相对于状态根目录的路径；网页只返回 input_id/linked。
 
 移入 hd 时保持源图原相对路径，因此生成记录 ID／LoRA／预设继续有效。联动移动在图集锁内先校验、复制两张图，再移除旧路径，失败回滚。HD 隐藏来源卡片依赖仍有高清结果及相同摘要的来源文件；快照用于预览和导出，不依赖来源仍存在。旧记录缺省无关联，不迁移或猜测历史来源。图集 ZIP 同时包含对应输入副本。
+
+v3.19.0 兼容增加 refinement.detached 整数数组，记录已解除的图片索引（从 1 开始），缺省为空。不删除共享快照／来源元数据，其他结果仍可对照；列表、联动移动、来源隐藏与 ZIP 按有效索引判断。解除前验证当前结果及输入快照，必要时完整保留原图，之后原子写入索引；写失败清理本次新建原图。没有来源的上传输入在移入高清时保存至 hd/{rating}/detailer_inputs/{job_id}{suffix}，主列表隐藏，选图窗口可独立读取；旧的仅有快照记录在主动解除时保留该副本，无自动数据迁移。所有结果解除／移走／删除后来源恢复独立卡片，删除单图不级联。
 
 ## 模型下载状态（v3.15.0）
 

@@ -159,3 +159,106 @@ class RefinementPairsTests(unittest.TestCase):
         data = {"image": base64.b64encode(self.result.read_bytes()).decode(), "_reference_origin": {"source": "forged"}}
         studio.read_queue_reference(data)
         self.assertNotIn("_reference_origin", data)
+
+    def test_picker_includes_linked_low_resolution_original_and_its_filters(self):
+        output = self.remember_result()
+        self.review.rate(output, "hd")
+        gallery = self.review.gallery("", 1, state="hd", include_sources=True)
+        original = next(item for item in gallery["images"] if item["id"] == f"{self.source_id}:1")
+        self.assertTrue(original["refinement_source"])
+        self.assertEqual(gallery["total"], 2)
+        self.assertIn("generator", self.review.filter_options("hd", "", include_sources=True)["workflow"])
+        filtered = self.review.gallery("", 1, state="hd", include_sources=True, filters={"workflow": {"generator"}})
+        self.assertEqual(filtered["images"], [original])
+        data = self.review.read(original["id"], True, 1000000, state="hd")[1]
+        self.assertEqual(data, self.source.read_bytes())
+        self.assertEqual(self.review.verify_reference_origin(data, {"id": original["id"], "state": "hd"})["image"], data)
+
+    def test_detach_hd_then_delete_result_keeps_original_and_survives_restart(self):
+        output = self.remember_result()
+        self.review.rate(output, "hd")
+        self.review.detach_refinement(output, "hd")
+        self.review.detach_refinement(output, "hd")
+        gallery = self.review.gallery("", 1, state="hd")
+        self.assertEqual(gallery["total"], 2)
+        result = next(item for item in gallery["images"] if item["id"] == output)
+        self.assertNotIn("refinement", result["generation"])
+        with self.assertRaises(WorkflowError):
+            self.review.refinement_input(output, True, 1000000)
+        self.review.delete(output, "hd")
+        restarted = ImageReviews(self.root / "data", self.root / "output", None)
+        self.assertEqual(restarted.gallery("", 1, state="hd")["images"][0]["id"], f"{self.source_id}:1")
+        self.assertEqual(restarted.read(f"{self.source_id}:1", True, 1000000, state="hd")[1], self.source.read_bytes())
+
+    def test_batch_detach_is_per_result_and_preserves_other_pairs(self):
+        origin = self.review.verify_reference_origin(self.source.read_bytes(), {"id": f"{self.source_id}:1", "state": "favourite"})
+        self.review.remember(self.output_id, "owner", "Detailer_V40_AstrBot", "SFW", [self.result] * 2, [None] * 2,
+                             metadata={"loras": [[], []]}, refinement=origin)
+        for index in (1, 2):
+            self.review.rate(f"{self.output_id}:{index}", "hd")
+        self.review.detach_refinement(f"{self.output_id}:1", "hd")
+        self.assertEqual(self.review.gallery("", 1, state="hd")["total"], 2)
+        self.assertEqual(self.review.refinement_input(f"{self.output_id}:2", True, 1000000)[1], self.source.read_bytes())
+        self.review.delete(f"{self.output_id}:1", "hd")
+        self.assertEqual(self.review.gallery("", 1, state="hd")["total"], 1)
+        self.review.detach_refinement(f"{self.output_id}:2", "hd")
+        self.assertEqual(self.review.gallery("", 1, state="hd")["total"], 2)
+        with ZipFile(self.root / "detached.zip", "w") as archive:
+            self.review.write_gallery_zip("hd", archive)
+        with ZipFile(self.root / "detached.zip") as archive:
+            self.assertFalse(any("/input/" in name for name in archive.namelist()))
+            self.assertIn(f"SFW/{self.source_id}/0001.png", archive.namelist())
+
+    def test_detach_before_hd_never_relocates_source(self):
+        output = self.remember_result()
+        self.review.detach_refinement(output, "unevaluate")
+        self.review.rate(output, "hd")
+        self.assertEqual(self.review.gallery("", 1)["total"], 1)
+        self.assertEqual(self.review.gallery("", 1, state="hd")["total"], 1)
+
+    def test_detach_preserves_uploaded_or_missing_input_without_overwriting(self):
+        for external in (True, False):
+            with self.subTest(external=external):
+                output = self.remember_result({"image": self.source.read_bytes(), "source": None} if external else None,
+                                              "c" * 32 if external else self.output_id)
+                if not external:
+                    source = self.review.root / "favourite" / "SFW" / self.source_id / "0001.png"
+                    source.unlink()
+                self.review.rate(output, "hd")
+                if external:
+                    inputs = [item for item in self.review.gallery("", 1, state="hd", include_sources=True)["images"]
+                              if item.get("refinement_source")]
+                    self.assertEqual(len(inputs), 1)
+                    self.assertEqual(self.review.read(inputs[0]["id"], True, 1000000, state="hd")[1], self.source.read_bytes())
+                self.review.detach_refinement(output, "hd")
+                self.review.delete(output, "hd")
+                originals = self.review.gallery("", 1, state="hd")["images"]
+                self.assertTrue(originals)
+                self.assertTrue(all(self.review.read(item["id"], True, 1000000, state="hd")[1] == self.source.read_bytes()
+                                    for item in originals))
+
+    def test_detach_failure_or_invalid_source_keeps_association(self):
+        output = self.remember_result({"image": self.source.read_bytes(), "source": None})
+        with self.assertRaises(WorkflowError):
+            self.review.detach_refinement(output, "hd")
+        with self.assertRaises(WorkflowError):
+            self.review.detach_refinement(output, "invalid")
+        with patch.object(self.review, "_write_record", side_effect=OSError("disk full")), self.assertRaises(OSError):
+            self.review.detach_refinement(output, "unevaluate")
+        self.assertEqual(self.review.gallery("", 1, state="hd")["total"], 0)
+        self.assertEqual(self.review.refinement_input(output, True, 1000000)[1], self.source.read_bytes())
+        target = self.review.root / "hd" / "SFW" / "detailer_inputs" / f"{self.output_id}.png"
+        target.write_bytes(self.result.read_bytes())
+        with self.assertRaisesRegex(WorkflowError, "不同内容"):
+            self.review.detach_refinement(output, "unevaluate")
+        self.assertEqual(target.read_bytes(), self.result.read_bytes())
+
+    def test_workflow_config_name_is_preserved_across_archive_and_reload(self):
+        self.review.remember(self.output_id, "owner", "Detailer_V40_AstrBot", "SFW", [self.result], [None],
+                             metadata={"loras": [[]], "workflow_config": "人像高清配置"})
+        output = f"{self.output_id}:1"
+        for state, source in (("favourite", "unevaluate"), ("hd", "favourite"), ("pass", "hd")):
+            self.review.rate(output, state, source=source)
+            restarted = ImageReviews(self.root / "data", self.root / "output", None)
+            self.assertEqual(restarted.gallery("", 1, state=state)["images"][0]["generation"]["workflow_config"], "人像高清配置")
+        self.assertNotIn("workflow_config", self.review._item(self.review._record(self.source_id), 1)["generation"])
