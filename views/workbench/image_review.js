@@ -56,6 +56,18 @@ export function mountImageReviews({
   const referencePrev = get("queue-reference-prev");
   const referenceNext = get("queue-reference-next");
   const cards = new Map();
+  const referenceOrigins = new WeakMap();
+  const lightbox = document.createElement("dialog"); lightbox.className = "image-lightbox";
+  const lightboxImage = document.createElement("img"); lightboxImage.alt = "放大查看图片";
+  const lightboxClose = document.createElement("button"); lightboxClose.textContent = "关闭 ×";
+  lightboxClose.onclick = () => lightbox.close(); lightbox.append(lightboxClose, lightboxImage); document.body.append(lightbox);
+  lightbox.addEventListener("click", event => { if (event.target === lightbox) lightbox.close(); });
+  lightbox.addEventListener("close", () => lightboxImage.removeAttribute("src"));
+  async function magnify(src) { lightboxImage.src = src; if (!lightbox.open) lightbox.showModal(); }
+  original.style.cursor = "zoom-in";
+  original.addEventListener("click", () => { if (original.src) magnify(original.src); });
+  const batchPreview = document.createElement("div"); batchPreview.className = "reference-batch";
+  referenceThumbnail.parentElement.after(batchPreview);
   const pendingList = imageList("unevaluate", pending, "image-review-pages");
   const galleryList = imageList("favourite", gallery, "image-gallery-pages");
   const originalPager = makePager("image-original-pages", (page) => browseOriginalPage(page, "first"), false);
@@ -290,10 +302,29 @@ export function mountImageReviews({
     referenceLabel = label;
     mask = null;
     editReference.textContent = "编辑遮罩";
-    editReference.disabled = !label;
+    editReference.disabled = !label || referenceFile.files.length > 1;
+    get("queue-count").disabled = referenceFile.files.length > 1;
+    if (referenceFile.files.length > 1) get("queue-count").value = "1";
     get("queue-reference-clear").hidden = !label;
     renderReferenceStatus();
     setTaskImagePreview(referenceThumbnail, preview || referenceFile.files[0]);
+    for (const image of batchPreview.querySelectorAll("img")) setTaskImagePreview(image, null);
+    batchPreview.replaceChildren();
+    if (referenceFile.files.length > 1) {
+      for (const [index, file] of [...referenceFile.files].entries()) {
+        const frame = document.createElement("article");
+        const image = document.createElement("img"); image.alt = file.name; setTaskImagePreview(image, file);
+        image.onclick = () => magnify(image.src);
+        const label = document.createElement("small"); label.textContent = `${index + 1}. ${file.name}`;
+        const remove = document.createElement("button"); remove.type = "button"; remove.textContent = "移除";
+        remove.onclick = () => {
+          const next = new DataTransfer();
+          for (const current of referenceFile.files) if (current !== file) next.items.add(current);
+          referenceFile.files = next.files; updateReference(`已选择 ${next.files.length} 张图片`);
+        };
+        frame.append(image, label, remove); batchPreview.append(frame);
+      }
+    }
     if (!preview && referenceId.value) {
       bridge.apiGet("studio/images/file", { id: referenceId.value, state: "favourite" }).then(({ src }) => {
         if (version === sourceVersion) setTaskImagePreview(referenceThumbnail, src);
@@ -359,12 +390,14 @@ export function mountImageReviews({
   }
 
   get("queue-reference-open").addEventListener("click", () => {
-    pickResource("gallery", async ({entry, kind, state, label}) => {
+    pickResource("gallery", async (selection) => {
       const version = ++sourceVersion;
       const buttons = [get("queue-add"), get("remote-command-send"), get("queue-reference-open")];
       const disabled = buttons.map(button => button.disabled);
       buttons.forEach(button => { button.disabled = true; });
       try {
+        const files = new DataTransfer();
+        for (const {entry, kind, state, label} of Array.isArray(selection) ? selection : [selection]) {
         const {src} = await bridge.apiGet(kind === "controls" ? "studio/control-assets/preview" : "studio/images/file", {
           id: kind === "controls" ? controlAssetId(entry) : entry.id,
           ...(kind === "controls" ? {} : {state}), original: "1",
@@ -374,15 +407,17 @@ export function mountImageReviews({
         if (!match) throw new Error("图集原图格式无效。");
         const suffix = {"image/png":"png","image/jpeg":"jpg","image/webp":"webp","image/gif":"gif"}[match[1]];
         const bytes = Uint8Array.from(atob(match[2]), value => value.charCodeAt(0));
-        const files = new DataTransfer();
-        files.items.add(new File([bytes], `reference.${suffix}`, {type: match[1]}));
+        const file = new File([bytes], `${label}.${suffix}`, {type: match[1]});
+        files.items.add(file);
+        if (kind === "images") referenceOrigins.set(file, {id: entry.id, state});
+        }
         referenceFile.files = files.files;
-        referenceOrigin = kind === "images" ? {id: entry.id, state, file: referenceFile.files[0]} : null;
+        referenceOrigin = null;
         referenceId.value = "";
-        updateReference(`已选择图集图片 · ${label}`, src);
+        updateReference(`已选择 ${files.files.length} 张图集图片，每张一个任务`);
       } catch (error) { notify(error.message, true); }
       finally { buttons.forEach((button, index) => { button.disabled = disabled[index]; }); }
-    }, {useControls: true, gallery: "images/favourite", title: "从图集选择参考图"});
+    }, {useControls: true, gallery: "images/favourite", title: "从图集选择参考图（支持多选）", multiple: true});
   });
   get("queue-reference-close").addEventListener("click", () => referencePicker.close());
   get("queue-reference-rating").addEventListener("change", () => loadReferences());
@@ -392,7 +427,7 @@ export function mountImageReviews({
   referenceFile.addEventListener("change", () => {
     if (!referenceFile.files.length) return;
     referenceId.value = "";
-    updateReference(`已选择本地图片 · ${referenceFile.files[0].name}`);
+    updateReference(`已选择 ${referenceFile.files.length} 张本地图片 · ${referenceFile.files[0].name}，多图时每张一个任务`);
   });
   get("queue-reference-clear").addEventListener("click", () => {
     referenceId.value = referenceFile.value = "";
@@ -494,7 +529,7 @@ export function mountImageReviews({
 
   function clearResourcePreview() {
     resourcePreview.hidden = true;
-    resourceChoose.disabled = true;
+    resourceChoose.disabled = !resourceRequest?.selected?.size;
     resourceImage.removeAttribute("src");
     resourceList.hidden = false;
   }
@@ -555,14 +590,41 @@ export function mountImageReviews({
         button.type = "button";
         button.className = "resource-entry";
         button.textContent = resourceLabel(entry, kind);
+        if (entry.width && entry.height) {
+          const dimensions = document.createElement("small"); dimensions.textContent = `${entry.width} × ${entry.height}`;
+          dimensions.className = "resource-dimensions"; button.append(dimensions);
+        }
         if (isInput && entry.kind === "directory") button.textContent = `目录 · ${entry.name}`;
         button.addEventListener("click", () => {
           if (isInput && entry.kind === "directory") {
             request.path.push(entry);
             loadResources();
+          } else if (request.multiple) {
+            const key = `${kind}/${state}/${entry.id}`;
+            if (request.selected.has(key)) request.selected.delete(key);
+            else {
+              if (request.selected.size >= 32) { status.textContent = "每次最多选择 32 张图片，请分批添加。"; return; }
+              request.selected.set(key, {entry, kind, state, label: resourceLabel(entry, kind)});
+            }
+            button.setAttribute("aria-pressed", String(request.selected.has(key)));
+            resourceChoose.disabled = !request.selected.size;
+            resourceChoose.textContent = `使用已选 ${request.selected.size} 张`;
           } else previewResource(entry, kind, state);
         });
+        if (request.multiple) {
+          button.setAttribute("aria-pressed", String(request.selected.has(`${kind}/${state}/${entry.id}`)));
+        }
         resourceList.append(button);
+        if (request.multiple) {
+          const preview = document.createElement("button"); preview.type = "button"; preview.textContent = "放大预览";
+          preview.onclick = async () => {
+            preview.disabled = true;
+            try { const {src} = await bridge.apiGet(kind === "controls" ? "studio/control-assets/preview" : "studio/images/file", {id: kind === "controls" ? controlAssetId(entry) : entry.id, state, original: "1"}); await magnify(src); }
+            catch (error) { status.textContent = error.message; }
+            finally { preview.disabled = false; }
+          };
+          const cell = document.createElement("div"); cell.className = "resource-selection"; button.replaceWith(cell); cell.append(button, preview);
+        }
         if (!isInput || entry.kind === "image") {
           const thumbnail = document.createElement("img");
           thumbnail.className = "resource-entry-thumbnail";
@@ -628,8 +690,9 @@ export function mountImageReviews({
     }
   }
 
-  function pickResource(source, select, { type, useControls = false, title, gallery } = {}) {
-    resourceRequest = { source, select, type, path: [{ name: "ComfyUI input", id: "" }] };
+  function pickResource(source, select, { type, useControls = false, title, gallery, multiple = false } = {}) {
+    resourceRequest = { source, select, type, multiple, selected: new Map(), path: [{ name: "ComfyUI input", id: "" }] };
+    resourceChoose.textContent = multiple ? "使用已选图片" : "使用此图";
     get("task-resource-title").textContent = title || (source === "input" ? "浏览 ComfyUI input" : "从图集选择控制图");
     get("task-resource-gallery-field").hidden = source === "input";
     get("task-resource-control-galleries").disabled = !useControls;
@@ -650,6 +713,10 @@ export function mountImageReviews({
   get("task-resource-rating").addEventListener("change", changeResourceGallery);
   get("task-resource-back").addEventListener("click", () => loadResources(resourceRequest.page));
   resourceChoose.addEventListener("click", () => {
+    if (resourceRequest?.multiple) {
+      if (!resourceRequest.selected.size) return;
+      resourceRequest.select([...resourceRequest.selected.values()]); resourcePicker.close(); return;
+    }
     if (!resourceRequest?.entry) return;
     resourceRequest.select(resourceRequest.entry);
     resourcePicker.close();
@@ -901,6 +968,7 @@ export function mountImageReviews({
     heading.append(title, download);
     const media = document.createElement("div"); media.className = "image-preview-media";
     const image = document.createElement("img"); image.alt = "细化输入原图"; image.hidden = true; media.append(image);
+    image.style.cursor = "zoom-in"; image.onclick = () => magnify(image.src);
     const status = document.createElement("p"); status.setAttribute("role", "status"); status.textContent = "正在读取细化原图…";
     frame.append(heading, media, status); container.append(frame);
     if (!openedImage?.readOnly) {
@@ -1354,6 +1422,6 @@ export function mountImageReviews({
   });
   setInterval(() => refreshList(pendingList, pendingList.page, { background: true }), 5000);
   return { mask: () => mask, pickFavourite, pickResource, openOriginal, previews,
-    referenceOrigin: () => referenceOrigin && referenceOrigin.file === referenceFile.files[0]
-      ? {id: referenceOrigin.id, state: referenceOrigin.state} : null };
+    referenceOrigin: (file = referenceFile.files[0]) => referenceOrigins.get(file) ?? (referenceOrigin && referenceOrigin.file === file
+      ? {id: referenceOrigin.id, state: referenceOrigin.state} : null) };
 }

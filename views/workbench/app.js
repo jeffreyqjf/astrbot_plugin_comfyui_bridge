@@ -2124,7 +2124,27 @@ async function changeQueue(endpoint, data, button, successMessage, { create = fa
   report("正在处理…");
   notify("正在处理…");
   try {
-    const result = await bridge.apiPost(endpoint, typeof data === "function" ? await data() : data);
+    const payload = typeof data === "function" ? await data() : data;
+    let result;
+    if (Array.isArray(payload)) {
+      result = {jobs: [], captions: []};
+      for (const [index, item] of payload.entries()) {
+        report(`正在提交第 ${index + 1} / ${payload.length} 张…`);
+        try {
+          const response = await bridge.apiPost(endpoint, item);
+          result.jobs.push(...(response.jobs ?? []));
+          if (response.caption) result.captions.push(response.caption);
+        } catch (error) {
+          throw new Error(`第 ${index + 1} 张失败：${error.message}。前 ${index} 张已受理，请勿重复提交。`);
+        }
+      }
+    } else result = await bridge.apiPost(endpoint, payload);
+    const captions = result.captions ?? (result.caption ? [result.caption] : []);
+    if (captions.length) {
+      let output = get("queue-caption-output");
+      if (!output) { output = document.createElement("pre"); output.id = "queue-caption-output"; output.className = "caption-output"; get("queue-form").append(output); }
+      output.textContent = captions.map((text, index) => `${index + 1}. ${text}`).join("\n\n");
+    }
     const text = successMessage(result);
     report(text);
     if (create && !get("create-task").hidden && opensQueue(result)) {
@@ -2539,6 +2559,8 @@ function renderTaskControlnets(selectedName = queueWorkflow.value, inputs) {
   h3Prompt.show(taskInputs.h3_prompt ? selectedName : null);
   h3Media.show(taskInputs.h3_media ? selectedName : null);
   field("queue-positive", taskInputs.positive);
+  field("queue-count", workflow?.kind !== "image_to_text");
+  get("queue-add").textContent = workflow?.kind === "image_to_text" ? "开始反推" : "加入队列";
   if (taskInputs.h3_prompt) get("queue-positive").closest("label").hidden = true;
   position.before(get("queue-features"));
   if (selectedName === taskControlWorkflow) return;
@@ -2933,7 +2955,7 @@ get("queue-form").addEventListener("submit", async (event) => {
     ...(taskInputs.positive ? {positive} : {}),
     ...(taskInputs.presets ? {preset, preset_account: get("queue-preset-account").value} : {}),
     ...(taskInputs.negative && (!queueConfig.value || get("queue-negative").value.trim()) ? {negative: get("queue-negative").value} : {}),
-    count: get("queue-count").valueAsNumber,
+    count: studio.workflows.find(item => item.name === workflow)?.kind === "image_to_text" ? 1 : get("queue-count").valueAsNumber,
   };
   if (taskInputs.h3_final) {
     data.h3_final = Object.fromEntries([...get("queue-h3-final").querySelectorAll("input")].map(input => [
@@ -2956,8 +2978,16 @@ get("queue-form").addEventListener("submit", async (event) => {
       queueConfig.value ? {} : queueControlnetPayload(),
       h3Media.payload(),
     ]);
-    return { ...data, ...reference, ...controlnets, ...media, ...(queueConfig.value ? {} : taskFeatures.payload()) };
-  }, get("queue-add"), (result) => `已加入 ${result.jobs.length} 项生成任务。`, { create: true, opensQueue: () => true });
+    const payload = { ...data, ...reference, ...controlnets, ...media, ...(queueConfig.value ? {} : taskFeatures.payload()) };
+    const files = [...get("queue-reference-file").files];
+    if (taskInputs.reference && files.length > 1) {
+      if (files.length > 32) throw new Error("每次最多选择 32 张图片，请分批添加。");
+      if (data.lora_sweep) throw new Error("多图输入请使用叠加 LoRA 模式，每张图一个任务。");
+      if (queueMask()) throw new Error("多图输入请先移除单图遮罩，每张图片需使用各自的遮罩。");
+      return Promise.all(files.map(async file => ({...payload, count: 1, reference_id: "", mask: "", image: await encodeReference(file), reference_origin: imageReviews.referenceOrigin(file)})));
+    }
+    return payload;
+  }, get("queue-add"), (result) => result.captions?.length || result.caption ? "反推完成，结果显示在下方并保存至反推记录。" : `已加入 ${result.jobs.length} 项生成任务。`, { create: true, opensQueue: (result) => result.jobs.length > 0 });
 });
 setInterval(refreshQueue, 2500);
 

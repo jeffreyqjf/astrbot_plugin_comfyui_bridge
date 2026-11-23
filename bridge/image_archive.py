@@ -679,6 +679,12 @@ class ImageReviews:
                     else:
                         record, index = self._lookup(item["id"])
                         relative = f"{record['directory']}/{record['files'][index - 1]}"
+                        path = self._path(f"{state}/{relative}")
+                    try:
+                        with Image.open(path) as image:
+                            item["width"], item["height"] = image.size
+                    except (OSError, ValueError, Image.DecompressionBombError):
+                        pass
                     if relative in hidden:
                         item["refinement_source"] = True
             return {

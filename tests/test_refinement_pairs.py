@@ -166,6 +166,7 @@ class RefinementPairsTests(unittest.TestCase):
         gallery = self.review.gallery("", 1, state="hd", include_sources=True)
         original = next(item for item in gallery["images"] if item["id"] == f"{self.source_id}:1")
         self.assertTrue(original["refinement_source"])
+        self.assertEqual((original["width"], original["height"]), (20, 30))
         self.assertEqual(gallery["total"], 2)
         self.assertIn("generator", self.review.filter_options("hd", "", include_sources=True)["workflow"])
         filtered = self.review.gallery("", 1, state="hd", include_sources=True, filters={"workflow": {"generator"}})

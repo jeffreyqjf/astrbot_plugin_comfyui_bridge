@@ -21,3 +21,4 @@ tests/*
 !tests/test_page_memory.mjs
 !tests/test_gallery_pages.py
 !tests/test_gallery_filters.py
+!tests/test_simple_reverse.py

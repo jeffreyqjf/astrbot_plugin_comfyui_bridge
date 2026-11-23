@@ -696,7 +696,7 @@ class StudioSettings:
         reference = bool(workflow.image_inputs) or workflow.name == AIO_WORKFLOW or (
             workflow.name in H3_WORKFLOWS and "5" in workflow.active
         )
-        simple = workflow.kind != "image_to_text" and (
+        simple = (
             len(workflow.image_inputs) <= 1 or workflow.shared_reference
         )
         image_workflow = workflow
@@ -715,8 +715,8 @@ class StudioSettings:
         )
         prompt_workflow = image_workflow if workflow.name in DETAILER_WORKFLOWS else workflow
         return {
-            "simple": simple, "positive": bool(prompt_workflow.positive), "negative": bool(prompt_workflow.negative),
-            "presets": bool(prompt_workflow.positive) and not full_h3,
+            "simple": simple, "positive": bool(prompt_workflow.positive) and workflow.kind != "image_to_text", "negative": bool(prompt_workflow.negative) and workflow.kind != "image_to_text",
+            "presets": bool(prompt_workflow.positive) and not full_h3 and workflow.kind != "image_to_text",
             "reference": reference and not full_h3, "mask": reference and mask and not full_h3,
             "h3_prompt": full_h3 and bool(workflow.positive),
             "h3_media": full_h3 and "416" in workflow.active,
@@ -1560,6 +1560,20 @@ class StudioSettings:
             if workflow is None:
                 raise WorkflowError("请选择可直接生成的工作流。需要参考图时可用命令表单上传。")
             inputs = self.task_inputs(workflow)
+            if workflow.kind == "image_to_text":
+                if type(data.get("count", 1)) is not int or data.get("count", 1) != 1:
+                    raise WorkflowError("反推每张图片仅执行一次。")
+                if not workflow.image_inputs or not workflow.outputs:
+                    raise WorkflowError("反推工作流缺少图片输入或文字输出。")
+                image = await asyncio.to_thread(self.read_queue_reference, data)
+                if image is None:
+                    raise WorkflowError("请先选择反推图片。")
+                graph = workflow.prepare_caption()
+                image_node = workflow.image_inputs[0].node
+                schemas = await self._node_schemas(workflow)
+                validate_graph(graph, schemas, {(image_node, "image")})
+                caption = await self.service.run_caption(graph, image, image_node, workflow.outputs[0], source=workflow.name)
+                return json_response({"jobs": [], "caption": caption, "queued": False})
             final_seed = None
             if "h3_final" in data:
                 workflow = h3_final_inputs(workflow, data["h3_final"])
