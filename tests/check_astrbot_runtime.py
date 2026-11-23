@@ -131,6 +131,7 @@ async def check_model_catalog(instance):
     incoming = Request({"type": "http", "method": "GET", "path": "/" + route, "headers": [], "query_string": b""})
     with bind_request_context(PluginRequest(incoming, username=None)):
         assert (await instance.studio.gallery_pages()).status_code == 401
+        assert (await instance.studio.task_memory()).status_code == 401
     payload_page = {"key": 'comfy-gallery-page:["images",[["state","hd"]]]', "page": 3}
     async def receive_page():
         return {"type":"http.request", "body":json.dumps(payload_page).encode()}

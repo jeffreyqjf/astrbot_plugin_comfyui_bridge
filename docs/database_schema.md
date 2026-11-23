@@ -1,5 +1,7 @@
 # 持久数据结构
 
+v3.24.0：task_memory/{sha256(username)}.json 保存 global 的 workflow/mode 和各 workflow:名称 的扁平任务草稿；config 名称、field:控件、lora:模型ID 对应强度、feature:功能ID 对应布尔、control:分支:参数对应字符串、open:区域对应折叠状态。文件名与登录账号绑定，不接受用户路径；state_lock 内按 scope 合并及原子写入，最多 200 个 scope／5 MiB。无原图、文件内容或临时遮罩。旧本地配置名称仅作缺省读取，成功应用后写入账号记忆，不自动迁移其他浏览器草稿。
+
 v3.23.0：generation.refinement 兼容增加 source_info，保存来源图片的安全展示元数据快照（id、rating、generation 的工作流／配置预设／提示词预设／LoRA／种子等）。明确选择时即捕获，图集自动匹配时捕获，在结果 remember 时深拷贝保存；没有来源信息不推断。旧数据读取时回退对应生成记录，不自动迁移。正向 source 关系仍是唯一事实来源，溯源按需扫描记录推导双向连接，支持多结果共享来源和任意深度连续修复，无反向列表写入一致性问题。detached 按结果索引标记失效边，历史边保留但不恢复移动联动。手动文件按来源摘要与相对位置形成内部稳定键以兼容移动后的 manual ID。
 
 v3.20.0：运行图 astrbot.workflow_config 保存最后应用的配置名称。任务受理时快照到 Job.configuration.workflow_config，生成 metadata 和归档 generation 同步保存；图片列表的 generation.workflow_config 是可选字符串，缺省为无记录。名称作为当时使用的配置来源保留，单次参数覆盖不改变该来源，不根据现有配置反推旧图片，无数据迁移。

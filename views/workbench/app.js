@@ -8,6 +8,7 @@ import { mountJobDetails, mountTaskPresets } from "./task_inspect.js";
 import { mountReverseHistory } from "./reverse_history.js";
 import { mountModelCatalog } from "./model_catalog.js";
 import { initializePageMemory } from "./page_memory.js";
+import { createTaskMemory } from "./task_memory.js";
 
 const remote = !window.AstrBotPluginView;
 const bridge = window.AstrBotPluginView || (await import("./remote.js")).bridge;
@@ -2260,10 +2261,17 @@ const queueConfig = get("queue-workflow-config");
 let queueConfigReady = Promise.resolve();
 let queueConfigError = "";
 const queueConfigKey = name => `comfy-task-config:${name}`;
+const taskMemory = createTaskMemory(bridge, text => notify(text, true));
+let taskMemoryWorkflow, restoringTaskMemory = false, taskMemoryVersion = 0;
+const rememberedFields = ["queue-positive", "queue-negative", "queue-count", "queue-preset-account", "queue-preset", "queue-lora-mode", "queue-command-text", "remote-command-account"];
+const taskFieldDefaults = Object.fromEntries(rememberedFields.map(id => [id, get(id).value]));
 function rememberedQueueConfig(name) {
+  const saved = taskMemory.read(`workflow:${name}`);
+  if (Object.hasOwn(saved, "config")) return saved.config;
   try { return localStorage.getItem(queueConfigKey(name)) || ""; } catch { return ""; }
 }
 function rememberQueueConfig(name, value) {
+  taskMemory.save(`workflow:${name}`, {...taskMemory.read(`workflow:${name}`), config: value});
   try { localStorage.setItem(queueConfigKey(name), value); } catch { /* Browser storage may be disabled. */ }
 }
 async function applyQueueConfig() {
@@ -2367,10 +2375,13 @@ function renderQueueLoraChoices() {
     : (count ? `叠加 · ${count} 项` : "");
 }
 
+let queueLoraReading;
 async function loadQueueLoras() {
   if (!queueLora.open || !queueLoraFamily || queueLoraEntries) return;
+  if (queueLoraReading?.version === queueLoraRequest) return queueLoraReading.promise;
   const version = ++queueLoraRequest;
   queueLoraStatus.textContent = "正在读取 LoRA…";
+  const promise = (async () => {
   try {
     const { entries } = await bridge.apiGet("studio/queue/loras", { workflow: queueLoraWorkflow });
     if (version !== queueLoraRequest) return;
@@ -2379,7 +2390,12 @@ async function loadQueueLoras() {
     queueLoraStatus.textContent = entries.length ? "" : "此目录没有可用的 LoRA。";
   } catch (error) {
     if (version === queueLoraRequest) queueLoraStatus.textContent = error.message;
+  } finally {
+    if (queueLoraReading?.version === version) queueLoraReading = null;
   }
+  })();
+  queueLoraReading = {version, promise};
+  return promise;
 }
 
 function renderQueueLoras() {
@@ -2829,9 +2845,13 @@ controlProfileForm.addEventListener("submit", (event) => {
 });
 
 queueWorkflow.addEventListener("change", () => {
+  clearTimeout(draftTimer);
+  saveTaskDraft();
+  taskMemoryWorkflow = queueWorkflow.value;
+  taskMemory.save("global", {workflow: queueWorkflow.value, mode: queueMode.value});
   renderQueueLoras();
   renderTaskControlnets();
-  queueConfigReady = loadQueueConfigs();
+  queueConfigReady = loadQueueConfigs().then(restoreTaskDraft);
 });
 async function showCreateMode() {
   const mode = queueMode.value;
@@ -2859,7 +2879,100 @@ async function showCreateMode() {
     accounts.disabled = mode === "command" ? queueMode.value !== "command" : !taskInputs.presets;
   }
 }
-queueMode.addEventListener("change", showCreateMode);
+queueMode.addEventListener("change", () => {
+  saveTaskDraft();
+  taskMemory.save("global", {workflow: queueWorkflow.value, mode: queueMode.value});
+  queueConfigReady = Promise.all([queueConfigReady, showCreateMode()]).then(restoreTaskDraft);
+});
+
+function saveTaskDraft() {
+  if (restoringTaskMemory || !taskMemoryWorkflow || queueConfigError || queueConfig.disabled) return;
+  if (queueMode.value === "command") {
+    taskMemory.save(`workflow:${taskMemoryWorkflow}`, {
+      ...taskMemory.read(`workflow:${taskMemoryWorkflow}`),
+      "field:queue-command-text": get("queue-command-text").value,
+      "field:remote-command-account": get("remote-command-account").value,
+    });
+    return;
+  }
+  const value = {config: rememberedQueueConfig(taskMemoryWorkflow)};
+  for (const id of rememberedFields) value[`field:${id}`] = get(id).value;
+  for (const [id, input] of queueLoras) if (Number.isFinite(input.valueAsNumber)) value[`lora:${id}`] = input.valueAsNumber;
+  for (const input of get("queue-features").querySelectorAll("[data-feature]")) value[`feature:${input.dataset.feature}`] = input.checked;
+  for (const [branch, settings] of taskControlnets) for (const field of ["type", "profile", "mode"]) value[`control:${branch}:${field}`] = settings[field].value;
+  value["open:queue-lora"] = queueLora.open;
+  taskMemory.save(`workflow:${taskMemoryWorkflow}`, value);
+}
+async function restoreTaskDraft() {
+  const workflow = queueWorkflow.value, version = ++taskMemoryVersion;
+  const value = taskMemory.read(`workflow:${workflow}`);
+  if (!Object.keys(value).length) return;
+  restoringTaskMemory = true;
+  queueWorkflow.disabled = queueConfig.disabled = get("queue-add").disabled = true;
+  const current = () => version === taskMemoryVersion && workflow === queueWorkflow.value;
+  const restore = (input, saved) => {
+    if (saved == null || !input) return;
+    if (input.tagName === "SELECT" && ![...input.options].some(option => option.value === String(saved))) return;
+    input.value = String(saved);
+  };
+  try {
+    const account = get("queue-preset-account");
+    const savedAccount = value["field:queue-preset-account"] ?? "";
+    if (taskInputs.presets && account.value !== savedAccount) {
+      if (![...account.options].some(option => option.value === savedAccount)) {
+        await loadPresetAccounts(account, "不使用预设", savedAccount);
+        if (!current()) return;
+      }
+      restore(account, savedAccount);
+      await loadQueuePresets();
+      if (!current()) return;
+    }
+    for (const id of rememberedFields) restore(get(id), value[`field:${id}`] ?? taskFieldDefaults[id]);
+    for (const input of get("queue-features").querySelectorAll("[data-feature]")) {
+      const checked = value[`feature:${input.dataset.feature}`];
+      if (typeof checked === "boolean" && checked !== input.checked) { input.checked = checked; input.dispatchEvent(new Event("change", {bubbles: true})); }
+    }
+    for (const [branch, settings] of taskControlnets) for (const field of ["type", "profile", "mode"]) {
+      restore(settings[field], value[`control:${branch}:${field}`]);
+      settings[field].dispatchEvent(new Event("change", {bubbles: true}));
+    }
+    const loras = Object.entries(value).filter(([key]) => key.startsWith("lora:"));
+    if (loras.length && !queueLora.hidden && queueLoraFamily) {
+      queueLora.open = true;
+      await loadQueueLoras();
+      if (!current()) return;
+      if (!queueLoraEntries) {
+        queueConfigError = "LoRA 记忆恢复失败，请重新打开新建任务重试。";
+        createTaskMessage(queueConfigError, true);
+        return;
+      }
+      for (const [key, strength] of loras) {
+        const id = key.slice(5);
+        if (!queueLoras.has(id) && queueLoraEntries?.some(entry => entry.id === id)) {
+          queueLoraChoice.value = id; queueLoraAdd.disabled = false; queueLoraAdd.click();
+        }
+        const input = queueLoras.get(id);
+        if (input) { input.value = strength; input.dispatchEvent(new Event("input", {bubbles: true})); }
+        else notify(`已保存的 LoRA「${id}」不再可用，请重新选择。`, true);
+      }
+    }
+    queueLora.open = Boolean(value["open:queue-lora"]);
+    renderQueueLoraChoices();
+  } finally {
+    if (version === taskMemoryVersion) {
+      restoringTaskMemory = false;
+      queueWorkflow.disabled = queueConfig.disabled = false;
+      get("queue-add").disabled = Boolean(queueConfigError) || queueWriting;
+    }
+  }
+}
+let draftTimer;
+for (const event of ["input", "change", "click"]) get("create-task").addEventListener(event, e => {
+  if (restoringTaskMemory || e.target === queueWorkflow || e.target === queueConfig) return;
+  clearTimeout(draftTimer); draftTimer = setTimeout(saveTaskDraft, 100);
+});
+queueLora.addEventListener("toggle", () => { if (!restoringTaskMemory) saveTaskDraft(); });
+window.addEventListener("pagehide", () => { saveTaskDraft(); taskMemory.flush(); });
 
 function openCreateTask() {
   if (!studio || loading || get("save").disabled || !get("create-task").hidden) return;
@@ -2871,10 +2984,14 @@ function openCreateTask() {
       queueWorkflow.add(new Option(workflowTitle(workflow.name), workflow.name));
     }
     if ([...queueWorkflow.options].some((item) => item.value === studio.default)) queueWorkflow.value = studio.default;
+    const saved = taskMemory.read("global");
+    if ([...queueWorkflow.options].some(item => item.value === saved.workflow)) queueWorkflow.value = saved.workflow;
+    if (["simple", "command"].includes(saved.mode)) queueMode.value = saved.mode;
+    taskMemoryWorkflow = queueWorkflow.value;
     get("queue-add").disabled = !queueWorkflow.options.length || queueWriting;
   }
-  showCreateMode();
-  queueConfigReady = loadQueueConfigs();
+  const modeReady = showCreateMode();
+  queueConfigReady = Promise.all([modeReady, loadQueueConfigs()]).then(restoreTaskDraft);
 }
 
 function openQueue() {
@@ -3526,6 +3643,7 @@ bindImport("lora-tags-import", "lora-tags-file", 2, async (file) => {
 try {
   await bridge.ready();
   await initializePageMemory(bridge, notify);
+  await taskMemory.initialize();
   studio = await bridge.apiGet("studio");
   mountNavigationOrder(get("management-list"), "management", (tab) => tab.id, get("remote-logout"));
   renderArchive(studio.archive);

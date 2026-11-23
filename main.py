@@ -293,6 +293,8 @@ class ComfyUIBridge(Star):
             ("studio/model-catalog", self.studio.model_catalog, "GET"),
             ("studio/gallery-pages", self.studio.gallery_pages, "GET"),
             ("studio/gallery-pages", self.studio.gallery_pages, "POST"),
+            ("studio/task-memory", self.studio.task_memory, "GET"),
+            ("studio/task-memory", self.studio.task_memory, "POST"),
             ("studio/model-links", self.studio.model_links.api, "GET"),
             ("studio/model-links", self.studio.model_links.api, "POST"),
             ("studio/model-links/open", self.studio.model_links.open_page, "POST"),

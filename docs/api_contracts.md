@@ -1,5 +1,7 @@
 # API 契约
 
+v3.24.0：登录保护 GET studio/task-memory 返回 `{memory:{scope:flat_values}}`；POST 接受 `{key,value}`，scope 为 global 或 workflow:工作流名称，值为不超过 400 项的扁平字典，仅接收 workflow/mode/config 及 field:/lora:/feature:/control:/open: 前缀字段，值为字符串／有限数字／布尔，文本最长 8000 字、字段名 512 字、scope 256 字、正文 64 KiB。按当前用户名摘要独立原子保存到 task_memory，最多 200 个 scope／5 MiB，禁止目录链接，未登录 401、非法输入或读写失败 400。前端只保存指定任务字段，不传图片／遮罩。按 workflow scope 合并写入，不覆盖其他工作流，桌面／远程工作台均提供。
+
 v3.23.0：GET studio/images/refinement 增加 image（来源展示元数据快照或旧生成记录回退），src 保持兼容。新增登录保护 GET studio/images/lineage?id=图片ID，返回 `{root,nodes:[{id,image}],edges:[{source,target,active}],truncated}`；未登录 401、无效 ID／路径 400。节点内部 ID 只标识图关系，不作磁盘路径使用；手动源按摘要和相对位置规范化，源文件状态改变不打断历史关系。active=false 是已解除的历史关联。按需扫描上限 5000 记录，连通分量上限 500 节点，超限 truncated=true；闭环／共享节点通过集合收敛不递归遍历。只返回连接到当前图的元数据，不返回凭据、用户目录或原文件绝对路径，桌面及远程工作台均注册。
 
 v3.22.1：选图窗口改用 GET studio/images?group_sources=1。高清列表隐藏仍关联的原图独立条目，分页／数量以结果组计算。组条目可包含 variants:[{id,name,width,height}]，分别指向高清结果及已核对的原图；保留实际图片 ID，读取、来源校验及提交契约不变，不使用相似度推断。缺失／不可读的原文件不返回低版本；已解除关联项无 variants 并独立显示。筛选选项按组的结果元数据生成，旧 include_sources 平铺参数保持兼容。该功能只读，不修改文件和持久关联。

@@ -49,6 +49,7 @@ def build(target=None):
         "views/workbench/model_catalog.js",
         "views/workbench/reverse_history.js",
         "views/workbench/page_memory.js",
+        "views/workbench/task_memory.js",
         "bridge/workflows/illustrious.py",
         "bridge/workflows/lightning.py",
         "bridge/workflows/minimax_h3.py",

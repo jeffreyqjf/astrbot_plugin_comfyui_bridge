@@ -251,6 +251,51 @@ finally:
 
 
 class StudioSettings:
+    async def task_memory(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        try:
+            owner = hashlib.sha256(str(request.username).encode()).hexdigest()
+            path = self.service.data_dir / "task_memory" / f"{owner}.json"
+            if path.resolve() != path.absolute():
+                raise WorkflowError("任务记忆目录不能使用链接。")
+            def read():
+                if not path.exists():
+                    return {}
+                if path.stat().st_size > 5 * 1024**2:
+                    raise WorkflowError("任务记忆数据过大。")
+                saved = json.loads(path.read_bytes())
+                if not isinstance(saved, dict):
+                    raise WorkflowError("任务记忆格式无效。")
+                return saved
+            if request.method == "GET":
+                return json_response({"memory": await asyncio.to_thread(read)})
+            body = await request.body()
+            if len(body) > 65536:
+                raise WorkflowError("任务记忆请求过大。")
+            data = json.loads(body)
+            key, value = data.get("key"), data.get("value")
+            if not isinstance(key, str) or len(key) > 256 or not (key == "global" or key.startswith("workflow:")) or not isinstance(value, dict) or len(value) > 400:
+                raise WorkflowError("任务记忆格式无效。")
+            for field, item in value.items():
+                if (len(field) > 512 or not field.startswith(("field:", "lora:", "feature:", "control:", "open:")) and field not in {"workflow", "mode", "config"}
+                        or type(item) not in (str, int, float, bool) or isinstance(item, str) and len(item) > 8000
+                        or isinstance(item, float) and not (-1e9 < item < 1e9)):
+                    raise WorkflowError("任务记忆字段无效。")
+            async with self.service.state_lock:
+                saved = await asyncio.to_thread(read)
+                saved.pop(key, None)
+                saved[key] = value
+                saved = dict(list(saved.items())[-200:])
+                raw = profile_bytes(saved)
+                if len(raw) > 5 * 1024**2:
+                    raise WorkflowError("任务记忆数据过大。")
+                path.parent.mkdir(parents=True, exist_ok=True)
+                await asyncio.to_thread(atomic_write, path, raw)
+            return json_response({})
+        except (OSError, ValueError, AttributeError) as exc:
+            return error_response(str(exc), status_code=400)
+
     async def gallery_pages(self):
         if not request.username:
             return error_response("请登录 AstrBot 面板。", status_code=401)
