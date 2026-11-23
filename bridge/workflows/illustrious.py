@@ -101,7 +101,7 @@ async def _controlnet_choice(client, value):
 
 
 async def lora_loader_files(client):
-    schemas = await client.request("GET", "/object_info/LoraLoader")
+    schemas = await client.node_schemas({"LoraLoader"}, cached=True)
     spec = schemas.get("LoraLoader", {}).get("input", {}).get("required", {})
     return {name.replace("\\", "/"): name for name in (combo_options(spec.get("lora_name")) or [])}
 

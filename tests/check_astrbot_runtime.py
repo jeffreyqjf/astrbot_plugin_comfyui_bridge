@@ -328,7 +328,9 @@ async def check_queue_loras(instance, root, name):
     options = {"input": {"required": {"lora_name": [[row["filename"] for row in entries.values()]]}}}
     with patch.object(studio.lora_families["illustrious"], "lora_catalog", return_value=entries), patch.object(
         service.client, "request", return_value={"LoraLoader": options}
-    ), patch.object(studio.lora_families["illustrious"], "task_catalog", return_value=entries), patch.object(service, "_run") as run:
+    ), patch.object(studio.lora_families["illustrious"], "task_catalog", return_value=entries), patch.object(
+        studio.lora_families["illustrious"], "generation_catalog", return_value=entries
+    ), patch.object(service, "_run") as run:
         catalog = await call("GET", "studio/queue/loras", f"workflow={name}".encode())
         assert catalog.status_code == 200, catalog.body
         assert [row["id"] for row in json.loads(catalog.body)["entries"]] == list(entries)
@@ -398,7 +400,7 @@ async def check_queue_loras(instance, root, name):
             })
         assert response.status_code == 400, response.body
         run.assert_not_called()
-        with patch.object(studio.lora_families["illustrious"], "lora_catalog", return_value={"style": entries["style"]}):
+        with patch.object(studio.lora_families["illustrious"], "generation_catalog", return_value={"style": entries["style"]}):
             response = await call("POST", "studio/queue", data={
                 "workflow": name, "positive": "fixture", "lora_sweep": True, "loras": [stacked[1]],
             })
@@ -428,6 +430,9 @@ async def check_command_controls(instance, root, name, call, run):
         "AIO_Preprocessor": {"input": {"optional": {"preprocessor": [["none", "CannyEdgePreprocessor"]]}}},
     }
     presets = [{"name": "fixture", "positive": "fixture", "negative": ""}]
+    schemas["LoraLoader"] = {"input": {"required": {"lora_name": [[
+        f"illustrious/{key}.safetensors" for key in ("alpha", "beta", "style", "style2", "other")
+    ]]}}}
     resolution = "studio/queue/command/workflow"
     with patch.dict(instance.service.selections, {"studio:remote": name}):
         for command, wanted in (
@@ -1020,7 +1025,7 @@ async def check_anima_detailer(instance):
     keys = ("hires_pre", "hires_post", "inoutpaint", "mask", "upscale")
     with patch.object(service, "_run") as run, patch.object(service.client, "node_schemas", return_value=schemas) as node_schemas, patch.object(
         service.client, "request", return_value=schemas
-    ), patch.object(family, "lora_catalog", return_value=catalog):
+    ), patch.object(family, "lora_catalog", return_value=catalog), patch.object(family, "generation_catalog", return_value=catalog):
         response = await call("studio/workflow", method="GET", query=f"name={name}".encode())
         assert response.status_code == 200, response.body
         description = json.loads(response.body)
@@ -1180,7 +1185,7 @@ async def check_anima_features(instance, workspace, schemas_path):
     }
     defaults = studio.anima.path.read_bytes()
     with patch.object(studio.anima, "workspace", workspace), patch.object(service.client, "request", return_value=schemas), patch.object(
-        studio.anima, "lora_catalog", return_value=catalog
+        studio.anima, "generation_catalog", return_value=catalog
     ), patch.object(service, "_run") as run:
         base = service.workflows["Anima_T2I_AstrBot"]
         for pre, post, second, ultimate, regional in product([False, True], repeat=5):

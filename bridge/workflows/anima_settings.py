@@ -477,7 +477,7 @@ class AnimaSettings(LoraSettings):
             raise WorkflowError("Anima 分支参数必须是对象。")
         options["branches"] = {**options.get("branches", {}), **task_switches}
         loras = options.get("loras", state.get("loras"))
-        catalog = await asyncio.to_thread((lora_settings or self).lora_catalog) if loras else {}
+        catalog = await asyncio.to_thread((lora_settings or self).generation_catalog, loras) if loras else {}
         options = merge_options(state, self.run_options(options, catalog, lora_settings=lora_settings))
         requested = {**options.get("branches", {}), **controlnet_switches(self.workflow_name, controlnets)}
         source = workflow.reference_source

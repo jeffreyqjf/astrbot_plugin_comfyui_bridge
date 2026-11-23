@@ -1249,6 +1249,7 @@ class StudioSettings:
             "job": self._queue_row(job),
             "preset": {key: value for key, value in (job.preset or {}).items() if key != "account"},
             "configuration": describe_configuration(job.configuration),
+            "caption": job.caption,
         })
 
     async def save_qq_timeout(self):
@@ -1498,7 +1499,7 @@ class StudioSettings:
         if workflow.sweep_lora_family is None:
             raise WorkflowError("此工作流未配置 LoRA 目录。")
         family = await self.lora_catalog_for(workflow.sweep_lora_family)
-        catalog = await asyncio.to_thread(family.lora_catalog)
+        catalog = await asyncio.to_thread(family.generation_catalog, loras, sweep)
         rows = family.parse_loras(loras, catalog)
         if sweep:
             characters = [row for row in rows if catalog[row["id"]]["category"] == "C"]
@@ -1568,12 +1569,12 @@ class StudioSettings:
                 image = await asyncio.to_thread(self.read_queue_reference, data)
                 if image is None:
                     raise WorkflowError("请先选择反推图片。")
-                graph = workflow.prepare_caption()
                 image_node = workflow.image_inputs[0].node
-                schemas = await self._node_schemas(workflow)
-                validate_graph(graph, schemas, {(image_node, "image")})
-                caption = await self.service.run_caption(graph, image, image_node, workflow.outputs[0], source=workflow.name)
-                return json_response({"jobs": [], "caption": caption, "queued": False})
+                async def validate(graph):
+                    schemas = await self._node_schemas(workflow, cached=True)
+                    validate_graph(graph, schemas, {(image_node, "image")})
+                job = self.service.start_caption_job(f"studio:{request.username}", workflow, image, validate)
+                return json_response({"jobs": [self._queue_row(job)], "queued": True})
             final_seed = None
             if "h3_final" in data:
                 workflow = h3_final_inputs(workflow, data["h3_final"])
@@ -2274,7 +2275,7 @@ class StudioSettings:
             raise WorkflowError("V40 支持单次切换局部修复。Advanced V40 也支持 --img2img on/off。")
         if not allow_nsfw:
             options = {**options, "nsfw_repair": False}
-        schemas = await self.service.client.node_schemas(controlnet_node_types(name)) if any((controlnets or {}).values()) else None
+        schemas = await self.service.client.node_schemas(controlnet_node_types(name), cached=True) if any((controlnets or {}).values()) else None
         images = {}
         detailer_task = "detailer" in options
         if detailer_task:

@@ -90,6 +90,7 @@ class Job:
     timeout_seconds: int = IMAGE_TIMEOUT_DEFAULT
     preset: dict | None = None
     configuration: dict | None = field(default=None, repr=False)
+    caption: str = ""
 
     @property
     def short_id(self):
@@ -469,7 +470,33 @@ class ComfyService:
         graph["2"]["inputs"]["threshold"] = threshold
         return await self.run_caption(graph, image_data, "1", "3", source="WD14")
 
-    async def run_caption(self, graph, image_data, image_node, output_node, *, source="PixAI / TIPO"):
+    def start_caption_job(self, owner, workflow, image, validate):
+        self.check_queue_capacity(workflow.name, 1)
+        graph = workflow.prepare_caption()
+        job = Job(uuid.uuid4().hex, owner, workflow.name, None, kind="image_to_text",
+                  timeout_seconds=self.generation_timeout(), configuration={
+                      "graph": graph, "outputs": list(workflow.outputs), "positive": [], "negative": [],
+                  })
+        async def run():
+            try:
+                await validate(graph)
+                job.caption = await self.run_caption(graph, image, workflow.image_inputs[0].node,
+                                                      workflow.outputs[0], source=workflow.name, job=job)
+                job.state = "completed"
+            except asyncio.CancelledError:
+                job.state, job.error = "cancelled", "任务已取消。"
+                raise
+            except Exception as exc:
+                job.state, job.error = "failed", str(exc)
+                logger.warning("Caption job %s failed: %s", job.short_id, exc)
+            finally:
+                job.submission_done.set()
+                job.finished = time.monotonic()
+        job.task = asyncio.create_task(run())
+        self.jobs[job.id] = job
+        return job
+
+    async def run_caption(self, graph, image_data, image_node, output_node, *, source="PixAI / TIPO", job=None):
         if self.closed or self.caption_pending >= self.queue_limit:
             raise ComfyError("暂时无法接收更多反推任务，请稍后重试。")
         self.caption_pending += 1
@@ -481,8 +508,13 @@ class ComfyService:
             except TimeoutError as exc:
                 raise WorkflowError("等待反推超时，请稍后重试。") from exc
             try:
+                if job:
+                    job.state = "running"
                 graph[image_node]["inputs"]["image"] = await self.client.upload_image(image_data)
                 prompt_id = await self.client.submit(graph, outputs=[output_node])
+                if job:
+                    job.prompt_id = prompt_id
+                    job.submission_done.set()
                 try:
                     result = await self.client.wait(
                         prompt_id, self.generation_timeout()

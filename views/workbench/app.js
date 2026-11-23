@@ -2120,31 +2120,25 @@ async function changeQueue(endpoint, data, button, successMessage, { create = fa
     return;
   }
   queueWriting = button.disabled = true;
-  const report = create ? createTaskMessage : queueMessage;
+  const report = (text, error = false) => create && !get("create-task").hidden ? createTaskMessage(text, error) : queueMessage(text, error);
   report("正在处理…");
   notify("正在处理…");
   try {
     const payload = typeof data === "function" ? await data() : data;
     let result;
     if (Array.isArray(payload)) {
-      result = {jobs: [], captions: []};
+      result = {jobs: []};
       for (const [index, item] of payload.entries()) {
         report(`正在提交第 ${index + 1} / ${payload.length} 张…`);
         try {
           const response = await bridge.apiPost(endpoint, item);
           result.jobs.push(...(response.jobs ?? []));
-          if (response.caption) result.captions.push(response.caption);
+          if (create && !get("create-task").hidden && opensQueue(response)) openQueue();
         } catch (error) {
           throw new Error(`第 ${index + 1} 张失败：${error.message}。前 ${index} 张已受理，请勿重复提交。`);
         }
       }
     } else result = await bridge.apiPost(endpoint, payload);
-    const captions = result.captions ?? (result.caption ? [result.caption] : []);
-    if (captions.length) {
-      let output = get("queue-caption-output");
-      if (!output) { output = document.createElement("pre"); output.id = "queue-caption-output"; output.className = "caption-output"; get("queue-form").append(output); }
-      output.textContent = captions.map((text, index) => `${index + 1}. ${text}`).join("\n\n");
-    }
     const text = successMessage(result);
     report(text);
     if (create && !get("create-task").hidden && opensQueue(result)) {
@@ -2987,7 +2981,7 @@ get("queue-form").addEventListener("submit", async (event) => {
       return Promise.all(files.map(async file => ({...payload, count: 1, reference_id: "", mask: "", image: await encodeReference(file), reference_origin: imageReviews.referenceOrigin(file)})));
     }
     return payload;
-  }, get("queue-add"), (result) => result.captions?.length || result.caption ? "反推完成，结果显示在下方并保存至反推记录。" : `已加入 ${result.jobs.length} 项生成任务。`, { create: true, opensQueue: (result) => result.jobs.length > 0 });
+  }, get("queue-add"), (result) => `已加入 ${result.jobs.length} 项任务，可在任务队列查看进度。`, { create: true, opensQueue: (result) => result.jobs.length > 0 });
 });
 setInterval(refreshQueue, 2500);
 

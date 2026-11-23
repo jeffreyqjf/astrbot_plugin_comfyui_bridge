@@ -10,6 +10,23 @@ from bridge.workflows.workflow import WorkflowError
 
 
 class LoraPreviewTests(unittest.TestCase):
+    def test_generation_hashes_only_selected_files_and_preserves_legacy_tags(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            family = root / "models/loras/custom"
+            family.mkdir(parents=True)
+            header = json.dumps({"lora_test": {}}).encode()
+            for name in ("selected", "unused"):
+                (family / f"{name}.safetensors").write_bytes(len(header).to_bytes(8, "little") + header)
+            settings = LoraSettings(SimpleNamespace(config={"anima_workspace": str(root)}, data_dir=root), "custom", "custom")
+            with patch.object(settings, "_read_lora_settings", return_value=([], {"custom/selected": "legacy tag"}, {}, {}, {})), \
+                    patch.object(settings, "_lora_sha256", wraps=settings._lora_sha256) as hash_file:
+                catalog = settings.generation_catalog([{"id": "custom/selected", "strength": 0.8}])
+            self.assertEqual(hash_file.call_count, 1)
+            self.assertEqual(hash_file.call_args.args[0].name, "selected.safetensors")
+            self.assertEqual(catalog["custom/selected"]["tag"], "legacy tag")
+            self.assertEqual(catalog["custom/unused"]["sha256"], "")
+
     def test_previews_survive_settings_and_fast_catalog_in_each_family(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

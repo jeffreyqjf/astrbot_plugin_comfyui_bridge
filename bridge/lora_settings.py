@@ -216,7 +216,7 @@ class LoraSettings:
                 tag.strip() if isinstance(tag, str) and len(tag) <= LORA_TAG_LIMIT else "",
             ))
             try:
-                sha256 = self._lora_sha256(resolved, version) if hash_files else ""
+                sha256 = self._lora_sha256(resolved, version) if hash_files is True or isinstance(hash_files, set) and key in hash_files else ""
             except OSError:
                 continue
             files.add(resolved)
@@ -226,9 +226,9 @@ class LoraSettings:
                 "default_strength": strengths.get(key, 1),
                 "preview": previews.get(key, ""),
             }
-        if hash_files:
+        if hash_files is True:
             self.lora_hashes = {path: self.lora_hashes[path] for path in files}
-        migrated = legacy.keys() & catalog.keys() if hash_files else set()
+        migrated = legacy.keys() & catalog.keys() if hash_files is True else set()
         if migrated:
             for key in catalog:
                 if key in migrated:
@@ -258,6 +258,19 @@ class LoraSettings:
         with self.lora_lock:
             catalog, *_ = self._load_lora_catalog(hash_files=False)
             return self._decorate_catalog(catalog, {})
+
+    def generation_catalog(self, loras, sweep=False):
+        with self.lora_lock:
+            catalog, *_ = self._load_lora_catalog(hash_files=False)
+            rows = self.parse_loras(loras, self._decorate_catalog(catalog, {}))
+            selected = {row["id"] for row in rows}
+            if sweep and not any(catalog[key]["category"] == "C" for key in selected):
+                selected.update(key for key, row in catalog.items() if row["category"] == "C")
+            catalog, _, legacy, tags, _, _ = self._load_lora_catalog(hash_files=selected)
+            for key in selected:
+                if key in legacy and key in catalog:
+                    tags.setdefault(catalog[key]["sha256"], legacy[key])
+            return self._decorate_catalog(catalog, tags)
 
     def _lora_order_snapshot(self, catalog, tags):
         entries = list(self._decorate_catalog(catalog, tags).values())

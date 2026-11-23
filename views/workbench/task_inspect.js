@@ -140,10 +140,11 @@ export function mountJobDetails({bridge, workflowTitle, states}) {
     content.replaceChildren(); status.textContent = "正在读取任务配置…";
     if (!dialog.open) dialog.showModal();
     try {
-      const {job, preset, configuration} = await bridge.apiGet("studio/queue/details", {id: identity});
+      const {job, preset, configuration, caption} = await bridge.apiGet("studio/queue/details", {id: identity});
       if (version !== request || !dialog.open) return;
       fields([["工作流", workflowTitle(job.workflow)], ["任务", job.id], ["状态", states[job.state] || job.state],
         ["种子", job.seed], ["超时", `${job.timeout_seconds} 秒`], ["提示词预设", preset?.name || "未使用"]], content);
+      if (caption) text("pre", caption, section("反推结果"));
       if (!configuration) { status.textContent = "此任务没有可用的配置记录。"; return; }
       status.textContent = "本次任务实际使用的配置";
       const prompts = section("提示词");
