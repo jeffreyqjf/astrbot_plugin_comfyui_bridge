@@ -608,7 +608,8 @@ export function mountImageReviews({
             }
             button.setAttribute("aria-pressed", String(request.selected.has(key)));
             resourceChoose.disabled = !request.selected.size;
-            resourceChoose.textContent = `使用已选 ${request.selected.size} 张`;
+            resourceChoose.textContent = "确认";
+            resourceChoose.setAttribute("aria-label", `确认选择 ${request.selected.size} 张图片`);
           } else previewResource(entry, kind, state);
         });
         if (request.multiple) {
@@ -692,7 +693,8 @@ export function mountImageReviews({
 
   function pickResource(source, select, { type, useControls = false, title, gallery, multiple = false } = {}) {
     resourceRequest = { source, select, type, multiple, selected: new Map(), path: [{ name: "ComfyUI input", id: "" }] };
-    resourceChoose.textContent = multiple ? "使用已选图片" : "使用此图";
+    resourceChoose.textContent = "确认";
+    resourceChoose.setAttribute("aria-label", multiple ? "确认选择图片" : "确认使用此图");
     get("task-resource-title").textContent = title || (source === "input" ? "浏览 ComfyUI input" : "从图集选择控制图");
     get("task-resource-gallery-field").hidden = source === "input";
     get("task-resource-control-galleries").disabled = !useControls;

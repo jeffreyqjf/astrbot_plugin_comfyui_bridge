@@ -551,6 +551,9 @@ button.order-name { border-color: transparent; background: transparent; text-ali
 .image-resource-dialog::backdrop, #image-original::backdrop { background: #181a2a99; }
 .resource-entry { min-width: 0; overflow-wrap: anywhere; text-align: left; padding: 8px; }
 #task-resource-path [aria-current] { color: var(--accent); background: var(--tint); }
+#task-resource-picker > .panel-heading { position: sticky; top: -1px; z-index: 3; background: var(--surface); padding-block: 8px; }
+.task-resource-confirm { display: flex; flex-wrap: nowrap; justify-content: flex-end; gap: 8px; margin-left: auto; }
+.task-resource-confirm button { min-height: 44px; }
 .task-resource-toolbar { position: relative; display: flex; align-items: flex-end; gap: 8px; }
 .task-resource-toolbar:has(#task-resource-gallery-field:not([hidden])) { margin-block: 10px; }
 .task-resource-toolbar .field { min-width: 0; }

@@ -881,7 +881,10 @@
           <dialog id="task-resource-picker" class="image-resource-dialog" aria-labelledby="task-resource-title">
             <div class="panel-heading">
               <h2 id="task-resource-title"></h2>
-              <form method="dialog"><button autofocus>关闭</button></form>
+              <div class="row-actions task-resource-confirm">
+                <button type="button" id="task-resource-choose" class="primary" disabled>确认</button>
+                <form method="dialog"><button autofocus>关闭</button></form>
+              </div>
             </div>
             <nav id="task-resource-path" class="row-actions" aria-label="当前目录"></nav>
             <div class="task-resource-toolbar">
@@ -916,7 +919,6 @@
               <p id="task-resource-preview-status" role="status"></p>
               <div class="row-actions">
                 <button type="button" id="task-resource-back">返回列表</button>
-                <button type="button" id="task-resource-choose" class="primary" disabled>使用此图</button>
               </div>
             </div>
             <div id="task-resource-items" class="review-grid"></div>
