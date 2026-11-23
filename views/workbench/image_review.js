@@ -307,7 +307,7 @@ export function mountImageReviews({
     if (referenceFile.files.length > 1) get("queue-count").value = "1";
     get("queue-reference-clear").hidden = !label;
     renderReferenceStatus();
-    setTaskImagePreview(referenceThumbnail, preview || referenceFile.files[0]);
+    setTaskImagePreview(referenceThumbnail, referenceFile.files.length > 1 ? null : preview || referenceFile.files[0]);
     for (const image of batchPreview.querySelectorAll("img")) setTaskImagePreview(image, null);
     batchPreview.replaceChildren();
     if (referenceFile.files.length > 1) {
