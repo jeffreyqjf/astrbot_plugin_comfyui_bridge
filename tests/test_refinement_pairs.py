@@ -277,3 +277,47 @@ class RefinementPairsTests(unittest.TestCase):
             restarted = ImageReviews(self.root / "data", self.root / "output", None)
             self.assertEqual(restarted.gallery("", 1, state=state)["images"][0]["generation"]["workflow_config"], "人像高清配置")
         self.assertNotIn("workflow_config", self.review._item(self.review._record(self.source_id), 1)["generation"])
+
+    def test_source_metadata_is_frozen_and_lineage_tracks_fanout_and_chain(self):
+        source = self.review._record(self.source_id)
+        source["generation"].update(seed=123, workflow_config="原图配置", preset={"name": "原图提示词"})
+        self.review._write_record(self.source_id, source)
+        first = self.remember_result()
+        second = self.remember_result(identity="c" * 32)
+        self.review.rate(first, "hd")
+        self.review.rate(second, "hd")
+        origin = self.review.verify_reference_origin(self.result.read_bytes(), {"id": first, "state": "hd"})
+        third = self.remember_result(origin, "d" * 32)
+        self.review.rate(third, "hd")
+        info = self.review.refinement_info(first)
+        self.assertEqual(info["generation"]["workflow_config"], "原图配置")
+        self.assertEqual(info["generation"]["seed"], "123")
+        source["generation"]["workflow_config"] = "后来修改"
+        self.review._write_record(self.source_id, source)
+        restarted = ImageReviews(self.root / "data", self.root / "output", None)
+        self.assertEqual(restarted.refinement_info(first)["generation"]["workflow_config"], "原图配置")
+        graph = restarted.lineage(third)
+        edges = {(edge["source"], edge["target"]) for edge in graph["edges"]}
+        original = f"{self.source_id}:1"
+        self.assertEqual(edges, {(original, first), (original, second), (first, third)})
+        self.review.detach_refinement(first, "hd")
+        graph = self.review.lineage(original)
+        self.assertEqual({(edge["source"], edge["target"]) for edge in graph["edges"]}, edges)
+        self.assertFalse(next(edge for edge in graph["edges"] if edge["target"] == first)["active"])
+        self.assertTrue(next(edge for edge in graph["edges"] if edge["target"] == second)["active"])
+
+    def test_legacy_source_metadata_fallback_and_manual_source_lineage(self):
+        output = self.remember_result()
+        record = self.review._record(self.output_id)
+        record["generation"]["refinement"].pop("source_info")
+        self.review._write_record(self.output_id, record)
+        self.assertEqual(self.review.refinement_info(output)["generation"]["workflow"], "generator")
+        manual = self.review.root / "pass/SFW/import.png"
+        manual.write_bytes(self.source.read_bytes())
+        identity = self.review.gallery("", 1, state="pass")["images"][0]["id"]
+        origin = self.review.verify_reference_origin(manual.read_bytes(), {"id": identity, "state": "pass"})
+        result = self.remember_result(origin, "c" * 32)
+        self.review.rate(result, "hd")
+        originals = self.review.gallery("", 1, state="hd", include_sources=True)["images"]
+        current = next(row for row in originals if row["id"].startswith("manual:"))
+        self.assertEqual(len(self.review.lineage(current["id"])["edges"]), 1)

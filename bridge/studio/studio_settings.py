@@ -2150,7 +2150,17 @@ class StudioSettings:
                 self.service.image_reviews.refinement_input, request.query.get("id"),
                 request.query.get("original") == "1", self.service.client.max_image_bytes,
             )
-            return json_response({"src": f"data:{mime};base64,{base64.b64encode(data).decode('ascii')}"})
+            info = await asyncio.to_thread(self.service.image_reviews.refinement_info, request.query.get("id"))
+            return json_response({"src": f"data:{mime};base64,{base64.b64encode(data).decode('ascii')}", "image": info})
+        except (OSError, ValueError, KeyError) as exc:
+            return error_response(str(exc), status_code=400)
+
+    async def image_lineage(self):
+        if not request.username:
+            return error_response("请登录 AstrBot 面板。", status_code=401)
+        try:
+            result = await asyncio.to_thread(self.service.image_reviews.lineage, request.query.get("id"))
+            return json_response(result)
         except (OSError, ValueError, KeyError) as exc:
             return error_response(str(exc), status_code=400)
 

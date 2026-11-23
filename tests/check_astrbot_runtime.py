@@ -104,6 +104,12 @@ async def check_refinement_pairs(instance, root):
     assert any(item.get("refinement_source") for item in json.loads(gallery.body)["images"])
     route = "studio/images/refinement/detach"
     payload = {"id": f"{output_id}:1", "state": "hd"}
+    lineage_route = "studio/images/lineage"
+    assert (await call("GET", lineage_route, query=f"id={output_id}:1".encode(), username=None)).status_code == 401
+    assert (await call("GET", lineage_route, query=b"id=../invalid")).status_code == 400
+    lineage = await call("GET", lineage_route, query=f"id={output_id}:1".encode())
+    assert lineage.status_code == 200, lineage.body
+    assert len(json.loads(lineage.body)["edges"]) == 1
     assert (await call("POST", route, payload=payload, username=None)).status_code == 401
     assert (await call("POST", route, payload={"id": "../invalid", "state": "hd"})).status_code == 400
     response = await call("POST", route, payload=payload)

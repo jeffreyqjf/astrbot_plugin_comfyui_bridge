@@ -1,5 +1,7 @@
 # 持久数据结构
 
+v3.23.0：generation.refinement 兼容增加 source_info，保存来源图片的安全展示元数据快照（id、rating、generation 的工作流／配置预设／提示词预设／LoRA／种子等）。明确选择时即捕获，图集自动匹配时捕获，在结果 remember 时深拷贝保存；没有来源信息不推断。旧数据读取时回退对应生成记录，不自动迁移。正向 source 关系仍是唯一事实来源，溯源按需扫描记录推导双向连接，支持多结果共享来源和任意深度连续修复，无反向列表写入一致性问题。detached 按结果索引标记失效边，历史边保留但不恢复移动联动。手动文件按来源摘要与相对位置形成内部稳定键以兼容移动后的 manual ID。
+
 v3.20.0：运行图 astrbot.workflow_config 保存最后应用的配置名称。任务受理时快照到 Job.configuration.workflow_config，生成 metadata 和归档 generation 同步保存；图片列表的 generation.workflow_config 是可选字符串，缺省为无记录。名称作为当时使用的配置来源保留，单次参数覆盖不改变该来源，不根据现有配置反推旧图片，无数据迁移。
 
 v3 新增 `regional_prompt_presets.json`：`{version:1,presets:{名称:{regions:[{text,strength},...],base_strength}}}`。最多 64 套、2 MB，按文件摘要处理并发冲突。遮罩不存入预设，由任务上传到 ComfyUI input，已提交图中记录各 LoadImage 文件名及三区文本。旧持久数据无需迁移。

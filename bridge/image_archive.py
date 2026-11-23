@@ -9,6 +9,7 @@ import re
 import shutil
 import time
 from collections import OrderedDict
+from copy import deepcopy
 from itertools import chain
 from pathlib import Path, PureWindowsPath
 from stat import S_ISREG
@@ -297,6 +298,7 @@ class ImageReviews:
                 atomic_write(target, image)
                 record.setdefault("generation", {"loras": [[] for _ in files]})["refinement"] = {
                     "input_id": job_id, "suffix": suffix, "source": refinement.get("source"),
+                    "source_info": deepcopy(refinement.get("source_info") or self._source_info(refinement.get("source"))),
                 }
             self._write_record(job_id, record)
             for source, target, digest, move in transfers:
@@ -333,7 +335,8 @@ class ImageReviews:
             if not _matches_digest(path, digest):
                 raise WorkflowError("参考图与所选原图不匹配，请重新选择。")
             return {"image": image, "source": {"id": identity, "state": state, "digest": digest,
-                    "relative": path.relative_to(self.root / state).as_posix()}}
+                    "relative": path.relative_to(self.root / state).as_posix()},
+                    "source_info": self._source_info({"id": identity})}
 
     def capture_refinement(self, image, owner):
         digest = hashlib.sha256(image).hexdigest()
@@ -347,7 +350,84 @@ class ImageReviews:
                         if record["digests"].get(record["files"][index - 1]) == digest and _matches_digest(path, digest):
                             matches.append({"id": f"{record['id']}:{index}", "state": state, "digest": digest,
                                             "relative": path.relative_to(self.root / state).as_posix()})
-        return {"image": image, "source": matches[0] if len(matches) == 1 else None}
+            source = matches[0] if len(matches) == 1 else None
+            return {"image": image, "source": source, "source_info": self._source_info(source)}
+
+    def _source_info(self, source):
+        if not source:
+            return {"name": "上传原图"}
+        identity = source["id"]
+        if identity.startswith("manual:"):
+            return {"id": identity, "name": "手动导入原图"}
+        try:
+            record, index = self._lookup(identity)
+            return self._item(record, index, self._legacy_metadata(record))
+        except (OSError, ValueError, KeyError):
+            return {"id": identity, "name": "历史原图（信息未记录）"}
+
+    def refinement_info(self, image_id):
+        with self.lock:
+            record, index = self._lookup(image_id)
+            relation = self._refinement(record, index)
+            if not relation:
+                raise WorkflowError("该图片没有细化原图记录。")
+            return deepcopy(relation.get("source_info") or self._source_info(relation.get("source")))
+
+    @staticmethod
+    def _source_key(source, job_id):
+        if not source:
+            return f"input:{job_id}"
+        if source["id"].startswith("manual:"):
+            return "source:" + hashlib.sha256(f"{source['digest']}/{source['relative']}".encode()).hexdigest()
+        return source["id"]
+
+    def lineage(self, image_id):
+        with self.lock:
+            if isinstance(image_id, str) and image_id.startswith("manual:"):
+                state, path, item = self._manual_lookup(image_id)
+                origin = {"id": image_id, "digest": _file_digest(path), "relative": path.relative_to(self.root / state).as_posix()}
+                root = self._source_key(origin, "")
+            else:
+                record, index = self._lookup(image_id)
+                item = self._item(record, index, self._legacy_metadata(record))
+                root = image_id
+            nodes = {root: {"id": root, "image": item}}
+            edges = []
+            truncated = False
+            for position, entry in enumerate(self.index.glob("*/*.json")):
+                if position >= 5000:
+                    truncated = True
+                    break
+                if entry.resolve() != entry.absolute() or not JOB_ID.fullmatch(entry.stem):
+                    continue
+                record = self._record(entry.stem)
+                if not record:
+                    continue
+                relation = record.get("generation", {}).get("refinement")
+                for index, name in enumerate(record["files"], 1):
+                    if not name:
+                        continue
+                    key = f"{record['id']}:{index}"
+                    nodes[key] = {"id": key, "image": self._item(record, index, self._legacy_metadata(record))}
+                    if relation:
+                        source = relation.get("source")
+                        parent = self._source_key(source, record["id"])
+                        nodes.setdefault(parent, {"id": parent, "image": deepcopy(relation.get("source_info") or self._source_info(source))})
+                        edges.append({"source": parent, "target": key, "active": index not in relation.get("detached", [])})
+            connected = {root}
+            while len(connected) < 500:
+                expanded = connected | {endpoint for edge in edges if edge["source"] in connected or edge["target"] in connected
+                                        for endpoint in (edge["source"], edge["target"])}
+                if expanded == connected:
+                    break
+                if len(expanded) > 500:
+                    truncated = True
+                    break
+                connected = expanded
+            if len(connected) >= 500:
+                truncated = True
+            selected = [edge for edge in edges if edge["source"] in connected and edge["target"] in connected]
+            return {"root": root, "nodes": [nodes[key] for key in sorted(connected)], "edges": selected, "truncated": truncated}
 
     def refinement_input(self, image_id, original, limit):
         with self.lock:

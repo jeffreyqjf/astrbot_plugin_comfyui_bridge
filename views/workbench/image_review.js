@@ -81,6 +81,51 @@ export function mountImageReviews({
   let resourceRequest;
   let originalVersion = 0;
   let openedImage;
+  const traceButton = document.createElement("button"); traceButton.type = "button"; traceButton.textContent = "溯源";
+  traceButton.className = "image-trace-button"; traceButton.title = "查看图片来源及后续修复链"; downloadOriginal.after(traceButton);
+  const traceDialog = document.createElement("dialog"); traceDialog.className = "image-lineage-dialog";
+  traceDialog.setAttribute("aria-label", "图片溯源");
+  const traceHeader = document.createElement("div"); traceHeader.className = "panel-heading";
+  const traceTitle = document.createElement("h2"); traceTitle.textContent = "图片溯源";
+  const traceClose = document.createElement("button"); traceClose.type = "button"; traceClose.textContent = "关闭";
+  traceClose.onclick = () => traceDialog.close(); traceHeader.append(traceTitle, traceClose);
+  const traceContent = document.createElement("div"); traceContent.setAttribute("role", "status");
+  traceDialog.append(traceHeader, traceContent); document.body.append(traceDialog);
+  let traceVersion = 0;
+  traceDialog.addEventListener("close", () => { traceVersion++; });
+  traceButton.onclick = async () => {
+    if (!openedImage) return;
+    const version = ++traceVersion;
+    traceContent.textContent = "正在读取真实来源与后续修复记录…"; traceDialog.showModal();
+    try {
+      const data = await bridge.apiGet("studio/images/lineage", {id: openedImage.item.id});
+      if (!traceDialog.open || version !== traceVersion) return;
+      traceContent.replaceChildren();
+      const labels = new Map(data.nodes.map((node, index) => [node.id, `图 ${index + 1}`]));
+      const edges = document.createElement("div"); edges.className = "image-lineage-edges";
+      for (const edge of data.edges) {
+        const text = document.createElement("p");
+        text.textContent = `${labels.get(edge.source)} → ${labels.get(edge.target)}${edge.active ? "" : " · 历史关系（已解除）"}`;
+        edges.append(text);
+      }
+      if (!data.edges.length) edges.textContent = "没有已记录的修复关联。";
+      traceContent.append(edges);
+      for (const node of data.nodes) {
+        const details = document.createElement("details"); details.open = node.id === data.root;
+        const title = document.createElement("summary");
+        title.textContent = `${labels.get(node.id)}${node.id === data.root ? " · 当前图片" : ""} · ${node.image.generation?.workflow ? workflowTitle(node.image.generation.workflow) : node.image.name || "原图（信息未记录）"}`;
+        const fields = document.createElement("dl"); fields.className = "image-generation-info";
+        for (const [label, value] of generationFields(node.image)) {
+          const name = document.createElement("dt"); name.textContent = label;
+          const text = document.createElement("dd"); text.textContent = value; fields.append(name, text);
+        }
+        details.append(title, fields); traceContent.append(details);
+      }
+      if (data.truncated) {
+        const note = document.createElement("p"); note.textContent = "记录较多，当前仅展示部分关联。"; traceContent.append(note);
+      }
+    } catch (error) { if (traceDialog.open && version === traceVersion) traceContent.textContent = error.message; }
+  };
   let imageToDelete;
   let referencePage = 1;
   let referenceVersion = 0;
@@ -275,7 +320,7 @@ export function mountImageReviews({
 
   function generationFields(item) {
     const info = item.generation;
-    if (!info) return item.id.startsWith("manual:") ? [["生成信息", "无记录"]] : [];
+    if (!info) return [["生成信息", "未记录"]];
     const loras = info.loras?.map((row) => (
       row.model === row.clip ? `${row.name} × ${row.model}` : `${row.name}（模型 ${row.model}，CLIP ${row.clip}）`
     ));
@@ -1019,7 +1064,8 @@ export function mountImageReviews({
     const image = document.createElement("img"); image.alt = "细化输入原图"; image.hidden = true; media.append(image);
     image.style.cursor = "zoom-in"; image.onclick = () => magnify(image.src);
     const status = document.createElement("p"); status.setAttribute("role", "status"); status.textContent = "正在读取细化原图…";
-    frame.append(heading, media, status); container.append(frame);
+    const metadata = document.createElement("dl"); metadata.className = "image-generation-info";
+    frame.append(heading, media, status, metadata); container.append(frame);
     if (!openedImage?.readOnly) {
       const detach = document.createElement("button"); detach.type = "button"; detach.textContent = "解除关联";
       detach.onclick = async () => {
@@ -1046,10 +1092,14 @@ export function mountImageReviews({
       frame.append(detach);
     }
     try {
-      const {src} = await bridge.apiGet("studio/images/refinement", {id: item.id, original: "1"});
+      const {src, image: sourceInfo} = await bridge.apiGet("studio/images/refinement", {id: item.id, original: "1"});
       if (!isCurrent() || !container.contains(frame)) return;
       image.src = src; image.hidden = download.hidden = false;
       status.textContent = "与本次修复结果关联保存";
+      for (const [label, value] of generationFields(sourceInfo || {})) {
+        const name = document.createElement("dt"); name.textContent = label;
+        const text = document.createElement("dd"); text.textContent = value; metadata.append(name, text);
+      }
       download.onclick = () => downloadImage(src, `detailer-input-${item.id}`, download);
     } catch (error) { if (isCurrent()) status.textContent = error.message; }
   }
