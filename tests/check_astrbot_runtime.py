@@ -6,6 +6,7 @@ import importlib
 import io
 import json
 import os
+import re
 import sys
 from argparse import ArgumentParser
 from itertools import product
@@ -671,6 +672,12 @@ async def check(root, archive, core, *, anima_workspace=None, anima_schemas=None
     remote_studio = importlib.import_module(f"data.plugins.{PLUGIN}.bridge.studio.remote_studio")
     assert remote_studio.VIEW == plugin / "views" / "workbench"
     assert all((remote_studio.VIEW / asset).is_file() for asset in remote_studio.ASSETS)
+    for asset in remote_studio.ASSETS:
+        if Path(asset).suffix not in {".js", ".mjs"}:
+            continue
+        imports = re.findall(r'''(?:from\s*|import\s*\(\s*|import\s*)["']\./([^"']+)["']''', (remote_studio.VIEW / asset).read_text(encoding="utf-8"))
+        for dependency in imports:
+            assert dependency.split("?", 1)[0].split("#", 1)[0] in remote_studio.ASSETS, (asset, dependency)
     schema = json.loads((plugin / "_conf_schema.json").read_text(encoding="utf-8"))
     config = module.AstrBotConfig(config_path=str(root / "plugin-config.json"), schema=schema)
     for key, value in {"anima_workspace": str(root), "remote_studio_enabled": False}.items():

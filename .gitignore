@@ -23,3 +23,4 @@ tests/*
 !tests/test_gallery_filters.py
 !tests/test_simple_reverse.py
 !tests/test_task_memory.py
+!tests/test_workbench_assets.py
