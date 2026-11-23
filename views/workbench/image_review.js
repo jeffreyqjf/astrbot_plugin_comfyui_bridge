@@ -261,7 +261,7 @@ export function mountImageReviews({
   const resourceFilters = mountFilters(pickerFilters, "picker-", () => {
     if (!resourcePicker.open || resourceRequest?.source === "input") return;
     const [kind, state] = resourceGallery.value.split("/");
-    if (kind === "images") return { state, rating: resourceRating(state), include_sources: "1" };
+    if (kind === "images") return { state, rating: resourceRating(state), group_sources: "1" };
   }, () => loadResources());
 
   function resourceRating(state) {
@@ -559,7 +559,7 @@ export function mountImageReviews({
     const status = get("task-resource-status");
     const [kind, state] = isInput ? ["input"] : resourceGallery.value.split("/");
     const query = isInput ? {directory: request.path.at(-1).id} : {
-      state, ...(kind === "controls" ? {type: request.type} : {rating: resourceRating(state), include_sources: "1", ...resourceFilters.query()}),
+      state, ...(kind === "controls" ? {type: request.type} : {rating: resourceRating(state), group_sources: "1", ...resourceFilters.query()}),
     };
     const key = pageKey(`resources/${kind}`, query);
     page ??= readPage(key);
@@ -590,6 +590,11 @@ export function mountImageReviews({
         button.type = "button";
         button.className = "resource-entry";
         button.textContent = resourceLabel(entry, kind);
+        const chosen = request.selected.get(`${kind}/${state}/${entry.id}`);
+        if (entry.variants?.length && chosen) {
+          const label = document.createElement("small"); label.className = "resource-dimensions";
+          label.textContent = `已选：${chosen.entry.name}`; button.append(label);
+        }
         if (entry.width && entry.height) {
           const dimensions = document.createElement("small"); dimensions.textContent = `${entry.width} × ${entry.height}`;
           dimensions.className = "resource-dimensions"; button.append(dimensions);
@@ -599,6 +604,8 @@ export function mountImageReviews({
           if (isInput && entry.kind === "directory") {
             request.path.push(entry);
             loadResources();
+          } else if (entry.variants?.length > 1) {
+            chooseResourceVersion(entry, kind, state);
           } else if (request.multiple) {
             const key = `${kind}/${state}/${entry.id}`;
             if (request.selected.has(key)) request.selected.delete(key);
@@ -667,7 +674,47 @@ export function mountImageReviews({
     return bridge.apiGet("studio/images/file", { id: entry.id, state });
   }
 
+  const resourceVersions = document.createElement("div"); resourceVersions.className = "resource-versions";
+  resourcePreview.prepend(resourceVersions);
+  function chooseResourceVersion(group, kind, state) {
+    const version = ++resourceVersion;
+    const request = resourceRequest;
+    resourceList.hidden = true; resourcePreview.hidden = false; resourceImage.hidden = true;
+    resourceVersions.replaceChildren();
+    resourceChoose.disabled = request.multiple ? !request.selected.size : true;
+    get("task-resource-preview-status").textContent = "请选择此图片的版本";
+    const key = `${kind}/${state}/${group.id}`;
+    for (const variant of group.variants) {
+      const entry = {...variant, rating: group.rating};
+      const button = document.createElement("button"); button.type = "button"; button.className = "resource-entry";
+      button.setAttribute("aria-pressed", String(request.selected.get(key)?.entry.id === entry.id));
+      const image = document.createElement("img"); image.alt = variant.name;
+      const title = document.createElement("strong"); title.textContent = variant.name;
+      const dimensions = document.createElement("small"); dimensions.className = "resource-dimensions";
+      dimensions.textContent = entry.width && entry.height ? `${entry.width} × ${entry.height}` : "尺寸未知";
+      button.append(image, title, dimensions); resourceVersions.append(button);
+      readResourcePreview(entry, kind, state).then(({src}) => {
+        if (version === resourceVersion && resourcePicker.open) image.src = src;
+      }).catch(error => { if (version === resourceVersion) get("task-resource-preview-status").textContent = error.message; });
+      button.onclick = () => {
+        const selection = {entry, kind, state, label: `${imageLabel(group)} · ${variant.name}`};
+        if (request.multiple) {
+          if (!request.selected.has(key) && request.selected.size >= 32) { notify("每次最多选择 32 张图片。", true); return; }
+          if (request.selected.get(key)?.entry.id === entry.id) request.selected.delete(key);
+          else request.selected.set(key, selection);
+          resourceChoose.setAttribute("aria-label", `确认选择 ${request.selected.size} 张图片`);
+          loadResources(request.page);
+        } else {
+          request.entry = selection; resourceChoose.disabled = false;
+          for (const sibling of resourceVersions.children) sibling.setAttribute("aria-pressed", String(sibling === button));
+          get("task-resource-preview-status").textContent = `已选择${variant.name}，点击右上角确认`;
+        }
+      };
+    }
+  }
+
   async function previewResource(entry, kind, state) {
+    resourceVersions.replaceChildren();
     const version = ++resourceVersion;
     const request = resourceRequest;
     const status = get("task-resource-preview-status");

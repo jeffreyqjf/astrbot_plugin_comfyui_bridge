@@ -1959,11 +1959,12 @@ class StudioSettings:
             rating = request.query.get("rating", "")
             lora_match = request.query.get("lora_match", "any")
             include_sources = request.query.get("include_sources") == "1"
+            group_sources = request.query.get("group_sources") == "1"
             if (state not in ("unevaluate", *GALLERY_STATES) or rating not in ("", *REVIEW_RATINGS)
                     or lora_match not in ("any", "all")):
                 raise WorkflowError("图片列表参数无效。")
             if request.query.get("facets") == "1":
-                facets = await asyncio.to_thread(review.filter_options, state, rating, include_sources=include_sources)
+                facets = await asyncio.to_thread(review.filter_options, state, rating, include_sources=include_sources and not group_sources)
                 facets["preset"], _ = await self._gallery_preset_labels(facets["preset"])
                 counts = {}
                 for label in facets["preset"].values():
@@ -1992,6 +1993,7 @@ class StudioSettings:
                 result = await asyncio.to_thread(
                     review.gallery, rating, page or 1, state=state, filters=filters, lora_match=lora_match,
                     include_sources=include_sources,
+                    group_sources=group_sources,
                 )
             items = result.get("images")
             if items is None:

@@ -175,6 +175,20 @@ class RefinementPairsTests(unittest.TestCase):
         self.assertEqual(data, self.source.read_bytes())
         self.assertEqual(self.review.verify_reference_origin(data, {"id": original["id"], "state": "hd"})["image"], data)
 
+    def test_grouped_picker_keeps_pair_in_one_card_with_real_version_ids(self):
+        output = self.remember_result()
+        self.review.rate(output, "hd")
+        gallery = self.review.gallery("", 1, state="hd", group_sources=True)
+        self.assertEqual(gallery["total"], 1)
+        versions = gallery["images"][0]["variants"]
+        self.assertEqual([row["id"] for row in versions], [output, f"{self.source_id}:1"])
+        self.assertEqual([(row["width"], row["height"]) for row in versions], [(40, 60), (20, 30)])
+        self.assertEqual(self.review.read(versions[1]["id"], True, 1000000, state="hd")[1], self.source.read_bytes())
+        self.review.detach_refinement(output, "hd")
+        independent = self.review.gallery("", 1, state="hd", group_sources=True)
+        self.assertEqual(independent["total"], 2)
+        self.assertTrue(all("variants" not in row for row in independent["images"]))
+
     def test_detach_hd_then_delete_result_keeps_original_and_survives_restart(self):
         output = self.remember_result()
         self.review.rate(output, "hd")

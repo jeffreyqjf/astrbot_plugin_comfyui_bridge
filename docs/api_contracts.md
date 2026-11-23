@@ -1,5 +1,7 @@
 # API 契约
 
+v3.22.1：选图窗口改用 GET studio/images?group_sources=1。高清列表隐藏仍关联的原图独立条目，分页／数量以结果组计算。组条目可包含 variants:[{id,name,width,height}]，分别指向高清结果及已核对的原图；保留实际图片 ID，读取、来源校验及提交契约不变，不使用相似度推断。缺失／不可读的原文件不返回低版本；已解除关联项无 variants 并独立显示。筛选选项按组的结果元数据生成，旧 include_sources 平铺参数保持兼容。该功能只读，不修改文件和持久关联。
+
 v3.22.0：POST studio/queue 的反推分支改为立即返回 `{jobs:[任务],queued:true}`，不再同步返回 caption。图片／数量等基本校验在受理前完成，节点和本地模型校验后台执行，失败记录到该任务。复用 Job／全局与工作流队列容量／并发槽／取消及卸载清理；任务详情 GET studio/queue/details 增加 caption 字符串，完成后提供文字，其他任务为空。成功文字继续经 run_caption 保存到永久反推记录。QQ 原有同步反推接口保持兼容。
 
 v3.21.0：task_inputs.simple 对单图输入反推工作流开放，positive/negative/presets 为 false。POST studio/queue 选择 image_to_text 时要求图片、count=1，按当前工作流 prepare_caption 和节点 schema 校验执行，复用 run_caption 保存历史，返回 `{jobs:[],caption,queued:false}`。非反推路径不变。网页多图在客户端按序调用既有单图接口，每图 count=1，各自携带 reference_origin；中途失败提示已经受理的序号，不自动重试或回滚已受理任务。include_sources=1 的图片列表可选返回 width/height（读取原图头部，不使用缩略图尺寸），不可识别时省略，无新增接口。

@@ -643,7 +643,7 @@ class ImageReviews:
                 result.update(total=len(jobs), page=page, page_size=limit, has_more=len(jobs) > end)
             return result
 
-    def gallery(self, rating, page, size=24, *, state="favourite", filters=None, lora_match="any", include_sources=False):
+    def gallery(self, rating, page, size=24, *, state="favourite", filters=None, lora_match="any", include_sources=False, group_sources=False):
         with self.lock:
             hidden = self._hd_source_paths() if state == "hd" else set()
             start = (page - 1) * size
@@ -652,14 +652,14 @@ class ImageReviews:
             for record in self._records(state, rating):
                 legacy = self._legacy_metadata(record) if filters else None
                 for index, path in self._files(record, state):
-                    if not include_sources and path.relative_to(self.root / state).as_posix() in hidden:
+                    if (not include_sources or group_sources) and path.relative_to(self.root / state).as_posix() in hidden:
                         continue
                     item = self._item(record, index, legacy, include_generation=bool(filters))
                     if not filters or self._matches_filters(item, filters, lora_match):
                         entries.append((record["created"], item, record))
             entries.extend(
                 (created, item, None) for created, item, path in self._manual_files(state, rating)
-                if (include_sources or path.relative_to(self.root / state).as_posix() not in hidden)
+                if (include_sources and not group_sources or path.relative_to(self.root / state).as_posix() not in hidden)
                 and (not filters or self._matches_filters(item, filters, lora_match))
             )
             entries.sort(key=lambda row: (-row[0], row[1]["id"]))
@@ -671,7 +671,7 @@ class ImageReviews:
                         page_metadata[job_id] = self._legacy_metadata(record)
                     item = self._item(record, item["index"], page_metadata[job_id])
                 rows.append(item)
-            if include_sources:
+            if include_sources or group_sources:
                 for item in rows:
                     if item["id"].startswith("manual:"):
                         _, path, _ = self._manual_lookup(item["id"])
@@ -687,6 +687,25 @@ class ImageReviews:
                         pass
                     if relative in hidden:
                         item["refinement_source"] = True
+                    if group_sources and state == "hd" and not item["id"].startswith("manual:"):
+                        relation = self._refinement(record, index)
+                        if relation:
+                            source_path = self._path(f"hd/{self._refinement_relative(record, relation)}")
+                            source = relation.get("source")
+                            if source_path.is_file() and (not source or _matches_digest(source_path, source["digest"])):
+                                if source and not source["id"].startswith("manual:"):
+                                    low_id = source["id"]
+                                else:
+                                    low_id = self._manual_item("hd", source_path.relative_to(self.root / "hd"), source_path.stat())["id"]
+                                try:
+                                    with Image.open(source_path) as image:
+                                        width, height = image.size
+                                    item["variants"] = [
+                                        {"id": item["id"], "name": "高清结果", "width": item.get("width"), "height": item.get("height")},
+                                        {"id": low_id, "name": "修复前原图", "width": width, "height": height},
+                                    ]
+                                except (OSError, ValueError, Image.DecompressionBombError):
+                                    pass
             return {
                 "images": rows, "has_more": len(entries) > start + size,
                 "total": len(entries), "page": page, "page_size": size,
