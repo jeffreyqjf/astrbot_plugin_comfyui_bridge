@@ -1,5 +1,9 @@
 # API 契约
 
+v4.0.0 的 `task_inputs.h3_toolbox` 返回已识别面板的节点 ID、类名及可编辑字面字段。简易 `POST studio/queue` 接受 `h3_toolbox` 对象，按面板名称覆盖固定节点的字面输入。`h3_toolbox_action` 取 `cut` 或 `join` 时只提交对应节点。H3 双采生成显式包括片段保存目标，并按一采或二采取回对应视频。草稿补采继续由原版 Toolbox 的提交处理器恢复。
+
+`POST studio/h3/toolbox/rpc` 转发白名单内的素材项目、片段库、文件元数据和预览操作。`POST studio/h3/toolbox/upload` 接受单个文件，视频投放池以 `pool=1&project=…` 指定项目。`GET studio/h3/toolbox/result?id=…` 返回本账号工具箱任务的状态及指定节点的结果事件。缩略图与视频预览复用当前来源和工作台权限限制。
+
 v3.24.0：登录保护 GET studio/task-memory 返回 `{memory:{scope:flat_values}}`；POST 接受 `{key,value}`，scope 为 global 或 workflow:工作流名称，值为不超过 400 项的扁平字典，仅接收 workflow/mode/config 及 field:/lora:/feature:/control:/open: 前缀字段，值为字符串／有限数字／布尔，文本最长 8000 字、字段名 512 字、scope 256 字、正文 64 KiB。按当前用户名摘要独立原子保存到 task_memory，最多 200 个 scope／5 MiB，禁止目录链接，未登录 401、非法输入或读写失败 400。前端只保存指定任务字段，不传图片／遮罩。按 workflow scope 合并写入，不覆盖其他工作流，桌面／远程工作台均提供。
 
 v3.23.0：GET studio/images/refinement 增加 image（来源展示元数据快照或旧生成记录回退），src 保持兼容。新增登录保护 GET studio/images/lineage?id=图片ID，返回 `{root,nodes:[{id,image}],edges:[{source,target,active}],truncated}`；未登录 401、无效 ID／路径 400。节点内部 ID 只标识图关系，不作磁盘路径使用；手动源按摘要和相对位置规范化，源文件状态改变不打断历史关系。active=false 是已解除的历史关联。按需扫描上限 5000 记录，连通分量上限 500 节点，超限 truncated=true；闭环／共享节点通过集合收敛不递归遍历。只返回连接到当前图的元数据，不返回凭据、用户目录或原文件绝对路径，桌面及远程工作台均注册。

@@ -52,3 +52,5 @@ bridge/studio/model_links.py 维护用户按工作流保存的有序模型网页
 `views/workbench/page_memory.js` 统一处理图集页码和选图入口的上次选择，`app.js` 在工作台初始化前载入。`studio_settings.gallery_pages` 负责按账号保存，图片、视频和反推记录在成功加载后记忆有效页。选图入口在切换图集时记忆选择。
 
 `bridge/workflows/video_duration.py` 读取当前视频图的有效帧数、帧率、分段拼接和时长滑块。`studio_settings.add_jobs` 在简易添加时应用按秒提交的任务参数。
+
+`scripts/export_h3_toolbox.py` 从 H3 双采与 PH3 画布导出 API，补齐紫色变量节点的连线。`bridge/workflows/h3_toolbox.py` 负责节点映射与执行目标。`bridge/studio/h3_toolbox.py` 桥接 Toolbox 素材库，`views/workbench/toolbox/` 保留原版前端和宿主接口。

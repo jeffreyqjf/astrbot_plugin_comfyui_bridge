@@ -102,6 +102,12 @@ WORKFLOW_HELP = {
     "h3-v3": """MiniMax H3 · Seed Hunter v3 完整版
 在工作台保存生成模式、模型、参考素材与采样参数，再用命令指定本次提示词和搜种种子。
 例：/comfy gen --wf h3-v3 --seed 1000 A red fox walks through snow --raw""",
+    "h3-dual": """H3 双采接续
+按已保存的画幅、时长和接续配置生成视频。参考素材、从草稿补二采、裁切和拼接在工作台的简易添加中操作。
+例：/comfy gen --wf h3-dual A red fox walks through snow --raw""",
+    "ph3": """PH3 图像编辑与生成
+输入画面描述或编辑要求。工作台简易添加提供图片参考卡片。图片引用使用 <Picture 1> 等编号。
+例：/comfy gen --wf ph3 A red fox in winter --raw""",
     "t2i": """Anima T2I · 文生图
 输入画面描述。明确用 --wf t2i 时走文生图。若启用 ControlNet 参考分支，图像来源按工作台设置。
 --hands / --face / --eyes / --feet 用 on 或 off 切换本次修复；--denoise 0–1。

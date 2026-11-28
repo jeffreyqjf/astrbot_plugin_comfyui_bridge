@@ -17,6 +17,7 @@ from ..workflows.workflow_archive import ARCHIVE_LIMIT
 from .mask_image import reference_body_limit
 from .studio_settings import COMMAND_IMPORT_LIMIT
 
+VIEW = PACKAGE_ROOT / "views" / "workbench"
 ASSETS = (
     "page_memory.js", "task_memory.js",
     "style.css", "app.js", "image_review.js", "remote.js", "prompt_library.js", "mask_editor.js", "videos.js", "reverse_history.js", "model_catalog.js",
@@ -24,8 +25,10 @@ ASSETS = (
     "h3_prompt.js", "h3_prompt_transport.js", "h3_prompt_vendor.js", "h3_prompt_vendor.css", "h3_prompt_LICENSE.txt",
     "h3_prompt_ide_core.mjs", "h3_prompt_completion_core.mjs", "h3_prompt_schema_core.mjs",
     "h3_prompt_ide_settings_core.mjs", "h3_legacy_widget_width.mjs", "task_features.js", "task_inspect.js",
+    "h3_toolbox.js", "h3_toolbox.css",
+    *(path.relative_to(VIEW).as_posix() for path in sorted((VIEW / "toolbox").rglob("*"))
+      if path.is_file() and not path.is_symlink()),
 )
-VIEW = PACKAGE_ROOT / "views" / "workbench"
 API_PATHS = frozenset({
     "studio/gallery-pages",
     "studio/model-catalog",
@@ -52,6 +55,7 @@ API_PATHS = frozenset({
     "anima/settings", "anima/branches",
     "studio/h3/media", "studio/h3/media/rpc", "studio/h3/media/upload", "studio/h3/media/preview",
     "studio/h3/prompt-templates",
+    "studio/h3/toolbox/rpc", "studio/h3/toolbox/upload", "studio/h3/toolbox/result",
     "studio/regional/presets",
 })
 PRIVATE_NETWORKS = tuple(map(ipaddress.ip_network, (
@@ -59,7 +63,7 @@ PRIVATE_NETWORKS = tuple(map(ipaddress.ip_network, (
     "::1/128", "fc00::/7", "fe80::/10",
 )))
 CSP = (
-    "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; "
+    "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; "
     "img-src 'self' data: blob:; media-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
 )
 LOGIN_CODE = re.compile(r"(?:[0-9]{6}|[A-Za-z0-9_-]{24,128})")
@@ -231,7 +235,7 @@ class RemoteStudio:
                 limit = WORKFLOW_UPLOAD_LIMIT
             elif route == "studio/queue/templates/import":
                 limit = COMMAND_IMPORT_LIMIT
-            elif route == "studio/h3/media/upload":
+            elif route in {"studio/h3/media/upload", "studio/h3/toolbox/upload"}:
                 limit = max(self.plugin.service.client.max_image_bytes, self.plugin.service.client.max_video_bytes) + 1024 * 1024
         if request.content_length is not None and request.content_length > limit:
             return self._error("请求数据过大。", 413)

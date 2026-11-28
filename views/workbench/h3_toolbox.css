@@ -1,0 +1,25 @@
+#queue-h3-toolbox { min-width: 0; margin-block: 0.75rem; }
+[data-toolbox-panels] { display: grid; gap: 0.65rem; min-width: 0; }
+.toolbox-widget { min-width: 0; margin: 0; background: #151c27; color: #dce8f4; border: 1px solid #334358; border-radius: 0.5rem; }
+.toolbox-widget > summary { box-sizing: border-box; padding: 0.65rem 0.8rem; color: #e1efff; cursor: pointer; }
+.toolbox-widget[open] > summary { border-bottom: 1px solid #334358; }
+.toolbox-widget-body { min-width: 0; overflow: auto; box-sizing: border-box; }
+.toolbox-widget-body > * { min-width: 0; min-height: 0; }
+[data-h3-role="images"] .toolbox-widget-body,
+[data-h3-role="references"] .toolbox-widget-body { height: 680px; }
+[data-h3-role="picker"] .toolbox-widget-body,
+[data-h3-role="cut"] .toolbox-widget-body,
+[data-h3-role="join"] .toolbox-widget-body { height: 610px; }
+[data-h3-role="settings"] .toolbox-widget-body { min-height: 440px; }
+[data-h3-role="prompt"] .toolbox-widget-body:not(.toolbox-ph3-prompt) { height: 425px; }
+.toolbox-widget > footer { display: flex; flex-wrap: wrap; padding: 0.5rem 0.75rem; }
+.toolbox-ph3-prompt { padding: 0.65rem; background: #4c3030; }
+.toolbox-ph3-prompt textarea { display: block; width: 100%; background: #101419; color: #ecdfcf; font: 0.92rem/1.42 ui-monospace, Consolas, monospace; box-sizing: border-box; resize: vertical; }
+@media (max-width: 640px) {
+  [data-h3-role="references"] .toolbox-widget-body > *,
+  [data-h3-role="images"] .toolbox-widget-body > *,
+  [data-h3-role="picker"] .toolbox-widget-body > *,
+  [data-h3-role="cut"] .toolbox-widget-body > *,
+  [data-h3-role="join"] .toolbox-widget-body > * { min-width: 510px; }
+  .toolbox-widget-body:focus-within { overflow: auto; }
+}

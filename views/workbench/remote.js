@@ -4,7 +4,7 @@ let token = sessionStorage.getItem(sessionKey) ?? "";
 
 async function call(path, options = {}, query = {}, asFile = false) {
   const url = new URL(`/api/${path}`, location.origin);
-  url.search = new URLSearchParams(query);
+  for (const [key, value] of new URLSearchParams(query)) url.searchParams.set(key, value);
   const headers = new Headers(options.headers);
   headers.set("Authorization", `Bearer ${token}`);
   const response = await fetch(url, { ...options, headers, credentials: "omit", redirect: "error" });

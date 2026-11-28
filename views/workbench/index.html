@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ComfyUI 工作台</title>
   <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./h3_toolbox.css">
 </head>
 <body>
   <main>
@@ -799,6 +800,10 @@
                 </div>
               </details>
               <p id="h3-prompt-status" role="status"></p>
+            </section>
+            <section id="queue-h3-toolbox" hidden aria-label="H3 工具箱">
+              <p id="queue-h3-toolbox-status" role="status" aria-live="polite" hidden></p>
+              <div data-toolbox-panels></div>
             </section>
             <section id="queue-h3-media" class="h3-media-editor" hidden tabindex="0" aria-label="H3 参考素材编辑器">
               <details class="h3-task-disclosure">

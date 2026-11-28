@@ -323,7 +323,7 @@ def output_refs(record, output_nodes, *, video=False, include_node=False):
         node_output = outputs.get(key, {})
         candidates = [
             ref
-            for category in ("images", "videos", "gifs")
+            for category in ("images", "videos", "gifs", "h3v3_film")
             for ref in node_output.get(category, [])
         ]
         for ref in candidates:

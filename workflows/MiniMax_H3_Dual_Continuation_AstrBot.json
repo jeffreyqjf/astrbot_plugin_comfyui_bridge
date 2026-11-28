@@ -1,0 +1,994 @@
+{
+  "prompt": {
+    "4": {
+      "inputs": {
+        "unet_name": "minimax_h3_fl2va_pruned_w6a8.safetensors",
+        "weight_dtype": "default"
+      },
+      "class_type": "UNETLoader",
+      "_meta": {
+        "title": "Load Diffusion Model"
+      }
+    },
+    "5": {
+      "inputs": {
+        "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+        "type": "minimax",
+        "device": "default"
+      },
+      "class_type": "CLIPLoader",
+      "_meta": {
+        "title": "Load CLIP"
+      }
+    },
+    "6": {
+      "inputs": {
+        "vae_name": "minimax_h3_video_vae_int8_convrot.safetensors"
+      },
+      "class_type": "VAELoader",
+      "_meta": {
+        "title": "Load VAE"
+      }
+    },
+    "7": {
+      "inputs": {
+        "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+      },
+      "class_type": "VAELoader",
+      "_meta": {
+        "title": "Load VAE"
+      }
+    },
+    "8": {
+      "inputs": {
+        "lora_name": "MiniMaxH3\\minimax_h3_ref2v_turbo_silver_dareties_comfy_pruned_v2.safetensors",
+        "strength_model": 1,
+        "model": [
+          "4",
+          0
+        ]
+      },
+      "class_type": "LoraLoaderModelOnly",
+      "_meta": {
+        "title": "加速Lora"
+      }
+    },
+    "9": {
+      "inputs": {
+        "model_name": "minimax_h3_latent_upscaler_3d_conv_v1_bf16.safetensors"
+      },
+      "class_type": "LatentUpscaleModelLoader",
+      "_meta": {
+        "title": "二采放大模型（原生）"
+      }
+    },
+    "10": {
+      "inputs": {
+        "reserved": 1,
+        "mode": "manual",
+        "seed": 1,
+        "auto_max_reserved": 0,
+        "clean_gpu_before": false,
+        "anything": [
+          "8",
+          0
+        ]
+      },
+      "class_type": "ReservedVRAMSetter",
+      "_meta": {
+        "title": "Set Reserved VRAM(GB) ⚙️"
+      }
+    },
+    "11": {
+      "inputs": {
+        "shift_video": 12,
+        "shift_audio": 3,
+        "model": [
+          "10",
+          0
+        ]
+      },
+      "class_type": "MiniMaxH3SigmaShift",
+      "_meta": {
+        "title": "ModelSamplingMiniMaxH3"
+      }
+    },
+    "13": {
+      "inputs": {
+        "attention": "comfy kitchen attention",
+        "model": [
+          "11",
+          0
+        ]
+      },
+      "class_type": "ModelAttentionBackend",
+      "_meta": {
+        "title": "Model Attention Backend"
+      }
+    },
+    "14": {
+      "inputs": {
+        "head_chunks": 4,
+        "model": [
+          "13",
+          0
+        ]
+      },
+      "class_type": "MiniMaxLowVRAMAttention",
+      "_meta": {
+        "title": "MiniMax H3 Low VRAM Attention"
+      }
+    },
+    "15": {
+      "inputs": {
+        "chunks": 2,
+        "seq_threshold": 4096,
+        "model": [
+          "14",
+          0
+        ]
+      },
+      "class_type": "MiniMaxChunkFeedForward",
+      "_meta": {
+        "title": "MiniMax H3 Chunk FeedForward"
+      }
+    },
+    "16": {
+      "inputs": {
+        "selection": "sol-attn",
+        "start_percent": 0.2,
+        "end_percent": 0.9,
+        "dense_blocks": "0-2,-1",
+        "min_tokens": 12288,
+        "extra_tokens": 256,
+        "sink_conditioning": "exact_kv_and_rows",
+        "verbose": false,
+        "model": [
+          "15",
+          0
+        ],
+        "selection.tau": 1
+      },
+      "class_type": "BlockSparseAttention",
+      "_meta": {
+        "title": "Model Sparse Attention"
+      }
+    },
+    "17": {
+      "inputs": {
+        "model": [
+          "19",
+          0
+        ]
+      },
+      "class_type": "Power Lora Loader (rgthree)",
+      "_meta": {
+        "title": "二采lora"
+      }
+    },
+    "18": {
+      "inputs": {
+        "model": [
+          "19",
+          0
+        ]
+      },
+      "class_type": "Power Lora Loader (rgthree)",
+      "_meta": {
+        "title": "一采lora"
+      }
+    },
+    "19": {
+      "inputs": {
+        "max_resolution": 1024,
+        "jpeg_quality": 80,
+        "suppress_default_preview": true,
+        "preview_frames": 999,
+        "preview_fps": 12,
+        "tiny_vae": "taeh3.safetensors",
+        "model": [
+          "16",
+          0
+        ]
+      },
+      "class_type": "ModelPreviewOverrideKJ",
+      "_meta": {
+        "title": "Model Preview Override"
+      }
+    },
+    "21": {
+      "inputs": {
+        "seconds": 6,
+        "follow_reference": false,
+        "ratio": "16:9",
+        "orientation": "横",
+        "megapixels": 0.4,
+        "upscale": 1.25,
+        "pad_reference": false,
+        "custom_width": 1344,
+        "custom_height": 832,
+        "refs": [
+          "5994",
+          0
+        ]
+      },
+      "class_type": "AmiaomiaoH3_GenerationSettings",
+      "_meta": {
+        "title": "H3 生成设置"
+      }
+    },
+    "22": {
+      "inputs": {
+        "scheduler": "simple",
+        "first_steps": 6,
+        "second_steps": 4,
+        "extra_steps": 1,
+        "start_at_sigma": 0.7,
+        "end_at_sigma": 0,
+        "spacing": "cosine",
+        "model": [
+          "19",
+          0
+        ]
+      },
+      "class_type": "AmiaomiaoH3_TwoPassSigmas",
+      "_meta": {
+        "title": "H3 两采 Sigma"
+      }
+    },
+    "23": {
+      "inputs": {
+        "value": false
+      },
+      "class_type": "easy boolean",
+      "_meta": {
+        "title": "一采重叠帧优化"
+      }
+    },
+    "24": {
+      "inputs": {
+        "value": true
+      },
+      "class_type": "easy boolean",
+      "_meta": {
+        "title": "二采重叠帧优化"
+      }
+    },
+    "27": {
+      "inputs": {
+        "text": "",
+        "refs": [
+          "5994",
+          0
+        ]
+      },
+      "class_type": "AmiaomiaoH3_Prompt",
+      "_meta": {
+        "title": "提示词"
+      }
+    },
+    "31": {
+      "inputs": {
+        "guides": "[]",
+        "enable_guide": false,
+        "positive": [
+          "35",
+          0
+        ],
+        "latent": [
+          "35",
+          1
+        ],
+        "length_seconds": [
+          "21",
+          6
+        ],
+        "vae": [
+          "6",
+          0
+        ],
+        "audio_vae": [
+          "7",
+          0
+        ]
+      },
+      "class_type": "AmiaomiaoH3_H3 Guide Timeline v2",
+      "_meta": {
+        "title": "H3 Guide 时间轴 v2"
+      }
+    },
+    "32": {
+      "inputs": {
+        "enable_guide": false,
+        "positive": [
+          "35",
+          0
+        ],
+        "latent": [
+          "40",
+          0
+        ],
+        "shared_guides": [
+          "31",
+          1
+        ],
+        "vae": [
+          "6",
+          0
+        ],
+        "audio_vae": [
+          "7",
+          0
+        ]
+      },
+      "class_type": "AmiaomiaoH3_H3 Guide Timeline v2 B",
+      "_meta": {
+        "title": "H3 Guide 时间轴 v2（二采信息传输）"
+      }
+    },
+    "35": {
+      "inputs": {
+        "width": 1344,
+        "height": 768,
+        "length": 124,
+        "ref_image_size": "max",
+        "follow_reference": false,
+        "pad_reference": true,
+        "sampling_pass": "一采",
+        "clip": [
+          "5",
+          0
+        ],
+        "refs": [
+          "5994",
+          0
+        ],
+        "prompt": [
+          "27",
+          0
+        ],
+        "vae": [
+          "6",
+          0
+        ],
+        "audio_vae": [
+          "7",
+          0
+        ],
+        "settings": [
+          "21",
+          0
+        ]
+      },
+      "class_type": "AmiaomiaoH3_ReferenceToVideo",
+      "_meta": {
+        "title": "H3 参考生成视频（素材包）"
+      }
+    },
+    "36": {
+      "inputs": {
+        "context_length": "22",
+        "audio_context_length": 24,
+        "enable_audio_context": false,
+        "conditioning": [
+          "31",
+          0
+        ],
+        "vae": [
+          "6",
+          0
+        ],
+        "latent": [
+          "35",
+          1
+        ],
+        "context_latent": [
+          "6108",
+          0
+        ],
+        "audio_vae": [
+          "7",
+          0
+        ],
+        "link": [
+          "6108",
+          2
+        ]
+      },
+      "class_type": "AmiaomiaoH3_MiniMaxH3MotionContextClipStream",
+      "_meta": {
+        "title": "H3 Motion Context (ClipStream)"
+      }
+    },
+    "38": {
+      "inputs": {
+        "seed": -1
+      },
+      "class_type": "Seed (rgthree)",
+      "_meta": {
+        "title": "Seed (rgthree)"
+      }
+    },
+    "39:5898": {
+      "inputs": {
+        "samples": [
+          "6010",
+          0
+        ],
+        "vae": [
+          "7",
+          0
+        ]
+      },
+      "class_type": "VAEDecodeAudio",
+      "_meta": {
+        "title": "VAE Decode Audio"
+      }
+    },
+    "39:5899": {
+      "inputs": {
+        "samples": [
+          "6010",
+          0
+        ],
+        "vae": [
+          "6",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "39:5900": {
+      "inputs": {
+        "fps": 24,
+        "match_tail": true,
+        "images": [
+          "39:5899",
+          0
+        ],
+        "trim_frames": [
+          "36",
+          1
+        ],
+        "audio": [
+          "39:5898",
+          0
+        ],
+        "frames_cap": [
+          "35",
+          3
+        ]
+      },
+      "class_type": "AmiaomiaoH3_MiniMaxH3MotionContextTrimClipStream",
+      "_meta": {
+        "title": "H3 Motion Context Trim (ClipStream)"
+      }
+    },
+    "40": {
+      "inputs": {
+        "width": [
+          "21",
+          3
+        ],
+        "height": [
+          "21",
+          4
+        ],
+        "length": [
+          "21",
+          5
+        ]
+      },
+      "class_type": "EmptyMiniMaxH3LatentAV",
+      "_meta": {
+        "title": "二采 · H3 空 AV Latent"
+      }
+    },
+    "41": {
+      "inputs": {
+        "audio_policy": "auto",
+        "second_pass_audio_source": "legacy_policy",
+        "second_pass_audio_strength": 0,
+        "upscale_model": [
+          "9",
+          0
+        ],
+        "first_pass": [
+          "6010",
+          0
+        ],
+        "template": [
+          "40",
+          0
+        ],
+        "positive": [
+          "42",
+          0
+        ]
+      },
+      "class_type": "AmiaomiaoH3_SecondPassPrepare",
+      "_meta": {
+        "title": "H3 二采准备"
+      }
+    },
+    "42": {
+      "inputs": {
+        "context_length": "22",
+        "audio_context_length": 24,
+        "enable_audio_context": false,
+        "conditioning": [
+          "32",
+          0
+        ],
+        "vae": [
+          "6",
+          0
+        ],
+        "latent": [
+          "40",
+          0
+        ],
+        "context_latent": [
+          "6108",
+          1
+        ],
+        "audio_vae": [
+          "7",
+          0
+        ],
+        "link": [
+          "6108",
+          2
+        ]
+      },
+      "class_type": "AmiaomiaoH3_MiniMaxH3MotionContextClipStream",
+      "_meta": {
+        "title": "H3 Motion Context (ClipStream)"
+      }
+    },
+    "45": {
+      "inputs": {
+        "frame_rate": 24,
+        "loop_count": 0,
+        "filename_prefix": "vedio/H3_一采",
+        "format": "video/h264-mp4",
+        "pingpong": false,
+        "save_output": true,
+        "images": [
+          "39:5900",
+          0
+        ],
+        "audio": [
+          "39:5900",
+          1
+        ],
+        "pix_fmt": "yuv420p",
+        "crf": 19,
+        "save_metadata": false,
+        "trim_to_audio": false
+      },
+      "class_type": "VideoCombineV2",
+      "_meta": {
+        "title": "一采视频"
+      }
+    },
+    "46": {
+      "inputs": {
+        "frame_rate": 24,
+        "loop_count": 0,
+        "filename_prefix": "vedio/H3_二采",
+        "format": "video/h264-mp4",
+        "pingpong": false,
+        "save_output": true,
+        "images": [
+          "6012:6001",
+          0
+        ],
+        "audio": [
+          "6012:6001",
+          1
+        ],
+        "pix_fmt": "yuv420p",
+        "crf": 19,
+        "save_metadata": false,
+        "trim_to_audio": false
+      },
+      "class_type": "VideoCombineV2",
+      "_meta": {
+        "title": "二采视频"
+      }
+    },
+    "50": {
+      "inputs": {
+        "shot_tag": "Auto",
+        "link": [
+          "6108",
+          2
+        ],
+        "latent_1": [
+          "6010",
+          0
+        ],
+        "latent_2": [
+          "6004",
+          0
+        ],
+        "video": [
+          "46",
+          0
+        ],
+        "prompt": [
+          "27",
+          0
+        ],
+        "draft_video": [
+          "45",
+          0
+        ]
+      },
+      "class_type": "AmiaomiaoH3_MiniMaxClipStageSaver",
+      "_meta": {
+        "title": "H3 片段保存 v2"
+      }
+    },
+    "5994": {
+      "inputs": {
+        "references": "{\"version\":1,\"images\":[],\"audios\":[],\"videos\":[]}",
+        "target_megapixels": 1.25,
+        "resampling_method": "Bicubic",
+        "upscale_small_images": false
+      },
+      "class_type": "AmiaomiaoH3_ReferenceHub",
+      "_meta": {
+        "title": "H3 参考素材"
+      }
+    },
+    "6004": {
+      "inputs": {
+        "color_compensation": false,
+        "color_strength": 0.25,
+        "color_fade_frames": 22,
+        "color_follow_overlap": false,
+        "samples": [
+          "6005:5996",
+          0
+        ],
+        "trim_frames": [
+          "42",
+          1
+        ],
+        "enabled": [
+          "24",
+          0
+        ],
+        "context_latent": [
+          "6108",
+          1
+        ]
+      },
+      "class_type": "AmiaomiaoH3_MiniMaxH3OverlapRestoreClipStream",
+      "_meta": {
+        "title": "二采 · 原始重叠恢复"
+      }
+    },
+    "6005:5997": {
+      "inputs": {
+        "sampler_name": "euler"
+      },
+      "class_type": "KSamplerSelect",
+      "_meta": {
+        "title": "KSamplerSelect"
+      }
+    },
+    "6005:5996": {
+      "inputs": {
+        "noise": [
+          "6005:5995",
+          0
+        ],
+        "guider": [
+          "6005:6000",
+          0
+        ],
+        "sampler": [
+          "6005:5997",
+          0
+        ],
+        "sigmas": [
+          "22",
+          1
+        ],
+        "latent_image": [
+          "41",
+          0
+        ]
+      },
+      "class_type": "SamplerCustomAdvanced",
+      "_meta": {
+        "title": "SamplerCustomAdvanced"
+      }
+    },
+    "6005:5995": {
+      "inputs": {
+        "noise_seed": [
+          "38",
+          0
+        ]
+      },
+      "class_type": "RandomNoise",
+      "_meta": {
+        "title": "RandomNoise"
+      }
+    },
+    "6005:6000": {
+      "inputs": {
+        "model": [
+          "17",
+          0
+        ],
+        "conditioning": [
+          "6090",
+          0
+        ]
+      },
+      "class_type": "BasicGuider",
+      "_meta": {
+        "title": "Basic Guider"
+      }
+    },
+    "6010": {
+      "inputs": {
+        "color_compensation": false,
+        "color_strength": 0.25,
+        "color_fade_frames": 22,
+        "color_follow_overlap": false,
+        "samples": [
+          "6011:6008",
+          1
+        ],
+        "trim_frames": [
+          "36",
+          1
+        ],
+        "enabled": [
+          "23",
+          0
+        ],
+        "context_latent": [
+          "6108",
+          0
+        ]
+      },
+      "class_type": "AmiaomiaoH3_MiniMaxH3OverlapRestoreClipStream",
+      "_meta": {
+        "title": "一采 · 原始重叠恢复"
+      }
+    },
+    "6011:6006": {
+      "inputs": {
+        "model": [
+          "18",
+          0
+        ],
+        "conditioning": [
+          "36",
+          0
+        ]
+      },
+      "class_type": "BasicGuider",
+      "_meta": {
+        "title": "Basic Guider"
+      }
+    },
+    "6011:6007": {
+      "inputs": {
+        "noise_seed": [
+          "38",
+          0
+        ]
+      },
+      "class_type": "RandomNoise",
+      "_meta": {
+        "title": "RandomNoise"
+      }
+    },
+    "6011:6009": {
+      "inputs": {
+        "sampler_name": "euler"
+      },
+      "class_type": "KSamplerSelect",
+      "_meta": {
+        "title": "KSamplerSelect"
+      }
+    },
+    "6011:6008": {
+      "inputs": {
+        "noise": [
+          "6011:6007",
+          0
+        ],
+        "guider": [
+          "6011:6006",
+          0
+        ],
+        "sampler": [
+          "6011:6009",
+          0
+        ],
+        "sigmas": [
+          "22",
+          0
+        ],
+        "latent_image": [
+          "35",
+          1
+        ]
+      },
+      "class_type": "SamplerCustomAdvanced",
+      "_meta": {
+        "title": "SamplerCustomAdvanced"
+      }
+    },
+    "6012:5998": {
+      "inputs": {
+        "samples": [
+          "6004",
+          0
+        ],
+        "vae": [
+          "6",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "6012:5999": {
+      "inputs": {
+        "samples": [
+          "6004",
+          0
+        ],
+        "vae": [
+          "7",
+          0
+        ]
+      },
+      "class_type": "VAEDecodeAudio",
+      "_meta": {
+        "title": "VAE Decode Audio"
+      }
+    },
+    "6012:6001": {
+      "inputs": {
+        "fps": 24,
+        "match_tail": true,
+        "images": [
+          "6012:5998",
+          0
+        ],
+        "trim_frames": [
+          "42",
+          1
+        ],
+        "audio": [
+          "6012:5999",
+          0
+        ],
+        "frames_cap": [
+          "35",
+          3
+        ]
+      },
+      "class_type": "AmiaomiaoH3_MiniMaxH3MotionContextTrimClipStream",
+      "_meta": {
+        "title": "H3 Motion Context Trim (ClipStream)"
+      }
+    },
+    "6090": {
+      "inputs": {
+        "pass_through": [
+          "41",
+          1
+        ],
+        "clip": [
+          "5",
+          0
+        ],
+        "enabled": [
+          "6091",
+          0
+        ]
+      },
+      "class_type": "AmiaomiaoH3_ReleaseTextEncoder",
+      "_meta": {
+        "title": "H3 释放文本编码器"
+      }
+    },
+    "6091": {
+      "inputs": {
+        "value": true
+      },
+      "class_type": "easy boolean",
+      "_meta": {
+        "title": "是否在二采运行前卸载文本编码器？"
+      }
+    },
+    "6103": {
+      "inputs": {
+        "split_mode": "fixed",
+        "video": "",
+        "custom_path": "",
+        "segment_duration": 6,
+        "segment_id": 1,
+        "playback_speed": "1.0x",
+        "detection_sensitivity": "medium",
+        "motion_context_frames": "auto",
+        "scale_percent": 100,
+        "align_to_h3_grid": true,
+        "project_name": "default",
+        "save_enabled": true,
+        "save_preview_mp4": true,
+        "save_dtype": "int8",
+        "playback_speed_custom": 1
+      },
+      "class_type": "AmiaomiaoH3_H3VideoCutterV3",
+      "_meta": {
+        "title": "H3 视频裁切 V3"
+      }
+    },
+    "6104": {
+      "inputs": {
+        "project_name": "default",
+        "variant_policy": "优先二采（无则退回一采）",
+        "join_mode": "auto（参数一致无损直拷，否则重编码）",
+        "exclude_clips": "",
+        "clip_order": "",
+        "fps": 24,
+        "output_name": "",
+        "playback_speed": "1.0x",
+        "playback_speed_custom": 1,
+        "asset_kind": "dual"
+      },
+      "class_type": "AmiaomiaoH3_H3LongBuilderV3",
+      "_meta": {
+        "title": "H3 长视频拼接 V3"
+      }
+    },
+    "6108": {
+      "inputs": {
+        "project_name": "default",
+        "mode": "全新段落",
+        "clip_selection": "latest",
+        "passes": "双采",
+        "context_length": "22",
+        "enable_audio_context": true,
+        "audio_context_length": 24,
+        "draft_only": false,
+        "refine_clip": "",
+        "refine_revision": "",
+        "stage_plan": ""
+      },
+      "class_type": "AmiaomiaoH3_MiniMaxClipStagePicker",
+      "_meta": {
+        "title": "H3 片段选择 v2"
+      }
+    }
+  },
+  "astrbot": {
+    "node_mapping": {
+      "positive": [
+        "27.text"
+      ],
+      "negative": [],
+      "seed": [
+        "38.seed"
+      ]
+    }
+  }
+}

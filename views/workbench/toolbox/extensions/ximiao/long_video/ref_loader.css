@@ -1,0 +1,145 @@
+/* H3 Reference Loaders (Image 0..8 / Audio 0..2)
+   Built on top of the shared Soft Luminous Studio shell (.ahr.ahr-hub in ../refs/refs.css)
+   so all 6 dark/light themes, large-button mode, and high-DPI display settings apply automatically. */
+
+.ahr.ahr-hub.h3rl-loader .h3rl-lib-acts {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 5px;
+}
+
+.ahr.ahr-hub.h3rl-loader .h3rl-port-pill {
+    display: inline-flex;
+    align-items: center;
+    flex: 1 1 0;
+    min-width: 0;
+    height: 24px;
+    padding: 0 7px;
+    border-radius: 6px;
+    border: 1px solid color-mix(in srgb, var(--hub-kind) 30%, var(--hub-line));
+    background: color-mix(in srgb, var(--hub-kind) 10%, var(--hub-input));
+    color: var(--hub-kind);
+    font-family: var(--h3-font-mono, "Cascadia Mono", Consolas, ui-monospace, monospace);
+    font-size: calc(11.5px * var(--h3-font-scale, 1));
+    font-weight: var(--h3-weight-strong, 700);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ahr.ahr-hub.h3rl-loader .h3rl-port-pill.is-off {
+    border-color: var(--hub-line);
+    background: var(--hub-input);
+    color: var(--ahr-faint);
+    font-weight: var(--h3-weight-ui, 600);
+}
+
+.ahr.ahr-hub.h3rl-loader .h3rl-port-pill.is-inline {
+    flex: 0 0 auto;
+    height: 22px;
+    padding: 0 6px;
+    font-size: calc(11px * var(--h3-font-scale, 1));
+}
+
+.ahr.ahr-hub.h3rl-loader[data-compact-cards="1"] .h3rl-port-pill {
+    height: 22px;
+    padding: 0 5px;
+    font-size: calc(11px * var(--h3-font-scale, 1));
+}
+
+.ahr.ahr-hub.h3rl-loader .hub-tbtn.is-replace {
+    padding: 0 6px;
+    color: var(--ahr-muted);
+}
+
+.ahr.ahr-hub.h3rl-loader .hub-tbtn.is-replace:hover:not(:disabled) {
+    border-color: var(--hub-kind);
+    color: var(--hub-kind);
+    background: color-mix(in srgb, var(--hub-kind) 14%, var(--hub-btn));
+}
+
+.ahr.ahr-hub.h3rl-loader .hub-tbtn.is-replace .pi {
+    font-size: 10.5px;
+}
+
+.ahr.ahr-hub.h3rl-loader .h3rl-row-sub {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    font-size: calc(11.5px * var(--h3-font-scale, 1));
+    color: var(--ahr-faint);
+}
+
+.ahr.ahr-hub.h3rl-loader .h3rl-row-file {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.ahr.ahr-hub.h3rl-loader .h3rl-row-dim {
+    flex: none;
+    font-family: var(--h3-font-mono, "Cascadia Mono", Consolas, ui-monospace, monospace);
+    font-size: calc(11.5px * var(--h3-font-scale, 1));
+    font-weight: var(--h3-weight-ui, 600);
+    font-variant-numeric: tabular-nums;
+    color: var(--ahr-muted);
+    white-space: nowrap;
+}
+
+.ahr.ahr-hub.h3rl-loader .h3rl-slot-val {
+    font-family: var(--h3-font-mono, "Cascadia Mono", Consolas, ui-monospace, monospace);
+    font-weight: var(--h3-weight-strong, 700);
+    font-variant-numeric: tabular-nums;
+    color: var(--hub-kind);
+}
+
+.ahr.ahr-hub.h3rl-loader .h3rl-slot-val.is-muted {
+    color: var(--ahr-muted);
+}
+
+.ahr.ahr-hub.h3rl-loader .hub-aud-r2 .h3rl-aud-reset {
+    min-height: 26px;
+    height: 26px;
+    padding: 0 7px;
+    font-size: calc(11.5px * var(--h3-font-scale, 1));
+}
+
+.ahr.ahr-hub.h3rl-loader .h3rl-aud-meta {
+    font-family: var(--h3-font-mono, "Cascadia Mono", Consolas, ui-monospace, monospace);
+    font-size: calc(11px * var(--h3-font-scale, 1));
+    font-variant-numeric: tabular-nums;
+    color: var(--ahr-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ahr.ahr-hub.h3rl-loader .h3rl-aud-meta.is-warn {
+    color: var(--ahr-danger);
+}
+
+.ahr.ahr-hub.h3rl-loader .hub-scale-row {
+    padding-top: 0;
+    border-top: 0;
+}
+
+/* Large-button mode parity with ui_theme.css */
+html[data-amiaomiao-h3-large-buttons] .ahr.ahr-hub.h3rl-loader .h3rl-port-pill {
+    height: 28px;
+    font-size: calc(12.5px * var(--h3-font-scale, 1));
+}
+
+html[data-amiaomiao-h3-large-buttons] .ahr.ahr-hub.h3rl-loader[data-compact-cards="1"] .h3rl-port-pill {
+    height: 24px;
+    font-size: calc(11.5px * var(--h3-font-scale, 1));
+}
+
+html[data-amiaomiao-h3-large-buttons] .ahr.ahr-hub.h3rl-loader .hub-aud-r2 .h3rl-aud-reset {
+    min-height: 31px;
+    height: 31px;
+    padding: 0 9px;
+    font-size: calc(12.5px * var(--h3-font-scale, 1));
+}

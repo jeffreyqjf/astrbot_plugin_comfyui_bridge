@@ -20,10 +20,12 @@ from .video_library import VideoLibrary
 from .workflows.anima_aio import AIO_MAPPING, AIO_WORKFLOW
 from .workflows.controlnet import CONTROL_BRANCHES
 from .workflows.detailer import prepare_detailer_models
+from .workflows.h3_toolbox import TOOLBOX_CUT, TOOLBOX_OUTPUTS
 from .workflows.workflow import (
     ANIMA_DETAILER_WORKFLOW,
     ANIMA_WORKFLOW,
     DETAILER_WORKFLOW,
+    H3_DUAL,
     SDXL_WORKFLOW,
     WAI_MAPPING,
     WAI_WORKFLOW,
@@ -91,6 +93,7 @@ class Job:
     preset: dict | None = None
     configuration: dict | None = field(default=None, repr=False)
     caption: str = ""
+    toolbox_result: dict | None = field(default=None, repr=False)
 
     @property
     def short_id(self):
@@ -684,6 +687,7 @@ class ComfyService:
                     control_outputs=wf.controlnet_outputs, control_archive=control_archive,
                     input_images=wf.input_images,
                     refinement=refinement,
+                    **({"execution_outputs": wf.execution_outputs} if wf.execution_outputs else {}),
                 )
             )
             self.jobs[job.id] = job
@@ -693,7 +697,7 @@ class ComfyService:
     async def _run(
         self, job, graph, outputs, image_data, image_fields, *, image_folder,
         control_sources=None, control_outputs=None, control_archive=None,
-        input_images=None, refinement=None,
+        input_images=None, refinement=None, execution_outputs=None,
     ):
         acquired = False
         record = None
@@ -752,10 +756,23 @@ class ComfyService:
                 types = {node["class_type"] for node in graph.values()} & {"ControlNetLoader", "ModelPatchLoader"}
                 if types:
                     prepare_detailer_models(graph, await self.client.node_schemas(types, cached=True))
+            targets = execution_outputs or outputs
             job.prompt_id = await self.client.submit(graph, metadata=embedded,
-                                                     outputs=list(dict.fromkeys([*outputs, *(control_outputs or {}).values()])))
+                                                     outputs=list(dict.fromkeys([*targets, *(control_outputs or {}).values()])))
             job.submission_done.set()
             record = await self.client.wait(job.prompt_id, job.timeout_seconds)
+            cut = any(graph[key]["class_type"] == TOOLBOX_CUT for key in outputs)
+            if job.workflow == H3_DUAL:
+                job.toolbox_result = {
+                    key: {field: record["outputs"][key][field]}
+                    for key, field in TOOLBOX_OUTPUTS.items()
+                    if field in record.get("outputs", {}).get(key, {})
+                }
+            if cut:
+                if not job.toolbox_result:
+                    raise ComfyError("裁切任务未返回片段库结果。")
+                job.state = "completed"
+                return
             job.paths, job.image_count = await self.client.download_outputs(
                 record,
                 outputs,

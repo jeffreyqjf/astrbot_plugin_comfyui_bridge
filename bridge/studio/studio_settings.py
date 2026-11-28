@@ -59,6 +59,7 @@ from ..workflows.detailer import (
     detailer_workflow,
     feet_switch,
 )
+from ..workflows.h3_toolbox import apply_panels, toolbox_panels
 from ..workflows.illustrious import (
     WAI_BRANCHES,
     lora_loader_files,
@@ -125,6 +126,8 @@ from ..workflows.workflow import (
     REVERSE_WORKFLOW,
     SEGMENTED_VIDEO_WORKFLOWS,
     SVI_WORKFLOW,
+    TOOLBOX_PROMPT_LIMIT,
+    TOOLBOX_WORKFLOWS,
     WAI_WORKFLOW,
     WorkflowError,
     profile_parts,
@@ -152,6 +155,7 @@ from ..workflows.workflow_store import (
     workflow_revision,
 )
 from .h3_media import H3Media, media_view
+from .h3_toolbox import ToolboxStudio
 from .input_library import InputLibrary, InputUnavailable
 from .job_details import describe_configuration
 from .mask_image import apply_mask, reference_body_limit
@@ -384,6 +388,7 @@ class StudioSettings:
         self.model_links = ModelLinks(service, anima)
         self.input_library = InputLibrary(service, anima.workspace)
         self.h3_media = H3Media(service)
+        self.h3_toolbox = ToolboxStudio(self)
         self.regional_presets = RegionalPresets(service)
         self.lora_families = {
             "anima": anima,
@@ -798,6 +803,7 @@ class StudioSettings:
             "h3_media": full_h3 and "416" in workflow.active,
             "h3_final": h3_final_defaults(workflow),
             "video_duration": timing.describe() if timing else None,
+            "h3_toolbox": toolbox_panels(workflow) if workflow.name in TOOLBOX_WORKFLOWS else None,
             "features": feature_catalog(workflow),
         }
 
@@ -1631,13 +1637,30 @@ class StudioSettings:
             prompt, negative, preset = (data.get(key, "") for key in ("positive", "negative", "preset"))
             if not all(isinstance(value, str) for value in (name, prompt, negative, preset)):
                 raise WorkflowError("工作流和提示词必须是文本。")
-            if any(len(value) > 8000 for value in (prompt, negative)) or len(preset) > 64:
+            prompt_limit = TOOLBOX_PROMPT_LIMIT if name in TOOLBOX_WORKFLOWS else 8000
+            if len(prompt) > prompt_limit or len(negative) > 8000 or len(preset) > 64:
                 raise WorkflowError("提示词或预设名称超长。")
             await self.service.initialize()
             workflow = self.service.workflows.get(name)
             if workflow is None:
                 raise WorkflowError("请选择可直接生成的工作流。需要参考图时可用命令表单上传。")
             inputs = self.task_inputs(workflow)
+            if "h3_toolbox" in data or "h3_toolbox_action" in data:
+                if not inputs["h3_toolbox"]:
+                    raise WorkflowError("当前工作流不支持 H3 工具箱任务。")
+                action = data.get("h3_toolbox_action")
+                if action is not None and not isinstance(action, str):
+                    raise WorkflowError("H3 工具箱任务类型无效。")
+                workflow = await asyncio.to_thread(
+                    apply_panels, workflow, data.get("h3_toolbox", {}), action,
+                    workspace=self.anima.workspace.resolve(),
+                )
+                if action:
+                    job = await self.service.start(
+                        f"studio:{request.username}", "", workflow,
+                        timeout_seconds=self.service.qq_timeout_for(workflow),
+                    )
+                    return json_response({"jobs": [self._queue_row(job)]})
             if "video_duration" in data:
                 limits = inputs.get("video_duration")
                 if limits is None:

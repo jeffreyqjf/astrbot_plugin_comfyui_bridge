@@ -26,6 +26,7 @@ def build(target=None):
         "bridge/studio/__init__.py",
         "bridge/studio/input_library.py",
         "bridge/studio/h3_media.py",
+        "bridge/studio/h3_toolbox.py",
         "bridge/studio/mask_image.py",
         "bridge/studio/prompt_library.py",
         "bridge/studio/remote_studio.py",
@@ -53,6 +54,7 @@ def build(target=None):
         "bridge/workflows/illustrious.py",
         "bridge/workflows/lightning.py",
         "bridge/workflows/minimax_h3.py",
+        "bridge/workflows/h3_toolbox.py",
         "bridge/workflows/parameter_layout.py",
         "bridge/workflows/svi.py",
         "bridge/workflows/video_duration.py",
@@ -64,6 +66,8 @@ def build(target=None):
         "templates/drawing_persona.txt",
         "templates/Anima_T2I_AstrBot.json",
         "templates/Anima_Detailer_AstrBot.json",
+        "templates/MiniMax_H3_Dual_Continuation_AstrBot.json",
+        "templates/PH3_Image_Edit_AstrBot.json",
         "templates/Detailer_V40_AstrBot.json",
         "templates/Anima_I2I_AIO_AstrBot.json",
         "templates/Anima_WD14_Caption_AstrBot.json",
@@ -74,6 +78,8 @@ def build(target=None):
         "views/workbench/mask_editor.js",
         "views/workbench/remote.js",
         "views/workbench/h3_media.js",
+        "views/workbench/h3_toolbox.js",
+        "views/workbench/h3_toolbox.css",
         "views/workbench/h3_media_transport.js",
         "views/workbench/h3_media_vendor.js",
         "views/workbench/h3_media_vendor.css",
@@ -100,10 +106,14 @@ def build(target=None):
         "user docs/CONFIGURATION.md",
         "user docs/MODEL_GUIDE.md",
         "user docs/MINIMAX_H3_SEED_HUNTER.md",
+        "user docs/H3_TOOLBOX.md",
         "user docs/REGIONAL_PROMPT.md",
         "user docs/ANIMA_DETAILER.md",
         "LICENSE",
     ]
+    files.extend(path.relative_to(root).as_posix() for path in sorted(
+        (root / "views/workbench/toolbox").rglob("*")
+    ) if path.is_file() and not path.is_symlink())
     json.loads((root / "_conf_schema.json").read_text(encoding="utf-8"))
     temp = target.with_suffix(".zip.tmp")
     with zipfile.ZipFile(temp, "w", compression=zipfile.ZIP_DEFLATED) as archive:

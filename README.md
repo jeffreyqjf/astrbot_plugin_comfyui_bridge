@@ -1,6 +1,6 @@
 # ComfyUI 工作台
 
-AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v3.25.0。
+AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、WAN 2.2 和 H3 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v4.0.0。
 
 v3 新建任务按工作流选择本次启用的功能，支持 Advanced Gemma V40 的 RGB 区域遮罩与整套区域提示词预设。见[使用教程](user%20docs/REGIONAL_PROMPT.md)。
 
@@ -42,6 +42,8 @@ v3.7 新建任务的提示词预设支持长按预览效果图；任务队列点
 各层指令都可加 `--help`，例如 `/comfy lora wai use --help`。查看单个工作流用 `/comfy gen --wf wai --help`，也可用 `/comfy wf wai --help`。`wai` 可换成简称、完整名称或 `/comfy wf` 里的编号。原有指令仍可用，完整示例见 [QQ 指令集](user%20docs/COMMANDS.md)。
 
 ## 内置工作流
+
+`h3-dual` 提供 H3 双采接续、草稿补采、视频裁切和拼接，`ph3` 提供 PH3 图像编辑与生成。在「新建任务 → 简易添加」可以使用原版 H3 Toolbox 控件。详见 [H3 双采与 PH3 使用说明](user%20docs/H3_TOOLBOX.md)。
 
 Anima Detailer 已独立接入，支持图集参考图、遮罩、新建任务可选功能和 Anima LoRA。详见 [使用说明](user%20docs/ANIMA_DETAILER.md)。
 

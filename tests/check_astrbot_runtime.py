@@ -11,6 +11,7 @@ import sys
 from argparse import ArgumentParser
 from itertools import product
 from pathlib import Path
+from posixpath import dirname, join, normpath
 from subprocess import CompletedProcess
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -71,8 +72,8 @@ async def check_video_duration(instance):
 
     service = instance.service
     assert all(
-        bool(instance.studio.task_inputs(workflow)["video_duration"]) == workflow.is_video
-        for workflow in service.workflows.values()
+        bool(inputs["video_duration"]) == (workflow.is_video and not inputs["h3_toolbox"])
+        for workflow in service.workflows.values() if (inputs := instance.studio.task_inputs(workflow))
     )
     image = io.BytesIO()
     Image.new("RGB", (16, 16)).save(image, "PNG")
@@ -121,6 +122,67 @@ async def check_video_duration(instance):
         assert run.call_count == 7
     assert service.workflows[wan].graph["7"]["inputs"]["length"] == 49
     print("PASS: simple queue video duration, default frames, invalid inputs and saved workflow isolation")
+
+
+async def check_h3_toolbox(instance):
+    from astrbot.api.web import PluginRequest, bind_request_context
+    from starlette.requests import Request
+
+    service = instance.service
+    dual = "MiniMax_H3_Dual_Continuation_AstrBot"
+    ph3 = "PH3_Image_Edit_AstrBot"
+
+    async def call(method, route, payload=None, owner="toolbox-test", query=b""):
+        async def receive():
+            return {"type": "http.request", "body": json.dumps(payload).encode()}
+        incoming = Request({"type": "http", "method": method, "path": "/" + route, "headers": [],
+                            "query_string": query}, receive)
+        with bind_request_context(PluginRequest(incoming, username=owner)):
+            return await instance.remote_studio.routes[(method, route)]()
+
+    caps = {name: instance.studio.task_inputs(service.workflows[name])["h3_toolbox"] for name in (dual, ph3)}
+    assert set(caps[dual]) == {"references", "settings", "picker", "cut", "join"}
+    assert set(caps[ph3]) == {"images"}
+    with patch.object(service, "_run") as run:
+        for workflow, positive, values, action, delivery in (
+            (dual, "A shot", {"settings": {"seconds": 6.5}}, None, "46"),
+            (dual, "A draft", {"picker": {"draft_only": True}}, None, "45"),
+            (dual, "", {"picker": {"refine_clip": "clip_test", "refine_revision": "revision"}}, None, "46"),
+            (dual, "", {"cut": {"video": "demo.mp4"}}, "cut", "6103"),
+            (dual, "", {"join": {"output_name": "movie.mp4"}}, "join", "6104"),
+            (ph3, "A reference" * 900, {"images": {"media_files": '[{"filename":"fixture.png"}]'}}, None, "62"),
+        ):
+            payload = {"workflow": workflow, "positive": positive, "h3_toolbox": values}
+            if action:
+                payload["h3_toolbox_action"] = action
+            response = await call("POST", "studio/queue", payload)
+            assert response.status_code == 200, response.body
+            await asyncio.sleep(0)
+            _, graph, outputs = run.call_args.args[:3]
+            assert outputs == [delivery]
+            if action:
+                assert set(graph) == {delivery}
+            elif workflow == dual:
+                assert run.call_args.kwargs["execution_outputs"] == [delivery, "50"]
+                assert graph["50"]["inputs"]["link"] == ["6108", 2]
+                assert graph["41"]["inputs"]["template"] == ["40", 0]
+                assert "6103" not in graph and "6104" not in graph
+                assert graph["21"]["inputs"]["seconds"] == values.get("settings", {}).get("seconds", 6)
+            else:
+                assert graph["24"]["inputs"]["value"] == positive
+                assert json.loads(graph["65"]["inputs"]["media_files"])[0]["filename"] == "fixture.png"
+        assert service.workflows[dual].graph["21"]["inputs"]["seconds"] == 6
+        assert service.workflows[ph3].graph["65"]["inputs"]["media_files"] == "[]"
+        bad = {"workflow": ph3, "positive": "test", "h3_toolbox": {"images": {"media_files": '[{"filename":"../escape.png"}]'}}}
+        assert (await call("POST", "studio/queue", bad)).status_code == 400
+        assert (await call("POST", "studio/queue", {"workflow": dual, "h3_toolbox_action": "join",
+                      "h3_toolbox": {"join": {"output_name": "../escape.mp4"}}})).status_code == 400
+        assert run.call_count == 6
+    route = "studio/h3/toolbox/rpc"
+    assert (await call("POST", route, {"method": "GET", "path": "/history"}, owner=None)).status_code == 401
+    assert (await call("POST", route, {"method": "GET", "path": "/history"})).status_code == 400
+    assert (await call("POST", route, {"method": "GET", "path": "/view?filename=../escape.mp4"})).status_code == 400
+    print("PASS: native H3 Toolbox task settings, draft/refine routing, PH3 reference, tool isolation and RPC guards")
 
 
 async def check_refinement_pairs(instance, root):
@@ -735,9 +797,10 @@ async def check(root, archive, core, *, anima_workspace=None, anima_schemas=None
     for asset in remote_studio.ASSETS:
         if Path(asset).suffix not in {".js", ".mjs"}:
             continue
-        imports = re.findall(r'''(?:from\s*|import\s*\(\s*|import\s*)["']\./([^"']+)["']''', (remote_studio.VIEW / asset).read_text(encoding="utf-8"))
+        imports = re.findall(r'''(?:from\s*|import\s*\(\s*|import\s*)["'](\.{1,2}/[^"']+)["']''', (remote_studio.VIEW / asset).read_text(encoding="utf-8"))
         for dependency in imports:
-            assert dependency.split("?", 1)[0].split("#", 1)[0] in remote_studio.ASSETS, (asset, dependency)
+            dependency = dependency.split("?", 1)[0].split("#", 1)[0]
+            assert normpath(join(dirname(asset), dependency)) in remote_studio.ASSETS, (asset, dependency)
     schema = json.loads((plugin / "_conf_schema.json").read_text(encoding="utf-8"))
     config = module.AstrBotConfig(config_path=str(root / "plugin-config.json"), schema=schema)
     for key, value in {"anima_workspace": str(root), "remote_studio_enabled": False}.items():
@@ -754,6 +817,7 @@ async def check(root, archive, core, *, anima_workspace=None, anima_schemas=None
         assert not service.errors, service.errors
         await check_h3_final_inputs(instance)
         await check_video_duration(instance)
+        await check_h3_toolbox(instance)
         await check_refinement_pairs(instance, root)
         await check_model_catalog(instance)
         await check_reverse_history(instance)

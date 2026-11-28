@@ -1,5 +1,6 @@
 import re
 import unittest
+from posixpath import dirname, join, normpath
 
 from bridge.studio.remote_studio import ASSETS, VIEW
 
@@ -11,7 +12,8 @@ class WorkbenchAssetTests(unittest.TestCase):
             self.assertTrue(path.is_file(), asset)
             if path.suffix not in {".js", ".mjs"}:
                 continue
-            imports = re.findall(r'''(?:from\s*|import\s*\(\s*|import\s*)["']\./([^"']+)["']''', path.read_text(encoding="utf-8"))
+            imports = re.findall(r'''(?:from\s*|import\s*\(\s*|import\s*)["'](\.{1,2}/[^"']+)["']''', path.read_text(encoding="utf-8"))
             for dependency in imports:
                 dependency = dependency.split("?", 1)[0].split("#", 1)[0]
-                self.assertIn(dependency, ASSETS, f"{asset} imports {dependency}, but the remote route is missing")
+                relative = normpath(join(dirname(asset), dependency))
+                self.assertIn(relative, ASSETS, f"{asset} imports {dependency}, but the remote route is missing")

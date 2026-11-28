@@ -31,7 +31,11 @@ H3_SEED_HUNTER = "MiniMax_H3_Seed_Hunter_AstrBot"
 H3_SEED_FINAL = "MiniMax_H3_Seed_Final_AstrBot"
 H3_SEED_FULL = "MiniMax_H3_Seed_Hunter_V3_AstrBot"
 H3_WORKFLOWS = {H3_SEED_HUNTER, H3_SEED_FINAL, H3_SEED_FULL}
-VIDEO_OUTPUT_NODES = frozenset({"SaveVideo", "SaveWEBM", "VHS_VideoCombine"})
+H3_DUAL = "MiniMax_H3_Dual_Continuation_AstrBot"
+PH3_IMAGE = "PH3_Image_Edit_AstrBot"
+TOOLBOX_WORKFLOWS = {H3_DUAL, PH3_IMAGE}
+TOOLBOX_PROMPT_LIMIT = 32000
+VIDEO_OUTPUT_NODES = frozenset({"SaveVideo", "SaveWEBM", "VHS_VideoCombine", "VideoCombineV2"})
 
 
 class WorkflowError(ValueError):
@@ -147,6 +151,7 @@ class Workflow:
         self.name = name
         self.controlnet_outputs = {}
         self.input_images = {}
+        self.execution_outputs = None
         data, settings = profile_parts(data)
         if not isinstance(settings, dict) or not isinstance(settings.get("positive_prefix", ""), str):
             raise WorkflowError("AstrBot 工作流设置格式无效。")
@@ -362,8 +367,9 @@ class Workflow:
         use_stage_seeds = self.name == WAI_WORKFLOW and seed is None and self.default_seed != -1
         if seed is None:
             seed = self.default_seed
-        if len(prompt) > 8000 or (negative is not None and len(negative) > 8000):
-            raise WorkflowError("单项提示词不能超过 8000 字符。")
+        prompt_limit = TOOLBOX_PROMPT_LIMIT if self.name in TOOLBOX_WORKFLOWS else 8000
+        if len(prompt) > prompt_limit or (negative is not None and len(negative) > 8000):
+            raise WorkflowError(f"单项提示词不能超过 {prompt_limit} 字符。")
         if isinstance(seed, bool) or not isinstance(seed, int) or not -1 <= seed <= 2**63 - 1:
             raise WorkflowError("种子应为 -1（随机）或 0 到 9223372036854775807 的整数。")
         if seed != -1 and not self.seeds:

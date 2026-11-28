@@ -4,6 +4,8 @@ MiniMax H3 用 `/comfy gen --wf h3 --seed 1000 描述` 生成三个候选。选�
 
 使用 `/comfy gen --wf h3-v3 --seed 1000 描述 --raw` 运行 Seed Hunter v3 完整版，使用工作台已保存的生成模式、模型和采样参数。
 
+使用 `/comfy gen --wf h3-dual 描述 --raw` 运行 H3 视频，或用 `/comfy gen --wf ph3 描述 --raw` 运行 PH3 图像任务。逐次参考素材、草稿补采、裁切和拼接从 [简易添加](H3_TOOLBOX.md) 操作。
+
 发送 `/comfy help` 或 `/comfy --help` 查看总览。`/绘图` 可替代 `/comfy`。工作台的「新建任务 → 命令添加」也可提交生成类指令和查看 `--help`。使用 `--preset` 时，在表单选择预设所属用户。Advanced Gemma V40 和 Anima T2I 的 ControlNet 在命令下方选图，可用于普通生成、人物 LoRA 遍历和提示词预设遍历。
 
 | 入口 | 用途 |

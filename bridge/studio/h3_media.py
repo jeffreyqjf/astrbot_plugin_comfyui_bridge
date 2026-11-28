@@ -259,37 +259,44 @@ class H3Media:
             if len(raw) > 4096:
                 raise WorkflowError("媒体预览请求过大。")
             params = media_view(json.loads(raw).get("file"))
-            async with self.lock:
-                now = monotonic()
-                for token, link in list(self.preview_links.items()):
-                    if link[0] < now:
-                        link[1].unlink(missing_ok=True)
-                        del self.preview_links[token]
-                owner = request.headers.get("authorization", "") if not request.plugin_name else request.username
-                for token, link in self.preview_links.items():
-                    if link[2:] == (owner, params):
-                        self.preview_links[token] = (now + 6 * 60 * 60, *link[1:])
-                        return json_response({"src": await self.preview_url(token, link[1])})
-                if len(self.preview_links) >= 128:
-                    raise WorkflowError("媒体预览数量已达上限，请稍后重试。")
-                if self.preview_directory is None:
-                    self.preview_directory = TemporaryDirectory(prefix="h3-media-", dir=self.service.data_dir)
-                directory = Path(self.preview_directory.name)
-                token = secrets.token_urlsafe(32)
-                path = directory / (token + Path(params["filename"]).suffix.lower())
-                try:
-                    await self.service.client.request(
-                        "GET", "/view", params=params, output_path=path,
-                        max_bytes=max(self.service.client.max_video_bytes, self.service.client.max_image_bytes),
-                    )
-                    src = await self.preview_url(token, path)
-                except BaseException:
-                    path.unlink(missing_ok=True)
-                    raise
-                self.preview_links[token] = (now + 6 * 60 * 60, path, owner, params)
-                return json_response({"src": src})
+            return json_response({"src": await self.register_preview(
+                "/view", params, Path(params["filename"]).suffix.lower()
+            )})
         except (OSError, ValueError, KeyError, AttributeError, ComfyError) as exc:
             return error_response(str(exc), status_code=400)
+
+    async def register_preview(self, route, params, suffix):
+        from astrbot.api.web import request
+
+        async with self.lock:
+            now = monotonic()
+            for token, link in list(self.preview_links.items()):
+                if link[0] < now:
+                    link[1].unlink(missing_ok=True)
+                    del self.preview_links[token]
+            owner = request.headers.get("authorization", "") if not request.plugin_name else request.username
+            source = (route, params)
+            for token, link in self.preview_links.items():
+                if link[2:] == (owner, source):
+                    self.preview_links[token] = (now + 6 * 60 * 60, *link[1:])
+                    return await self.preview_url(token, link[1])
+            if len(self.preview_links) >= 128:
+                raise WorkflowError("媒体预览数量已达上限，请稍后重试。")
+            if self.preview_directory is None:
+                self.preview_directory = TemporaryDirectory(prefix="h3-media-", dir=self.service.data_dir)
+            token = secrets.token_urlsafe(32)
+            path = Path(self.preview_directory.name) / (token + suffix)
+            try:
+                await self.service.client.request(
+                    "GET", route, params=params, output_path=path,
+                    max_bytes=max(self.service.client.max_video_bytes, self.service.client.max_image_bytes),
+                )
+                src = await self.preview_url(token, path)
+            except BaseException:
+                path.unlink(missing_ok=True)
+                raise
+            self.preview_links[token] = (now + 6 * 60 * 60, path, owner, source)
+            return src
 
     @staticmethod
     async def preview_url(token, path):

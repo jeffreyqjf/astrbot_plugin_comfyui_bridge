@@ -1,0 +1,3012 @@
+{
+  "revision": 0,
+  "last_node_id": 66,
+  "last_link_id": 149,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "UNETLoader",
+      "pos": [
+        -960,
+        780
+      ],
+      "size": [
+        430,
+        90
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "UNet名称",
+          "name": "unet_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "unet_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "数据类型",
+          "name": "weight_dtype",
+          "type": "COMBO",
+          "widget": {
+            "name": "weight_dtype"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "模型",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            20
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "UNETLoader",
+        "models": [
+          {
+            "name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+            "directory": "diffusion_models"
+          }
+        ],
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "minimax_h3_fl2va_pruned_w6a8.safetensors",
+        "default"
+      ],
+      "widgets_values_named": {
+        "unet_name": "minimax_h3_fl2va_pruned_w6a8.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    {
+      "id": 2,
+      "type": "CLIPLoader",
+      "pos": [
+        -960,
+        910
+      ],
+      "size": [
+        430,
+        110
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "CLIP名称",
+          "name": "clip_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "clip_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "类型",
+          "name": "type",
+          "type": "COMBO",
+          "widget": {
+            "name": "type"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "设备",
+          "name": "device",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "device"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CLIP",
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "title": "Text encoder",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "CLIPLoader",
+        "models": [
+          {
+            "name": "p-h3-image_text_encoder_int8_convrot.safetensors",
+            "url": "https://huggingface.co/PrunaAI/p-h3-image-comfy/resolve/main/text_encoders/p-h3-image_text_encoder_int8_convrot.safetensors",
+            "directory": "text_encoders"
+          }
+        ],
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "p-h3-image_text_encoder_int8_convrot.safetensors",
+        "minimax",
+        "default"
+      ],
+      "widgets_values_named": {
+        "clip_name": "p-h3-image_text_encoder_int8_convrot.safetensors",
+        "type": "minimax",
+        "device": "default"
+      }
+    },
+    {
+      "id": 3,
+      "type": "VAELoader",
+      "pos": [
+        -960,
+        1080
+      ],
+      "size": [
+        430,
+        60
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "vae名称",
+          "name": "vae_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "vae_name"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "VAE",
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            2,
+            18
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "VAELoader",
+        "models": [
+          {
+            "name": "p-h3-image_vae_int8_convrot.safetensors",
+            "url": "https://huggingface.co/PrunaAI/p-h3-image-comfy/resolve/main/vae/p-h3-image_vae_int8_convrot.safetensors",
+            "directory": "vae"
+          }
+        ],
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "p-h3-image_vae_int8_convrot.safetensors"
+      ],
+      "widgets_values_named": {
+        "vae_name": "p-h3-image_vae_int8_convrot.safetensors"
+      }
+    },
+    {
+      "id": 4,
+      "type": "CLIPLoader",
+      "pos": [
+        -960,
+        1190
+      ],
+      "size": [
+        430,
+        110
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "showAdvanced": true,
+      "inputs": [
+        {
+          "localized_name": "CLIP名称",
+          "name": "clip_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "clip_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "类型",
+          "name": "type",
+          "type": "COMBO",
+          "widget": {
+            "name": "type"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "设备",
+          "name": "device",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "device"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CLIP",
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            75
+          ]
+        }
+      ],
+      "title": "Prompt upsampler model",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "CLIPLoader",
+        "models": [
+          {
+            "name": "p-h3-image_prompt_upsampler_w4a8.safetensors",
+            "url": "https://huggingface.co/PrunaAI/p-h3-image-comfy/resolve/main/text_encoders/p-h3-image_prompt_upsampler_w4a8.safetensors",
+            "directory": "text_encoders"
+          }
+        ],
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "p-h3-image_prompt_upsampler_w4a8.safetensors",
+        "minimax",
+        "default"
+      ],
+      "widgets_values_named": {
+        "clip_name": "p-h3-image_prompt_upsampler_w4a8.safetensors",
+        "type": "minimax",
+        "device": "default"
+      }
+    },
+    {
+      "id": 9,
+      "type": "PH3ImageConditioning",
+      "pos": [
+        1410,
+        780
+      ],
+      "size": [
+        430,
+        360
+      ],
+      "flags": {},
+      "order": 24,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 1
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "shape": 7,
+          "type": "VAE",
+          "link": 2
+        },
+        {
+          "label": "image_1",
+          "localized_name": "image_1",
+          "name": "images.image_1",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 136
+        },
+        {
+          "label": "image_2",
+          "localized_name": "image_2",
+          "name": "images.image_2",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 139
+        },
+        {
+          "localized_name": "image_3",
+          "name": "images.image_3",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 141
+        },
+        {
+          "localized_name": "image_4",
+          "name": "images.image_4",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 143
+        },
+        {
+          "localized_name": "image_5",
+          "name": "images.image_5",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 145
+        },
+        {
+          "localized_name": "image_6",
+          "name": "images.image_6",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 146
+        },
+        {
+          "localized_name": "image_7",
+          "name": "images.image_7",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 147
+        },
+        {
+          "localized_name": "image_8",
+          "name": "images.image_8",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 148
+        },
+        {
+          "localized_name": "image_9",
+          "name": "images.image_9",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 149
+        },
+        {
+          "localized_name": "提示词",
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          },
+          "link": 102
+        },
+        {
+          "localized_name": "宽度",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 73
+        },
+        {
+          "localized_name": "高度",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 74
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "正面",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "links": [
+            11
+          ]
+        },
+        {
+          "localized_name": "Latent",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            120
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "PH3ImageConditioning",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "prompt": true,
+            "width": true,
+            "height": true
+          },
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "Aspect ratio: 1:1\nRequest: change the lighting to night time",
+        0,
+        0
+      ],
+      "widgets_values_named": {
+        "prompt": "Aspect ratio: 1:1\nRequest: change the lighting to night time",
+        "width": 0,
+        "height": 0
+      },
+      "color": "#322",
+      "bgcolor": "#533"
+    },
+    {
+      "id": 18,
+      "type": "MiniMaxH3SigmaShift",
+      "pos": [
+        1880,
+        910
+      ],
+      "size": [
+        310,
+        90
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 27,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 97
+        },
+        {
+          "localized_name": "视频偏移",
+          "name": "shift_video",
+          "type": "FLOAT",
+          "widget": {
+            "name": "shift_video"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "音频偏移",
+          "name": "shift_audio",
+          "type": "FLOAT",
+          "widget": {
+            "name": "shift_audio"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "模型",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            10
+          ]
+        }
+      ],
+      "title": "ModelSamplingMiniMaxH3 (keep at 1.0)",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "MiniMaxH3SigmaShift",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        1,
+        1
+      ],
+      "widgets_values_named": {
+        "shift_video": 1,
+        "shift_audio": 1
+      }
+    },
+    {
+      "id": 10,
+      "type": "BasicGuider",
+      "pos": [
+        1880,
+        960
+      ],
+      "size": [
+        320,
+        50
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 28,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "模型",
+          "name": "model",
+          "type": "MODEL",
+          "link": 10
+        },
+        {
+          "localized_name": "条件",
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "引导器",
+          "name": "GUIDER",
+          "type": "GUIDER",
+          "links": [
+            117
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "BasicGuider",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "KSamplerSelect",
+      "pos": [
+        1880,
+        1010
+      ],
+      "size": [
+        320,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "采样器名称",
+          "name": "sampler_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "sampler_name"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "采样器",
+          "name": "SAMPLER",
+          "type": "SAMPLER",
+          "links": [
+            118
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "KSamplerSelect",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "er_sde"
+      ],
+      "widgets_values_named": {
+        "sampler_name": "er_sde"
+      }
+    },
+    {
+      "id": 12,
+      "type": "RandomNoise",
+      "pos": [
+        1870,
+        780
+      ],
+      "size": [
+        320,
+        90
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "噪波随机种",
+          "name": "noise_seed",
+          "type": "INT",
+          "widget": {
+            "name": "noise_seed"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "噪波",
+          "name": "NOISE",
+          "type": "NOISE",
+          "links": [
+            116
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "RandomNoise",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        417861535306459,
+        "randomize"
+      ],
+      "widgets_values_named": {
+        "noise_seed": 417861535306459,
+        "control_after_generate": "randomize"
+      }
+    },
+    {
+      "id": 13,
+      "type": "ManualSigmas",
+      "pos": [
+        1880,
+        1050
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "sigmas",
+          "name": "sigmas",
+          "type": "STRING",
+          "widget": {
+            "name": "sigmas"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "Sigmas",
+          "name": "SIGMAS",
+          "type": "SIGMAS",
+          "links": [
+            119
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "ManualSigmas",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "1.0, 0.984753, 0.967905, 0.951688, 0.925372, 0.881923, 0.810083, 0.528718, 0.0"
+      ],
+      "widgets_values_named": {
+        "sigmas": "1.0, 0.984753, 0.967905, 0.951688, 0.925372, 0.881923, 0.810083, 0.528718, 0.0"
+      }
+    },
+    {
+      "id": 15,
+      "type": "VAEDecode",
+      "pos": [
+        2440,
+        780
+      ],
+      "size": [
+        210,
+        50
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 30,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "Latent",
+          "name": "samples",
+          "type": "LATENT",
+          "link": 121
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 18
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "图像",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            130
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "VAEDecode",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      }
+    },
+    {
+      "id": 19,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        -960,
+        1350
+      ],
+      "size": [
+        430,
+        90
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "模型",
+          "name": "model",
+          "type": "MODEL",
+          "link": 20
+        },
+        {
+          "localized_name": "LoRA名称",
+          "name": "lora_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "lora_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "模型强度",
+          "name": "strength_model",
+          "type": "FLOAT",
+          "widget": {
+            "name": "strength_model"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "模型",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            128
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.44.0",
+        "Node name for S&R": "LoraLoaderModelOnly",
+        "models": [
+          {
+            "name": "p-h3-image_lora_bf16.safetensors",
+            "url": "https://huggingface.co/PrunaAI/p-h3-image-comfy/resolve/main/loras/p-h3-image_lora_bf16.safetensors",
+            "directory": "loras"
+          }
+        ],
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "MiniMaxH3\\p-h3-image_lora_bf16.safetensors",
+        1
+      ],
+      "widgets_values_named": {
+        "lora_name": "MiniMaxH3\\p-h3-image_lora_bf16.safetensors",
+        "strength_model": 1
+      }
+    },
+    {
+      "id": 24,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        -500.3972846750537,
+        1178.4108612997857
+      ],
+      "size": [
+        560,
+        340
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "值",
+          "name": "value",
+          "type": "STRING",
+          "widget": {
+            "name": "value"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "字符串",
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            77,
+            99
+          ]
+        }
+      ],
+      "title": "输入提示词",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.44.0",
+        "Node name for S&R": "PrimitiveStringMultiline",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        ""
+      ],
+      "widgets_values_named": {
+        "value": ""
+      },
+      "color": "#322",
+      "bgcolor": "#533"
+    },
+    {
+      "id": 28,
+      "type": "MarkdownNote",
+      "pos": [
+        -1520,
+        740
+      ],
+      "size": [
+        520,
+        770
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "## Input Asset\n\n- [image_p_h3_image_edit_atrium_day.png](https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/input/image_p_h3_image_edit_atrium_day.png)\n\n## Model Links\n\n- [Hugging Face:Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3)\n- [Hugging Face:PrunaAI/p-h3-image-comfy](https://huggingface.co/PrunaAI/p-h3-image-comfy)\n\n**diffusion_models**\n\n- [minimax_h3_fl2va_pruned_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors) (19.53 GB)\n\n**text_encoders**\n\n- [p-h3-image_text_encoder_int8_convrot.safetensors](https://huggingface.co/PrunaAI/p-h3-image-comfy/resolve/main/text_encoders/p-h3-image_text_encoder_int8_convrot.safetensors)\n- [p-h3-image_prompt_upsampler_w4a8.safetensors](https://huggingface.co/PrunaAI/p-h3-image-comfy/resolve/main/text_encoders/p-h3-image_prompt_upsampler_w4a8.safetensors)\n\n**vae**\n\n- [p-h3-image_vae_int8_convrot.safetensors](https://huggingface.co/PrunaAI/p-h3-image-comfy/resolve/main/vae/p-h3-image_vae_int8_convrot.safetensors)\n\n**loras**\n\n- [p-h3-image_lora_bf16.safetensors](https://huggingface.co/PrunaAI/p-h3-image-comfy/resolve/main/loras/p-h3-image_lora_bf16.safetensors)\n\n\n## Model Storage Location\n\n```\n📂 ComfyUI/\n├── 📂 models/\n│   ├── 📂 diffusion_models/\n│   │   └── minimax_h3_fl2va_pruned_int8_convrot.safetensors\n│   ├── 📂 text_encoders/\n│   │   ├── p-h3-image_text_encoder_int8_convrot.safetensors\n│   │   └── p-h3-image_prompt_upsampler_w4a8.safetensors\n│   ├── 📂 vae/\n│   │   └── p-h3-image_vae_int8_convrot.safetensors\n│   └── 📂 loras/\n│       └── p-h3-image_lora_bf16.safetensors\n```\n\n## Report Issue\n\nNote: Please update ComfyUI first ([guide](https://docs.comfy.org/installation/update_comfyui)) and prepare required models. Desktop/Cloud updates follow stable releases, so some nightly-supported models may not be available yet.\n\n- Cannot run / runtime errors: [ComfyUI/issues](https://github.com/comfyanonymous/ComfyUI/issues)\n- UI / frontend issues: [ComfyUI_frontend/issues](https://github.com/Comfy-Org/ComfyUI_frontend/issues)\n- Workflow issues: [workflow_templates/issues](https://github.com/Comfy-Org/workflow_templates/issues)\n"
+      ],
+      "widgets_values_named": {
+        "text": "## Input Asset\n\n- [image_p_h3_image_edit_atrium_day.png](https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/input/image_p_h3_image_edit_atrium_day.png)\n\n## Model Links\n\n- [Hugging Face:Comfy-Org/MiniMax-H3](https://huggingface.co/Comfy-Org/MiniMax-H3)\n- [Hugging Face:PrunaAI/p-h3-image-comfy](https://huggingface.co/PrunaAI/p-h3-image-comfy)\n\n**diffusion_models**\n\n- [minimax_h3_fl2va_pruned_int8_convrot.safetensors](https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors) (19.53 GB)\n\n**text_encoders**\n\n- [p-h3-image_text_encoder_int8_convrot.safetensors](https://huggingface.co/PrunaAI/p-h3-image-comfy/resolve/main/text_encoders/p-h3-image_text_encoder_int8_convrot.safetensors)\n- [p-h3-image_prompt_upsampler_w4a8.safetensors](https://huggingface.co/PrunaAI/p-h3-image-comfy/resolve/main/text_encoders/p-h3-image_prompt_upsampler_w4a8.safetensors)\n\n**vae**\n\n- [p-h3-image_vae_int8_convrot.safetensors](https://huggingface.co/PrunaAI/p-h3-image-comfy/resolve/main/vae/p-h3-image_vae_int8_convrot.safetensors)\n\n**loras**\n\n- [p-h3-image_lora_bf16.safetensors](https://huggingface.co/PrunaAI/p-h3-image-comfy/resolve/main/loras/p-h3-image_lora_bf16.safetensors)\n\n\n## Model Storage Location\n\n```\n📂 ComfyUI/\n├── 📂 models/\n│   ├── 📂 diffusion_models/\n│   │   └── minimax_h3_fl2va_pruned_int8_convrot.safetensors\n│   ├── 📂 text_encoders/\n│   │   ├── p-h3-image_text_encoder_int8_convrot.safetensors\n│   │   └── p-h3-image_prompt_upsampler_w4a8.safetensors\n│   ├── 📂 vae/\n│   │   └── p-h3-image_vae_int8_convrot.safetensors\n│   └── 📂 loras/\n│       └── p-h3-image_lora_bf16.safetensors\n```\n\n## Report Issue\n\nNote: Please update ComfyUI first ([guide](https://docs.comfy.org/installation/update_comfyui)) and prepare required models. Desktop/Cloud updates follow stable releases, so some nightly-supported models may not be available yet.\n\n- Cannot run / runtime errors: [ComfyUI/issues](https://github.com/comfyanonymous/ComfyUI/issues)\n- UI / frontend issues: [ComfyUI_frontend/issues](https://github.com/Comfy-Org/ComfyUI_frontend/issues)\n- Workflow issues: [workflow_templates/issues](https://github.com/Comfy-Org/workflow_templates/issues)\n"
+      },
+      "color": "#222",
+      "bgcolor": "#000"
+    },
+    {
+      "id": 31,
+      "type": "ResolutionSelector",
+      "pos": [
+        -500,
+        780
+      ],
+      "size": [
+        330,
+        150
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "label": "aspect_ratio",
+          "localized_name": "宽高比",
+          "name": "aspect_ratio",
+          "type": "COMBO",
+          "widget": {
+            "name": "aspect_ratio"
+          },
+          "link": null
+        },
+        {
+          "label": "megapixels",
+          "localized_name": "百万像素",
+          "name": "megapixels",
+          "type": "FLOAT",
+          "widget": {
+            "name": "megapixels"
+          },
+          "link": null
+        },
+        {
+          "label": "multiple",
+          "localized_name": "倍数",
+          "name": "multiple",
+          "type": "INT",
+          "widget": {
+            "name": "multiple"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "预览",
+          "name": "preview",
+          "shape": 7,
+          "type": "RESOLUTION_PREVIEW",
+          "widget": {
+            "name": "preview"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "width",
+          "localized_name": "宽度",
+          "name": "width",
+          "type": "INT",
+          "links": [
+            73,
+            88
+          ]
+        },
+        {
+          "label": "height",
+          "localized_name": "高度",
+          "name": "height",
+          "type": "INT",
+          "links": [
+            74,
+            89
+          ]
+        }
+      ],
+      "title": "分辨率选择器（像素）",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.33.0",
+        "Node name for S&R": "ResolutionSelector",
+        "ue_properties": {
+          "version": "7.8",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "16:9 (Widescreen)",
+        8,
+        32
+      ],
+      "widgets_values_named": {
+        "aspect_ratio": "16:9 (Widescreen)",
+        "megapixels": 8,
+        "multiple": 32
+      },
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 32,
+      "type": "TextGenerateV2",
+      "pos": [
+        968.6038372357777,
+        782.3089508222922
+      ],
+      "size": [
+        410,
+        676
+      ],
+      "flags": {},
+      "order": 20,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 75
+        },
+        {
+          "localized_name": "image1",
+          "name": "images.image1",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 137
+        },
+        {
+          "localized_name": "video1",
+          "name": "videos.video1",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "localized_name": "audio1",
+          "name": "audios.audio1",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": null
+        },
+        {
+          "localized_name": "system_prompt",
+          "name": "system_prompt",
+          "shape": 7,
+          "type": "STRING",
+          "link": null
+        },
+        {
+          "localized_name": "prompt",
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          },
+          "link": 77
+        },
+        {
+          "localized_name": "max_length",
+          "name": "max_length",
+          "type": "INT",
+          "widget": {
+            "name": "max_length"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "sampling_mode",
+          "name": "sampling_mode",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "widget": {
+            "name": "sampling_mode"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "thinking",
+          "name": "thinking",
+          "shape": 7,
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "thinking"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "use_default_template",
+          "name": "use_default_template",
+          "shape": 7,
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "use_default_template"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "mtp",
+          "name": "mtp",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "mtp"
+          },
+          "link": null
+        },
+        {
+          "name": "images.image6",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "name": "images.image7",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "name": "images.image8",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "name": "images.image9",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "name": "images.image10",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "name": "images.image11",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "localized_name": "image2",
+          "name": "images.image2",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 140
+        },
+        {
+          "localized_name": "image3",
+          "name": "images.image3",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 142
+        },
+        {
+          "localized_name": "image4",
+          "name": "images.image4",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 144
+        },
+        {
+          "localized_name": "image5",
+          "name": "images.image5",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "generated_text",
+          "name": "generated_text",
+          "type": "STRING",
+          "links": [
+            98
+          ]
+        },
+        {
+          "localized_name": "thinking",
+          "name": "thinking",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.44.0",
+        "Node name for S&R": "TextGenerateV2",
+        "ue_properties": {
+          "version": "8.0.1",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "title_regex": null,
+          "input_regex": null,
+          "group_regex": null,
+          "title_regex_invert": false,
+          "input_regex_invert": false,
+          "group_regex_invert": false,
+          "apply_to_unrepeated": 0,
+          "send_to_any": 0,
+          "string_to_combo": 0,
+          "repeated_type_rule": 0,
+          "group_restricted": 0,
+          "color_restricted": 0
+        }
+      },
+      "widgets_values": [
+        "",
+        1536,
+        "off",
+        true,
+        true,
+        "auto"
+      ],
+      "widgets_values_named": {
+        "prompt": "",
+        "max_length": 1536,
+        "sampling_mode": "off",
+        "thinking": true,
+        "use_default_template": true,
+        "mtp": "auto"
+      }
+    },
+    {
+      "id": 33,
+      "type": "LegacyWidgetWidthFix",
+      "pos": [
+        -960,
+        630
+      ],
+      "size": [
+        290,
+        60
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfyui-workflow-encrypt",
+        "ver": "0eef569a67667111ceb87a00c246740ca7902ff3",
+        "Node name for S&R": "LegacyWidgetWidthFix",
+        "aux_id": "pekkAi-dev/ComfyUI-LegacyWidgetWidthFix",
+        "ue_properties": {
+          "version": "8.0.1",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "title_regex": null,
+          "input_regex": null,
+          "group_regex": null,
+          "title_regex_invert": false,
+          "input_regex_invert": false,
+          "group_regex_invert": false,
+          "apply_to_unrepeated": 0,
+          "send_to_any": 0,
+          "string_to_combo": 0,
+          "repeated_type_rule": 0,
+          "group_restricted": 0,
+          "color_restricted": 0
+        }
+      },
+      "widgets_values": [
+        null
+      ],
+      "widgets_values_named": {
+        "Repair widget widths now": null
+      }
+    },
+    {
+      "id": 36,
+      "type": "easy showAnything",
+      "pos": [
+        -150,
+        770
+      ],
+      "size": [
+        210,
+        90
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 88
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "输出",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "title": "宽",
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "b0b47ca1372117fce575d9e744655344ebff6bef",
+        "Node name for S&R": "easy showAnything",
+        "ue_properties": {
+          "version": "8.0.1",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "title_regex": null,
+          "input_regex": null,
+          "group_regex": null,
+          "title_regex_invert": false,
+          "input_regex_invert": false,
+          "group_regex_invert": false,
+          "apply_to_unrepeated": 0,
+          "send_to_any": 0,
+          "string_to_combo": 0,
+          "repeated_type_rule": 0,
+          "group_restricted": 0,
+          "color_restricted": 0
+        }
+      },
+      "widgets_values": [
+        "3872"
+      ],
+      "widgets_values_named": {
+        "text": "3872"
+      }
+    },
+    {
+      "id": 37,
+      "type": "easy showAnything",
+      "pos": [
+        -150,
+        900
+      ],
+      "size": [
+        210,
+        90
+      ],
+      "flags": {},
+      "order": 19,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "输入任何",
+          "name": "anything",
+          "shape": 7,
+          "type": "*",
+          "link": 89
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "输出",
+          "name": "output",
+          "type": "*",
+          "links": []
+        }
+      ],
+      "title": "高",
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "b0b47ca1372117fce575d9e744655344ebff6bef",
+        "Node name for S&R": "easy showAnything",
+        "ue_properties": {
+          "version": "8.0.1",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "title_regex": null,
+          "input_regex": null,
+          "group_regex": null,
+          "title_regex_invert": false,
+          "input_regex_invert": false,
+          "group_regex_invert": false,
+          "apply_to_unrepeated": 0,
+          "send_to_any": 0,
+          "string_to_combo": 0,
+          "repeated_type_rule": 0,
+          "group_restricted": 0,
+          "color_restricted": 0
+        }
+      },
+      "widgets_values": [
+        "2176"
+      ],
+      "widgets_values_named": {
+        "text": "2176"
+      }
+    },
+    {
+      "id": 39,
+      "type": "easy clearCacheAll",
+      "pos": [
+        2543.7223591176185,
+        1280.0392558214207
+      ],
+      "size": [
+        140,
+        30
+      ],
+      "flags": {},
+      "order": 32,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "输入任何",
+          "name": "anything",
+          "type": "*",
+          "link": 131
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "输出",
+          "name": "output",
+          "type": "*",
+          "links": [
+            92
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "b0b47ca1372117fce575d9e744655344ebff6bef",
+        "Node name for S&R": "easy clearCacheAll",
+        "ue_properties": {
+          "version": "8.0.1",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "title_regex": null,
+          "input_regex": null,
+          "group_regex": null,
+          "title_regex_invert": false,
+          "input_regex_invert": false,
+          "group_regex_invert": false,
+          "apply_to_unrepeated": 0,
+          "send_to_any": 0,
+          "string_to_combo": 0,
+          "repeated_type_rule": 0,
+          "group_restricted": 0,
+          "color_restricted": 0
+        }
+      }
+    },
+    {
+      "id": 40,
+      "type": "easy cleanGpuUsed",
+      "pos": [
+        2538.1624418041283,
+        1381.1747927769716
+      ],
+      "size": [
+        140,
+        30
+      ],
+      "flags": {},
+      "order": 34,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "输入任何",
+          "name": "anything",
+          "type": "*",
+          "link": 92
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "输出",
+          "name": "output",
+          "type": "*",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "b0b47ca1372117fce575d9e744655344ebff6bef",
+        "Node name for S&R": "easy cleanGpuUsed",
+        "ue_properties": {
+          "version": "8.0.1",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "title_regex": null,
+          "input_regex": null,
+          "group_regex": null,
+          "title_regex_invert": false,
+          "input_regex_invert": false,
+          "group_regex_invert": false,
+          "apply_to_unrepeated": 0,
+          "send_to_any": 0,
+          "string_to_combo": 0,
+          "repeated_type_rule": 0,
+          "group_restricted": 0,
+          "color_restricted": 0
+        }
+      }
+    },
+    {
+      "id": 42,
+      "type": "ModelAttentionBackend",
+      "pos": [
+        -920,
+        1560
+      ],
+      "size": [
+        330,
+        60
+      ],
+      "flags": {},
+      "order": 23,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 129
+        },
+        {
+          "localized_name": "attention",
+          "name": "attention",
+          "type": "COMBO",
+          "widget": {
+            "name": "attention"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "模型",
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            95
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2",
+        "Node name for S&R": "ModelAttentionBackend",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.8"
+        }
+      },
+      "widgets_values": [
+        "pytorch attention"
+      ],
+      "widgets_values_named": {
+        "attention": "pytorch attention"
+      }
+    },
+    {
+      "id": 43,
+      "type": "BlockSparseAttention",
+      "pos": [
+        -920,
+        1740
+      ],
+      "size": [
+        330,
+        250
+      ],
+      "flags": {},
+      "order": 26,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 95
+        },
+        {
+          "localized_name": "selection",
+          "name": "selection",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "widget": {
+            "name": "selection"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "tau",
+          "name": "selection.tau",
+          "type": "FLOAT",
+          "widget": {
+            "name": "selection.tau"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "start_percent",
+          "name": "start_percent",
+          "type": "FLOAT",
+          "widget": {
+            "name": "start_percent"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "end_percent",
+          "name": "end_percent",
+          "type": "FLOAT",
+          "widget": {
+            "name": "end_percent"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "dense_blocks",
+          "name": "dense_blocks",
+          "type": "STRING",
+          "widget": {
+            "name": "dense_blocks"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "min_tokens",
+          "name": "min_tokens",
+          "type": "INT",
+          "widget": {
+            "name": "min_tokens"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "extra_tokens",
+          "name": "extra_tokens",
+          "type": "INT",
+          "widget": {
+            "name": "extra_tokens"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "sink_conditioning",
+          "name": "sink_conditioning",
+          "type": "COMBO",
+          "widget": {
+            "name": "sink_conditioning"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "verbose",
+          "name": "verbose",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "verbose"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "模型",
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            97
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.37.0",
+        "Node name for S&R": "BlockSparseAttention",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.8"
+        }
+      },
+      "widgets_values": [
+        "sol-attn",
+        1,
+        0.2,
+        0.9,
+        "0-2,-1",
+        12288,
+        256,
+        "exact_kv_and_rows",
+        false
+      ],
+      "widgets_values_named": {
+        "selection": "sol-attn",
+        "selection.tau": 1,
+        "start_percent": 0.2,
+        "end_percent": 0.9,
+        "dense_blocks": "0-2,-1",
+        "min_tokens": 12288,
+        "extra_tokens": 256,
+        "sink_conditioning": "exact_kv_and_rows",
+        "verbose": false
+      },
+      "color": "#322",
+      "bgcolor": "#533"
+    },
+    {
+      "id": 44,
+      "type": "easy ifElse",
+      "pos": [
+        -500.3972846750537,
+        1040
+      ],
+      "size": [
+        560,
+        90
+      ],
+      "flags": {},
+      "order": 22,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "真流程",
+          "name": "on_true",
+          "type": "*",
+          "link": 98
+        },
+        {
+          "localized_name": "假流程",
+          "name": "on_false",
+          "type": "*",
+          "link": 99
+        },
+        {
+          "localized_name": "是否为真",
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "*",
+          "name": "*",
+          "type": "*",
+          "links": [
+            102,
+            104
+          ]
+        }
+      ],
+      "title": "true = 使用提示词重写器优化输入提示词｜false=直接用输入提示词",
+      "properties": {
+        "cnr_id": "comfyui-easy-use",
+        "ver": "b0b47ca1372117fce575d9e744655344ebff6bef",
+        "Node name for S&R": "easy ifElse",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "boolean": true
+          },
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        false
+      ],
+      "widgets_values_named": {
+        "boolean": false
+      },
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 46,
+      "type": "MarkdownNote",
+      "pos": [
+        250,
+        -350
+      ],
+      "size": [
+        850,
+        1040
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "skill",
+      "properties": {
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.8",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "# MiniMax H3 单图编辑与多图组合提示词生成规则\n\n你是 MiniMax H3 静态图像提示词生成助手。根据用户提供的图片与要求，生成可以直接粘贴到 ComfyUI H3 单图工作流的完整英文提示词。\n\n本规则覆盖：文生图、单图编辑、多图组合、人物替换、换装、姿态迁移、背景替换、重打光、风格迁移、物件增删、扩图、画面文字修改和单张画布内多视图。\n\n本规则沿用官方 Full-Reference 视频指南的六段结构、参考标签与保留关系，并适配为静态画面。这是单图适配方案，不是官方发布的独立生图规范。不得承诺模型一定能精确执行所有编辑。\n\n---\n\n## 一、先理解任务与图片\n\n收到用户信息后，先完成以下检查，再输出提示词：\n\n1. 查看每张图片，识别人物、服装、姿态、物件、背景、构图和视觉风格。\n2. 根据用户指定编号或实际传入顺序，建立 `<Picture 1>`、`<Picture 2>`……的对应关系。\n3. 明确用户要的是：\n   - 以原图为底，修改指定内容；\n   - 从多张图提取不同属性，重新组合成一张画面；\n   - 没有参考图片，直接生成新画面。\n4. 分清每张图片提供的属性，以及不能随之迁移的其他内容。\n5. 信息已经足够时直接生成，不要重复询问。\n6. 只有缺失信息会改变人物身份、素材编号、主要编辑目标或关键构图时，集中询问最少必要问题。\n\n无法查看图片时，不得编造图片中的具体特征。可以使用用户已经明确提供的描述；不足以完成任务时，请用户补充必要信息。\n\n图片编号必须与实际工作流输入顺序一致。无法核对节点排序时，只能说明采用的编号假设，不能声称已经确认。\n\n---\n\n## 二、明确每项属性来自哪里\n\n在内部整理参考关系，不必向用户展示分析过程：\n\n| 属性 | 需要确定的内容 |\n|---|---|\n| 人物身份 | 脸部特征、发型、眼睛、体型来自哪张图 |\n| 服装设计 | 款式、颜色、剪裁、材质、配饰、鞋袜来自哪张图 |\n| 姿态与表情 | 身体朝向、四肢位置、手部接触、视线、表情来自哪张图 |\n| 构图与机位 | 景别、裁切、机位高度、俯仰、主体位置来自哪张图或用户要求 |\n| 场景 | 背景几何、物件摆放、空间关系来自哪张图 |\n| 风格与光照 | 渲染方式、笔触、色彩、光源来自哪张图或用户要求 |\n| 可见文字 | 原文、目标文字、位置、载体和字体外观 |\n\n必须防止属性串图：\n\n- 服装参考只提供服装时，不迁移模特的脸、发型或体型。\n- 姿态参考只提供姿态时，不迁移该人物的身份或衣服。\n- 场景参考只提供环境时，不自动带入原图人物。\n- 风格参考只提供视觉表现时，不自动复制其主体与构图。\n- 同一张图片可以提供多个属性，但必须符合用户要求。\n- 同一个主体可以由多张图共同定义，但每项关键属性应有明确来源。\n- 不得把“融合多张图”写成模糊的平均混合。\n\n用户未指定时：\n- 局部编辑沿用原图构图和视觉风格。\n- 多图组合沿用明确主图的视觉风格；没有明确主图时，根据任务选择并保持一致。\n- 不得擅自固定为写实、动漫、电影风或某个场景。\n- 不得额外增加人物、帽子、配饰、道具或剧情。\n\n---\n\n## 三、正确使用参考标签\n\n### `<Picture N>`\n\n表示实际输入的参考图片。\n\n图片承担整体编辑底图、构图锚点或布局来源时，可以单独定义：\n\n`<Picture 1> is the source image and composition anchor for the edited still.`\n\n图片只用于定义某个主体或属性时，直接在主体定义中引用即可，不必重复单独定义。\n\n### `<Subject N>`\n\n表示目标画面中需要追踪的人物、服装、物件、场景或视觉属性。\n\n例如：\n\n`<Subject 1> is the woman in <Picture 1>, providing her facial identity, hairstyle, and body proportions.`\n\n`<Subject 2> is the outfit in <Picture 2>, providing its design, colors, materials, and accessories to <Subject 1>.`\n\n规则：\n\n- 每个独立人物使用独立 Subject。\n- 同一个人出现在多张参考图中，只定义一个 Subject。\n- 服装、物件、场景或风格需要单独迁移时，可以独立定义。\n- 不要把每个细小特征都拆成独立 Subject。\n- Subject 编号与 Picture 编号不必相同。\n- 标签在所有段落中保持同一含义。\n- 不创建未实际输入的 Picture。\n- 不混用 `ref_image_0`、`Char 1` 等其他编号体系。\n- 静态图片任务不创建不存在的 Video 或 Audio 标签。\n\n---\n\n## 四、正确说明保留关系\n\n在 `retention_analysis` 中使用以下四种关系标记：\n\n| 标记 | 含义 |\n|---|---|\n| `fully_preserved` | 完整保留该标签所定义的属性范围 |\n| `partially_preserved` | 保留部分属性，并明确修改其他属性 |\n| `attribute_transfer` | 将来源属性迁移到另一个明确目标 |\n| `weak_reference` | 只借鉴总体风格、类别或氛围 |\n\n注意：\n\n- `fully_preserved` 不代表整张图片逐像素不变。\n- 人物只定义了身份、发型和体型时，改变其姿态或背景不自动构成身份丢失。\n- 衣服换颜色，衣服本身应使用 `partially_preserved`。\n- 把图2衣服穿到图1人物身上，应使用 `attribute_transfer`，明确目标人物。\n- 复用一个场景本身通常使用 `fully_preserved` 或 `partially_preserved`；不能把“放到背景里”自动叫属性迁移。\n- 同一个属性不能一边要求完全保留，一边要求改变。\n- 每个正式定义的标签在分析中各写一条，并说明其在 `[Shot 1]` 中的作用。\n- 仅作为来源被引用、没有单独定义的 Picture，不必独立分析。\n\n---\n\n## 五、描述最终静态画面\n\n`detailed_description` 必须描述编辑完成后的最终结果。\n\n先用一两句明确整体视觉风格与单张静态输出，再写一个 `[Shot 1]`。\n\n按以下顺序组织：\n\n1. 首要编辑目标与实际出现的主体。\n2. 构图、景别、机位、裁切、人数和人物位置。\n3. 姿态、表情、视线、手部接触和物件关系。\n4. 服装、配饰、材质、场景、光照与遮挡。\n5. 必须保留的其他关键内容。\n\n必须把重要参考关系落实到最终画面描述中，不能只写在主体定义与分析里。\n\n### 静态表达\n\n- 写最终姿态和空间位置。\n- 不写“先换衣服，再转身，然后走到窗边”。\n- 不写时间戳、镜头运动、切镜、动作阶段或前后片段衔接。\n- 需要动作感时，描述一个被捕捉的瞬间，例如裙摆展开的形状、身体倾斜和手臂位置。\n- 角色自身左右用 `her anatomical left/right`。\n- 画面左右用 `image-left/image-right`。\n- 多人画面明确人物位置、相对大小、接触和前后遮挡。\n- 不因用户未指定而自动制造一高一矮、不同体型或额外人物。\n- 不把裁切范围外的细节强行塞进画面。\n\n### 保留与改变\n\n换姿态时，允许对应衣物褶皱与遮挡改变；不要同时锁死原姿态。\n\n重打光时，允许阴影、反射、明暗改变；不要要求全部光影不变。\n\n以正向最终结果为主，不额外堆砌长负面清单。用户明确要求删除的内容，可以直接说明删除，并描述填补后的表面或背景。\n\n用户要求的配饰、鞋袜、特效和可见文字不得擅自省略。\n\n---\n\n## 六、不同任务的处理规则\n\n### 单图局部编辑\n\n明确修改对象和属性，同时保留其余相关内容。不要把“只修改”解释成已有像素锁定能力。\n\n### 人物替换\n\n明确新人物身份来源，以及原图提供的构图、姿态、服装或环境。不要生成原人物和新人物两个人。\n\n### 换装\n\n保留目标人物身份和体型；把服装设计适配到目标姿态。不要迁移服装模特的身体。\n\n### 姿态迁移\n\n明确最终身体朝向、关节位置、手与物件接触、视线及表情。姿态图的机位不必随姿态迁移；用户指定机位优先。\n\n### 多人组合\n\n每人独立定义，明确谁在左、谁在右、谁在前、谁在后，以及可见接触关系。不要只写“combine all images”。\n\n### 背景替换\n\n明确保留的人物与前景内容，以及新背景的空间、透视、光照关系。\n\n### 风格迁移\n\n迁移视觉表现时，保留用户要求的主体设计。不要同时要求改变风格与完全保留原渲染风格。\n\n### 物件插入或删除\n\n插入时明确尺度、落点、方向、支撑、遮挡及接触影。\n\n删除时描述空缺区域恢复后的背景连续性。\n\n### 扩图\n\n明确原图位于最终画布的什么位置，以及新增区域的内容、透视和光照延续。精确保护原区域需要实际工作流支持。\n\n### 遮罩编辑\n\n只有实际提供了 mask 才引用遮罩。核对工作流的黑白语义，不能默认白色一定代表编辑区域。\n\n### 多视图或拼版\n\n仍然是一张画布、一个 `[Shot 1]`。明确面板数量、布局、视角与一致性，不自行增加用户未要求的视图。\n\n### 画面文字\n\n保留用户要求的原语言与准确措辞。写：\n\n`The sign reads exactly \"目标文字\".`\n\n不要把画面文字写成对白，不使用 `<d>` 标签。\n\n### 透明背景\n\n可以表达用户的透明背景意图，但 alpha 通道与文件格式依赖工作流，不能承诺提示词本身能产生透明 PNG。\n\n---\n\n## 七、固定输出格式\n\n默认只输出一个英文代码块，包含以下六段。\n\n不要附加任务规划、分析过程、参数建议、来源链接或多个局部替换片段。只有素材编号需要澄清时，可在代码块外用一句中文说明编号。\n\n```text\nsubject_definitions:\n[Define the referenced subjects and any independently used picture anchors.]\n\nsummary:\n[Describe the final still image, the main edit or composition objective, and the reference roles.]\n\nretention_analysis:\n<Subject 1> (appears in [Shot 1]): relationship_marker - [Define the exact preservation or transfer scope.]\n[Add one entry for each formally defined label.]\n\ndetailed_description:\n[Establish the visual style and single still-image output.]\n[Shot 1] [Describe the complete final image, including important reference roles, composition, subjects, pose, clothing, environment, lighting, and spatial relationships.]\n\noverall_soundscape:\nN/A\n\nnon_diegetic_music:\nN/A\n```\n\n实际输出时：\n- 六个段名保持原样、顶格书写。\n- 保留 `[Shot 1]`，删除所有示意占位说明。\n- 正文使用英文；可见文字保留用户指定语言。\n- summary 使用普通英文静态任务描述，不冒充官方新增的 `[image editing]` 任务标记。\n- 无参考图片的文生图，`subject_definitions` 与 `retention_analysis` 写 `N/A`。\n- 字数根据任务复杂度决定，不机械套用视频提示词字数。\n- 用户要求修改时，始终重新输出完整六段提示词，不只给替换段落。\n\n---\n\n## 八、完整示例\n\n用户要求：图1提供人物身份和体型；图2提供红色丝质衬衫；图3提供画室背景。输出人物坐在桌边的半身肖像，保持图1视觉风格。\n\n```text\nsubject_definitions:\n<Subject 1> is the person in <Picture 1>, providing their facial identity, hairstyle, body proportions, and visual rendering style.\n<Subject 2> is the red silk blouse in <Picture 2>, providing its garment design, color, fastenings, and fabric texture to <Subject 1>.\n<Subject 3> is the art studio in <Picture 3>, providing its visible furnishings, spatial character, and background setting.\n\nsummary:\nCreate one still portrait of <Subject 1> wearing <Subject 2> and seated at a table in <Subject 3>. Preserve the identity, body proportions, and visual style from <Picture 1>, while combining clothing and environment from their separate references.\n\nretention_analysis:\n<Subject 1> (appears in [Shot 1]): fully_preserved - retain the defined facial identity, hairstyle, body proportions, and visual rendering style; use the newly specified seated pose.\n<Subject 2> (appears in [Shot 1]): attribute_transfer - transfer the blouse design, red color, fastenings, and silk texture from <Picture 2> onto <Subject 1>, adapting its fit and folds to the target body.\n<Subject 3> (appears in [Shot 1]): partially_preserved - retain the studio's recognizable furnishings and spatial character while adapting its framing around the new portrait.\n\ndetailed_description:\nA single still portrait follows the visual rendering style of <Picture 1>, with coherent lighting across the person, clothing, and environment.\n[Shot 1] An eye-level waist-up composition shows <Subject 1> seated at a table in the art studio, <Subject 3>, from <Picture 3>. Preserve the person's facial identity, hairstyle, and body proportions from <Picture 1>. The person sits upright with both forearms resting naturally on the tabletop, looking toward the viewer with a relaxed expression. They wear <Subject 2>, the red silk blouse from <Picture 2>, preserving its visible garment construction, fastenings, color, and material texture. The blouse fits the target person's body, with folds shaped by the seated posture. The table occupies the lower foreground, and the recognizable studio furnishings remain visible behind the person. Light direction, shading, reflections, and contact shadows are consistent across the assembled scene.\n\noverall_soundscape:\nN/A\n\nnon_diegetic_music:\nN/A\n```\n\n示例中的人物、颜色、姿态和场景仅用于演示。实际任务必须根据用户素材重写，不得成为固定设定。\n\n---\n\n## 九、提交前检查\n\n输出前在内部检查：\n\n- Picture 编号与输入顺序一致。\n- 身份、体型、服装、姿态、背景和风格来源明确。\n- 无未提供的素材或编造细节。\n- 无属性串图、身份混合或额外人物。\n- 修改要求没有同时被保留要求锁死。\n- 所有正式定义标签都有分析与实际画面用途。\n- 各段中的人数、服装、配饰、机位和位置一致。\n- 用户关键要求没有被省略。\n- 恰好六段、一个静态 Shot、没有时间轴，声音均为 N/A。\n- 最终输出是完整可复制提示词。"
+      ],
+      "widgets_values_named": {
+        "text": "# MiniMax H3 单图编辑与多图组合提示词生成规则\n\n你是 MiniMax H3 静态图像提示词生成助手。根据用户提供的图片与要求，生成可以直接粘贴到 ComfyUI H3 单图工作流的完整英文提示词。\n\n本规则覆盖：文生图、单图编辑、多图组合、人物替换、换装、姿态迁移、背景替换、重打光、风格迁移、物件增删、扩图、画面文字修改和单张画布内多视图。\n\n本规则沿用官方 Full-Reference 视频指南的六段结构、参考标签与保留关系，并适配为静态画面。这是单图适配方案，不是官方发布的独立生图规范。不得承诺模型一定能精确执行所有编辑。\n\n---\n\n## 一、先理解任务与图片\n\n收到用户信息后，先完成以下检查，再输出提示词：\n\n1. 查看每张图片，识别人物、服装、姿态、物件、背景、构图和视觉风格。\n2. 根据用户指定编号或实际传入顺序，建立 `<Picture 1>`、`<Picture 2>`……的对应关系。\n3. 明确用户要的是：\n   - 以原图为底，修改指定内容；\n   - 从多张图提取不同属性，重新组合成一张画面；\n   - 没有参考图片，直接生成新画面。\n4. 分清每张图片提供的属性，以及不能随之迁移的其他内容。\n5. 信息已经足够时直接生成，不要重复询问。\n6. 只有缺失信息会改变人物身份、素材编号、主要编辑目标或关键构图时，集中询问最少必要问题。\n\n无法查看图片时，不得编造图片中的具体特征。可以使用用户已经明确提供的描述；不足以完成任务时，请用户补充必要信息。\n\n图片编号必须与实际工作流输入顺序一致。无法核对节点排序时，只能说明采用的编号假设，不能声称已经确认。\n\n---\n\n## 二、明确每项属性来自哪里\n\n在内部整理参考关系，不必向用户展示分析过程：\n\n| 属性 | 需要确定的内容 |\n|---|---|\n| 人物身份 | 脸部特征、发型、眼睛、体型来自哪张图 |\n| 服装设计 | 款式、颜色、剪裁、材质、配饰、鞋袜来自哪张图 |\n| 姿态与表情 | 身体朝向、四肢位置、手部接触、视线、表情来自哪张图 |\n| 构图与机位 | 景别、裁切、机位高度、俯仰、主体位置来自哪张图或用户要求 |\n| 场景 | 背景几何、物件摆放、空间关系来自哪张图 |\n| 风格与光照 | 渲染方式、笔触、色彩、光源来自哪张图或用户要求 |\n| 可见文字 | 原文、目标文字、位置、载体和字体外观 |\n\n必须防止属性串图：\n\n- 服装参考只提供服装时，不迁移模特的脸、发型或体型。\n- 姿态参考只提供姿态时，不迁移该人物的身份或衣服。\n- 场景参考只提供环境时，不自动带入原图人物。\n- 风格参考只提供视觉表现时，不自动复制其主体与构图。\n- 同一张图片可以提供多个属性，但必须符合用户要求。\n- 同一个主体可以由多张图共同定义，但每项关键属性应有明确来源。\n- 不得把“融合多张图”写成模糊的平均混合。\n\n用户未指定时：\n- 局部编辑沿用原图构图和视觉风格。\n- 多图组合沿用明确主图的视觉风格；没有明确主图时，根据任务选择并保持一致。\n- 不得擅自固定为写实、动漫、电影风或某个场景。\n- 不得额外增加人物、帽子、配饰、道具或剧情。\n\n---\n\n## 三、正确使用参考标签\n\n### `<Picture N>`\n\n表示实际输入的参考图片。\n\n图片承担整体编辑底图、构图锚点或布局来源时，可以单独定义：\n\n`<Picture 1> is the source image and composition anchor for the edited still.`\n\n图片只用于定义某个主体或属性时，直接在主体定义中引用即可，不必重复单独定义。\n\n### `<Subject N>`\n\n表示目标画面中需要追踪的人物、服装、物件、场景或视觉属性。\n\n例如：\n\n`<Subject 1> is the woman in <Picture 1>, providing her facial identity, hairstyle, and body proportions.`\n\n`<Subject 2> is the outfit in <Picture 2>, providing its design, colors, materials, and accessories to <Subject 1>.`\n\n规则：\n\n- 每个独立人物使用独立 Subject。\n- 同一个人出现在多张参考图中，只定义一个 Subject。\n- 服装、物件、场景或风格需要单独迁移时，可以独立定义。\n- 不要把每个细小特征都拆成独立 Subject。\n- Subject 编号与 Picture 编号不必相同。\n- 标签在所有段落中保持同一含义。\n- 不创建未实际输入的 Picture。\n- 不混用 `ref_image_0`、`Char 1` 等其他编号体系。\n- 静态图片任务不创建不存在的 Video 或 Audio 标签。\n\n---\n\n## 四、正确说明保留关系\n\n在 `retention_analysis` 中使用以下四种关系标记：\n\n| 标记 | 含义 |\n|---|---|\n| `fully_preserved` | 完整保留该标签所定义的属性范围 |\n| `partially_preserved` | 保留部分属性，并明确修改其他属性 |\n| `attribute_transfer` | 将来源属性迁移到另一个明确目标 |\n| `weak_reference` | 只借鉴总体风格、类别或氛围 |\n\n注意：\n\n- `fully_preserved` 不代表整张图片逐像素不变。\n- 人物只定义了身份、发型和体型时，改变其姿态或背景不自动构成身份丢失。\n- 衣服换颜色，衣服本身应使用 `partially_preserved`。\n- 把图2衣服穿到图1人物身上，应使用 `attribute_transfer`，明确目标人物。\n- 复用一个场景本身通常使用 `fully_preserved` 或 `partially_preserved`；不能把“放到背景里”自动叫属性迁移。\n- 同一个属性不能一边要求完全保留，一边要求改变。\n- 每个正式定义的标签在分析中各写一条，并说明其在 `[Shot 1]` 中的作用。\n- 仅作为来源被引用、没有单独定义的 Picture，不必独立分析。\n\n---\n\n## 五、描述最终静态画面\n\n`detailed_description` 必须描述编辑完成后的最终结果。\n\n先用一两句明确整体视觉风格与单张静态输出，再写一个 `[Shot 1]`。\n\n按以下顺序组织：\n\n1. 首要编辑目标与实际出现的主体。\n2. 构图、景别、机位、裁切、人数和人物位置。\n3. 姿态、表情、视线、手部接触和物件关系。\n4. 服装、配饰、材质、场景、光照与遮挡。\n5. 必须保留的其他关键内容。\n\n必须把重要参考关系落实到最终画面描述中，不能只写在主体定义与分析里。\n\n### 静态表达\n\n- 写最终姿态和空间位置。\n- 不写“先换衣服，再转身，然后走到窗边”。\n- 不写时间戳、镜头运动、切镜、动作阶段或前后片段衔接。\n- 需要动作感时，描述一个被捕捉的瞬间，例如裙摆展开的形状、身体倾斜和手臂位置。\n- 角色自身左右用 `her anatomical left/right`。\n- 画面左右用 `image-left/image-right`。\n- 多人画面明确人物位置、相对大小、接触和前后遮挡。\n- 不因用户未指定而自动制造一高一矮、不同体型或额外人物。\n- 不把裁切范围外的细节强行塞进画面。\n\n### 保留与改变\n\n换姿态时，允许对应衣物褶皱与遮挡改变；不要同时锁死原姿态。\n\n重打光时，允许阴影、反射、明暗改变；不要要求全部光影不变。\n\n以正向最终结果为主，不额外堆砌长负面清单。用户明确要求删除的内容，可以直接说明删除，并描述填补后的表面或背景。\n\n用户要求的配饰、鞋袜、特效和可见文字不得擅自省略。\n\n---\n\n## 六、不同任务的处理规则\n\n### 单图局部编辑\n\n明确修改对象和属性，同时保留其余相关内容。不要把“只修改”解释成已有像素锁定能力。\n\n### 人物替换\n\n明确新人物身份来源，以及原图提供的构图、姿态、服装或环境。不要生成原人物和新人物两个人。\n\n### 换装\n\n保留目标人物身份和体型；把服装设计适配到目标姿态。不要迁移服装模特的身体。\n\n### 姿态迁移\n\n明确最终身体朝向、关节位置、手与物件接触、视线及表情。姿态图的机位不必随姿态迁移；用户指定机位优先。\n\n### 多人组合\n\n每人独立定义，明确谁在左、谁在右、谁在前、谁在后，以及可见接触关系。不要只写“combine all images”。\n\n### 背景替换\n\n明确保留的人物与前景内容，以及新背景的空间、透视、光照关系。\n\n### 风格迁移\n\n迁移视觉表现时，保留用户要求的主体设计。不要同时要求改变风格与完全保留原渲染风格。\n\n### 物件插入或删除\n\n插入时明确尺度、落点、方向、支撑、遮挡及接触影。\n\n删除时描述空缺区域恢复后的背景连续性。\n\n### 扩图\n\n明确原图位于最终画布的什么位置，以及新增区域的内容、透视和光照延续。精确保护原区域需要实际工作流支持。\n\n### 遮罩编辑\n\n只有实际提供了 mask 才引用遮罩。核对工作流的黑白语义，不能默认白色一定代表编辑区域。\n\n### 多视图或拼版\n\n仍然是一张画布、一个 `[Shot 1]`。明确面板数量、布局、视角与一致性，不自行增加用户未要求的视图。\n\n### 画面文字\n\n保留用户要求的原语言与准确措辞。写：\n\n`The sign reads exactly \"目标文字\".`\n\n不要把画面文字写成对白，不使用 `<d>` 标签。\n\n### 透明背景\n\n可以表达用户的透明背景意图，但 alpha 通道与文件格式依赖工作流，不能承诺提示词本身能产生透明 PNG。\n\n---\n\n## 七、固定输出格式\n\n默认只输出一个英文代码块，包含以下六段。\n\n不要附加任务规划、分析过程、参数建议、来源链接或多个局部替换片段。只有素材编号需要澄清时，可在代码块外用一句中文说明编号。\n\n```text\nsubject_definitions:\n[Define the referenced subjects and any independently used picture anchors.]\n\nsummary:\n[Describe the final still image, the main edit or composition objective, and the reference roles.]\n\nretention_analysis:\n<Subject 1> (appears in [Shot 1]): relationship_marker - [Define the exact preservation or transfer scope.]\n[Add one entry for each formally defined label.]\n\ndetailed_description:\n[Establish the visual style and single still-image output.]\n[Shot 1] [Describe the complete final image, including important reference roles, composition, subjects, pose, clothing, environment, lighting, and spatial relationships.]\n\noverall_soundscape:\nN/A\n\nnon_diegetic_music:\nN/A\n```\n\n实际输出时：\n- 六个段名保持原样、顶格书写。\n- 保留 `[Shot 1]`，删除所有示意占位说明。\n- 正文使用英文；可见文字保留用户指定语言。\n- summary 使用普通英文静态任务描述，不冒充官方新增的 `[image editing]` 任务标记。\n- 无参考图片的文生图，`subject_definitions` 与 `retention_analysis` 写 `N/A`。\n- 字数根据任务复杂度决定，不机械套用视频提示词字数。\n- 用户要求修改时，始终重新输出完整六段提示词，不只给替换段落。\n\n---\n\n## 八、完整示例\n\n用户要求：图1提供人物身份和体型；图2提供红色丝质衬衫；图3提供画室背景。输出人物坐在桌边的半身肖像，保持图1视觉风格。\n\n```text\nsubject_definitions:\n<Subject 1> is the person in <Picture 1>, providing their facial identity, hairstyle, body proportions, and visual rendering style.\n<Subject 2> is the red silk blouse in <Picture 2>, providing its garment design, color, fastenings, and fabric texture to <Subject 1>.\n<Subject 3> is the art studio in <Picture 3>, providing its visible furnishings, spatial character, and background setting.\n\nsummary:\nCreate one still portrait of <Subject 1> wearing <Subject 2> and seated at a table in <Subject 3>. Preserve the identity, body proportions, and visual style from <Picture 1>, while combining clothing and environment from their separate references.\n\nretention_analysis:\n<Subject 1> (appears in [Shot 1]): fully_preserved - retain the defined facial identity, hairstyle, body proportions, and visual rendering style; use the newly specified seated pose.\n<Subject 2> (appears in [Shot 1]): attribute_transfer - transfer the blouse design, red color, fastenings, and silk texture from <Picture 2> onto <Subject 1>, adapting its fit and folds to the target body.\n<Subject 3> (appears in [Shot 1]): partially_preserved - retain the studio's recognizable furnishings and spatial character while adapting its framing around the new portrait.\n\ndetailed_description:\nA single still portrait follows the visual rendering style of <Picture 1>, with coherent lighting across the person, clothing, and environment.\n[Shot 1] An eye-level waist-up composition shows <Subject 1> seated at a table in the art studio, <Subject 3>, from <Picture 3>. Preserve the person's facial identity, hairstyle, and body proportions from <Picture 1>. The person sits upright with both forearms resting naturally on the tabletop, looking toward the viewer with a relaxed expression. They wear <Subject 2>, the red silk blouse from <Picture 2>, preserving its visible garment construction, fastenings, color, and material texture. The blouse fits the target person's body, with folds shaped by the seated posture. The table occupies the lower foreground, and the recognizable studio furnishings remain visible behind the person. Light direction, shading, reflections, and contact shadows are consistent across the assembled scene.\n\noverall_soundscape:\nN/A\n\nnon_diegetic_music:\nN/A\n```\n\n示例中的人物、颜色、姿态和场景仅用于演示。实际任务必须根据用户素材重写，不得成为固定设定。\n\n---\n\n## 九、提交前检查\n\n输出前在内部检查：\n\n- Picture 编号与输入顺序一致。\n- 身份、体型、服装、姿态、背景和风格来源明确。\n- 无未提供的素材或编造细节。\n- 无属性串图、身份混合或额外人物。\n- 修改要求没有同时被保留要求锁死。\n- 所有正式定义标签都有分析与实际画面用途。\n- 各段中的人数、服装、配饰、机位和位置一致。\n- 用户关键要求没有被省略。\n- 恰好六段、一个静态 Shot、没有时间轴，声音均为 N/A。\n- 最终输出是完整可复制提示词。"
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 47,
+      "type": "MarkdownNote",
+      "pos": [
+        1110,
+        -150
+      ],
+      "size": [
+        740,
+        830
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "当图1为角色，图2为目标动作时候，可尝试用通用模板进行动作迁移",
+      "properties": {
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.8",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "subject_definitions:\n<Subject 1> is the target character defined by <Picture 1>. Preserve the character's facial identity, body proportions, hairstyle, hair color, eyes, clothing, accessories, footwear, and distinctive anatomical or mechanical features. Use the reference views to identify one consistent character.\n<Picture 2> is the primary pose, expression, and composition reference. It defines the visible body arrangement, joint positions, limb directions, hand gestures, contact points, head orientation, gaze, camera angle, perspective, framing, and overlap order.\n\nsummary:\nCreate one still image of <Subject 1> in the pose and composition of <Picture 2>. Use <Picture 1> for character identity and outfit, and <Picture 2> for body geometry and camera placement. Render the result in a PBR–NPR hybrid 3D anime style.\n\nretention_analysis:\n<Subject 1> (appears in [Shot 1]): partially_preserved — preserve the character design and complete outfit from <Picture 1>; adapt the pose, expression, visible surfaces, and rendering to the target image.\n<Picture 2> (appears in [Shot 1]): partially_preserved — preserve the pose, expression, camera geometry, framing, contact relationships, and occlusions; replace its original character and clothing with <Subject 1>.\n\ndetailed_description:\nCreate one stylized 3D anime still with sculpted forms, clean NPR facial shadow shapes, and PBR material response. Preserve anime facial proportions, with softly shaded skin, broad stylized hair highlights, and distinct fabric, metal, and translucent materials where appropriate.\n\n[Shot 1] Recreate the visible pose and composition of <Picture 2> using <Subject 1>. Match the reference's camera elevation, viewing direction, perspective, image orientation, and crop. Preserve the character's placement and apparent size within the frame.\n\nFollow the actual body geometry in <Picture 2>: the positions and orientations of the head, shoulders, torso, pelvis, elbows, wrists, knees, and ankles; the bend of each joint; and the spacing and overlap between limbs. Preserve the reference's foreshortening and distinguish limbs that are in front from those partially concealed behind the body.\n\nEach arm forms one continuous connection from its own shoulder through the elbow and wrist to its hand. Each leg connects from its own hip through the knee and ankle to its foot. Match the visible hand gestures and finger arrangement directly to <Picture 2>. Keep concealed body parts naturally concealed within the same pose and framing.\n\nPreserve the reference's support and contact relationships. Body parts touching a surface remain in contact with that surface; lifted body parts retain their reference positions. Hands touching the body or an object meet the same target at the same location. Use subtle contact shadows and local compression where appropriate.\n\nMatch the head rotation, facial expression, and gaze of <Picture 2> while retaining <Subject 1>'s recognizable facial identity. Fit the hairstyle, clothing, accessories, and footwear from <Picture 1> around the established pose. Fabric folds, hanging hair, loose straps, and attached features respond naturally to gravity and contact. Allow natural occlusion and cropping of costume details while preserving the reference's joint placement and composition.\n\nUse the setting and supporting surfaces visible in <Picture 2>. If it has a blank background, retain a simple neutral background, adding only the minimal supporting surface required by the visible pose. Apply soft coherent lighting and readable material shading.\n\nProduce one character in one continuous still image. The final body arrangement and camera view follow <Picture 2>, and the character identity and outfit follow <Picture 1>.\n\noverall_soundscape:\nN/A\n\nnon_diegetic_music:\nN/A"
+      ],
+      "widgets_values_named": {
+        "text": "subject_definitions:\n<Subject 1> is the target character defined by <Picture 1>. Preserve the character's facial identity, body proportions, hairstyle, hair color, eyes, clothing, accessories, footwear, and distinctive anatomical or mechanical features. Use the reference views to identify one consistent character.\n<Picture 2> is the primary pose, expression, and composition reference. It defines the visible body arrangement, joint positions, limb directions, hand gestures, contact points, head orientation, gaze, camera angle, perspective, framing, and overlap order.\n\nsummary:\nCreate one still image of <Subject 1> in the pose and composition of <Picture 2>. Use <Picture 1> for character identity and outfit, and <Picture 2> for body geometry and camera placement. Render the result in a PBR–NPR hybrid 3D anime style.\n\nretention_analysis:\n<Subject 1> (appears in [Shot 1]): partially_preserved — preserve the character design and complete outfit from <Picture 1>; adapt the pose, expression, visible surfaces, and rendering to the target image.\n<Picture 2> (appears in [Shot 1]): partially_preserved — preserve the pose, expression, camera geometry, framing, contact relationships, and occlusions; replace its original character and clothing with <Subject 1>.\n\ndetailed_description:\nCreate one stylized 3D anime still with sculpted forms, clean NPR facial shadow shapes, and PBR material response. Preserve anime facial proportions, with softly shaded skin, broad stylized hair highlights, and distinct fabric, metal, and translucent materials where appropriate.\n\n[Shot 1] Recreate the visible pose and composition of <Picture 2> using <Subject 1>. Match the reference's camera elevation, viewing direction, perspective, image orientation, and crop. Preserve the character's placement and apparent size within the frame.\n\nFollow the actual body geometry in <Picture 2>: the positions and orientations of the head, shoulders, torso, pelvis, elbows, wrists, knees, and ankles; the bend of each joint; and the spacing and overlap between limbs. Preserve the reference's foreshortening and distinguish limbs that are in front from those partially concealed behind the body.\n\nEach arm forms one continuous connection from its own shoulder through the elbow and wrist to its hand. Each leg connects from its own hip through the knee and ankle to its foot. Match the visible hand gestures and finger arrangement directly to <Picture 2>. Keep concealed body parts naturally concealed within the same pose and framing.\n\nPreserve the reference's support and contact relationships. Body parts touching a surface remain in contact with that surface; lifted body parts retain their reference positions. Hands touching the body or an object meet the same target at the same location. Use subtle contact shadows and local compression where appropriate.\n\nMatch the head rotation, facial expression, and gaze of <Picture 2> while retaining <Subject 1>'s recognizable facial identity. Fit the hairstyle, clothing, accessories, and footwear from <Picture 1> around the established pose. Fabric folds, hanging hair, loose straps, and attached features respond naturally to gravity and contact. Allow natural occlusion and cropping of costume details while preserving the reference's joint placement and composition.\n\nUse the setting and supporting surfaces visible in <Picture 2>. If it has a blank background, retain a simple neutral background, adding only the minimal supporting surface required by the visible pose. Apply soft coherent lighting and readable material shading.\n\nProduce one character in one continuous still image. The final body arrangement and camera view follow <Picture 2>, and the character identity and outfit follow <Picture 1>.\n\noverall_soundscape:\nN/A\n\nnon_diegetic_music:\nN/A"
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 48,
+      "type": "MarkdownNote",
+      "pos": [
+        -510,
+        130
+      ],
+      "size": [
+        750,
+        270
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "注意",
+      "properties": {
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.8",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "\n# 你可以用本工作流所给skill 交给agent帮你写提示词，并关闭本工作流的提示词优化开关，用更强大的线上llm帮助你生成提示词。（重写器对于某些长描述内容仍旧有所不足）\n# 你也可以直接让本工作流的提示词重写器直接帮你优化你输入的自然语言提示词。\n# 总之，关闭开关后，是提示词重写器生成的提示词不会输入到conditioning的。（我希望这种程度的说明足够清晰了）"
+      ],
+      "widgets_values_named": {
+        "text": "\n# 你可以用本工作流所给skill 交给agent帮你写提示词，并关闭本工作流的提示词优化开关，用更强大的线上llm帮助你生成提示词。（重写器对于某些长描述内容仍旧有所不足）\n# 你也可以直接让本工作流的提示词重写器直接帮你优化你输入的自然语言提示词。\n# 总之，关闭开关后，是提示词重写器生成的提示词不会输入到conditioning的。（我希望这种程度的说明足够清晰了）"
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 50,
+      "type": "MarkdownNote",
+      "pos": [
+        -510,
+        440
+      ],
+      "size": [
+        750,
+        250
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "标题",
+      "properties": {
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.8",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "\n# ph3 图像编辑与生成工作流\n# 作者：b站——阿喵喵Az\n# B站主页：https://space.bilibili.com/36380937?spm_id_from=333.1007.0.0\n\n# 资源链接（模型/节点/工作流）\n\n# > 网盘链接：https://pan.quark.cn/s/ca4e2a25b3e4\n"
+      ],
+      "widgets_values_named": {
+        "text": "\n# ph3 图像编辑与生成工作流\n# 作者：b站——阿喵喵Az\n# B站主页：https://space.bilibili.com/36380937?spm_id_from=333.1007.0.0\n\n# 资源链接（模型/节点/工作流）\n\n# > 网盘链接：https://pan.quark.cn/s/ca4e2a25b3e4\n"
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 51,
+      "type": "MarkdownNote",
+      "pos": [
+        -960,
+        390
+      ],
+      "size": [
+        290,
+        200
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "标题",
+      "properties": {
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.8",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "# 这个节点只是存在就能帮你修复ui缩短的bug，很神奇吧？安装后，哪个工作流遇到这个问题，就直接复制粘贴过去\n"
+      ],
+      "widgets_values_named": {
+        "text": "# 这个节点只是存在就能帮你修复ui缩短的bug，很神奇吧？安装后，哪个工作流遇到这个问题，就直接复制粘贴过去\n"
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 53,
+      "type": "PreviewAny",
+      "pos": [
+        -500,
+        1560
+      ],
+      "size": [
+        560,
+        470
+      ],
+      "flags": {},
+      "order": 25,
+      "mode": 4,
+      "inputs": [
+        {
+          "localized_name": "源",
+          "name": "source",
+          "type": "*",
+          "link": 104
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "字符串",
+          "name": "STRING",
+          "type": "STRING",
+          "links": null
+        }
+      ],
+      "title": "当前生效提示词",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.44.0",
+        "Node name for S&R": "PreviewAny",
+        "ue_properties": {
+          "version": "8.0.1",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "title_regex": null,
+          "input_regex": null,
+          "group_regex": null,
+          "title_regex_invert": false,
+          "input_regex_invert": false,
+          "group_regex_invert": false,
+          "apply_to_unrepeated": 0,
+          "send_to_any": 0,
+          "string_to_combo": 0,
+          "repeated_type_rule": 0,
+          "group_restricted": 0,
+          "color_restricted": 0
+        }
+      },
+      "widgets_values": [],
+      "widgets_values_named": {}
+    },
+    {
+      "id": 56,
+      "type": "SamplerCustomAdvanced",
+      "pos": [
+        2200,
+        780
+      ],
+      "size": [
+        210,
+        340
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 29,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "噪波",
+          "name": "noise",
+          "type": "NOISE",
+          "link": 116
+        },
+        {
+          "localized_name": "引导器",
+          "name": "guider",
+          "type": "GUIDER",
+          "link": 117
+        },
+        {
+          "localized_name": "采样器",
+          "name": "sampler",
+          "type": "SAMPLER",
+          "link": 118
+        },
+        {
+          "localized_name": "西格玛",
+          "name": "sigmas",
+          "type": "SIGMAS",
+          "link": 119
+        },
+        {
+          "localized_name": "Latent图像",
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 120
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "Latent",
+          "name": "output",
+          "type": "LATENT",
+          "links": [
+            121
+          ]
+        },
+        {
+          "localized_name": "降噪Latent",
+          "name": "denoised_output",
+          "type": "LATENT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "SamplerCustomAdvanced",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      }
+    },
+    {
+      "id": 60,
+      "type": "Power Lora Loader (rgthree)",
+      "pos": [
+        -1477.6507930121877,
+        1566.8950483558174
+      ],
+      "size": [
+        493.90692071959495,
+        205.91648601219072
+      ],
+      "flags": {},
+      "order": 21,
+      "mode": 0,
+      "inputs": [
+        {
+          "dir": 3,
+          "name": "model",
+          "type": "MODEL",
+          "link": 128
+        },
+        {
+          "dir": 3,
+          "name": "clip",
+          "type": "CLIP",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "dir": 4,
+          "name": "MODEL",
+          "shape": 3,
+          "type": "MODEL",
+          "links": [
+            129
+          ]
+        },
+        {
+          "dir": 4,
+          "name": "CLIP",
+          "shape": 3,
+          "type": "CLIP",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "rgthree-comfy",
+        "ver": "d7297b42f0fa78bec1c0411478f887423c249502",
+        "Show Strengths": "Single Strength",
+        "Match": "",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        {},
+        {
+          "type": "PowerLoraLoaderHeaderWidget"
+        },
+        {
+          "on": false,
+          "lora": "MinimaxH3\\H3_VBVR_Pro_attn_only.safetensors",
+          "strength": 0.9,
+          "strengthTwo": null
+        },
+        {
+          "on": false,
+          "lora": "MinimaxH3\\minimax_h3_style_transfer_v1.0_r64.safetensors",
+          "strength": 0.8,
+          "strengthTwo": null
+        },
+        {
+          "on": false,
+          "lora": "MinimaxH3\\丝袜质感.safetensors",
+          "strength": 0.6,
+          "strengthTwo": null
+        },
+        {},
+        ""
+      ],
+      "widgets_values_named": {
+        "divider": {},
+        "PowerLoraLoaderHeaderWidget": {
+          "type": "PowerLoraLoaderHeaderWidget"
+        },
+        "lora_1": {
+          "on": false,
+          "lora": "MinimaxH3\\H3_VBVR_Pro_attn_only.safetensors",
+          "strength": 0.9,
+          "strengthTwo": null
+        },
+        "lora_2": {
+          "on": false,
+          "lora": "MinimaxH3\\minimax_h3_style_transfer_v1.0_r64.safetensors",
+          "strength": 0.8,
+          "strengthTwo": null
+        },
+        "lora_3": {
+          "on": false,
+          "lora": "MinimaxH3\\丝袜质感.safetensors",
+          "strength": 0.6,
+          "strengthTwo": null
+        },
+        "divider#2": {},
+        "➕ Add Lora": ""
+      }
+    },
+    {
+      "id": 62,
+      "type": "SaveImage",
+      "pos": [
+        1429.6229902226787,
+        1271.4365678917507
+      ],
+      "size": [
+        1100,
+        750
+      ],
+      "flags": {},
+      "order": 31,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "图片",
+          "name": "images",
+          "type": "IMAGE",
+          "link": 130
+        },
+        {
+          "localized_name": "文件名前缀",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            131,
+            134
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.43.0",
+        "Node name for S&R": "SaveImage",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        "PH3"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "PH3"
+      }
+    },
+    {
+      "id": 63,
+      "type": "GH_ImageVideoComparer",
+      "pos": [
+        3027.0929596454575,
+        1639.0953647525241
+      ],
+      "size": [
+        638.7450617706713,
+        591.4747708292855
+      ],
+      "flags": {},
+      "order": 33,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "图像 a",
+          "localized_name": "media_a",
+          "name": "media_a",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 138
+        },
+        {
+          "label": "图像 b",
+          "localized_name": "media_b",
+          "name": "media_b",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 134
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "aux_id": "goohai/Goohaitools-comfyui",
+        "ver": "6d917f93f245515f0bd3bd901338f56ce7df8a7a",
+        "Node name for S&R": "GH_ImageVideoComparer",
+        "gh_image_video_comparer_media_v1": {
+          "a": {
+            "kind": "unknown"
+          },
+          "b": {
+            "kind": "unknown"
+          }
+        },
+        "gh_image_video_comparer_state_v1": {
+          "view": "auto",
+          "position": 0.19385860105932717,
+          "speed": 1,
+          "audioMode": "none",
+          "syncEnabled": true
+        },
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "8.0.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        ""
+      ],
+      "widgets_values_named": {
+        "gh_image_video_comparer": ""
+      }
+    },
+    {
+      "id": 65,
+      "type": "AmiaomiaoH3_H3 Image Reference Loader",
+      "pos": [
+        67.7594503606602,
+        775.5189007213203
+      ],
+      "size": [
+        890,
+        1250
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "media_files",
+          "name": "media_files",
+          "type": "STRING",
+          "widget": {
+            "name": "media_files"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "target_megapixels",
+          "name": "target_megapixels",
+          "type": "FLOAT",
+          "widget": {
+            "name": "target_megapixels"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "resampling_method",
+          "name": "resampling_method",
+          "type": "COMBO",
+          "widget": {
+            "name": "resampling_method"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "upscale_small_images",
+          "name": "upscale_small_images",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "upscale_small_images"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "project_name",
+          "name": "project_name",
+          "type": "STRING",
+          "widget": {
+            "name": "project_name"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "ref_image_0",
+          "name": "ref_image_0",
+          "type": "IMAGE",
+          "links": [
+            136,
+            137,
+            138
+          ]
+        },
+        {
+          "localized_name": "ref_image_1",
+          "name": "ref_image_1",
+          "type": "IMAGE",
+          "links": [
+            139,
+            140
+          ]
+        },
+        {
+          "localized_name": "ref_image_2",
+          "name": "ref_image_2",
+          "type": "IMAGE",
+          "links": [
+            141,
+            142
+          ]
+        },
+        {
+          "localized_name": "ref_image_3",
+          "name": "ref_image_3",
+          "type": "IMAGE",
+          "links": [
+            143,
+            144
+          ]
+        },
+        {
+          "localized_name": "ref_image_4",
+          "name": "ref_image_4",
+          "type": "IMAGE",
+          "links": [
+            145
+          ]
+        },
+        {
+          "localized_name": "ref_image_5",
+          "name": "ref_image_5",
+          "type": "IMAGE",
+          "links": [
+            146
+          ]
+        },
+        {
+          "localized_name": "ref_image_6",
+          "name": "ref_image_6",
+          "type": "IMAGE",
+          "links": [
+            147
+          ]
+        },
+        {
+          "localized_name": "ref_image_7",
+          "name": "ref_image_7",
+          "type": "IMAGE",
+          "links": [
+            148
+          ]
+        },
+        {
+          "localized_name": "ref_image_8",
+          "name": "ref_image_8",
+          "type": "IMAGE",
+          "links": [
+            149
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "AraneaQwQ/ComfyUI-ximiao-H3-Toolbox",
+        "ver": "554d5797af3bb0ddc0f37d0bc9cfb97182a7b441",
+        "Node name for S&R": "AmiaomiaoH3_H3 Image Reference Loader",
+        "ue_properties": {
+          "version": "8.0.1",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "title_regex": null,
+          "input_regex": null,
+          "group_regex": null,
+          "title_regex_invert": false,
+          "input_regex_invert": false,
+          "group_regex_invert": false,
+          "apply_to_unrepeated": 0,
+          "send_to_any": 0,
+          "string_to_combo": 0,
+          "repeated_type_rule": 0,
+          "group_restricted": 0,
+          "color_restricted": 0
+        }
+      },
+      "widgets_values": [
+        "[]",
+        2,
+        "Lanczos",
+        false,
+        "H3_LVM"
+      ],
+      "widgets_values_named": {
+        "media_files": "[]",
+        "target_megapixels": 2,
+        "resampling_method": "Lanczos",
+        "upscale_small_images": false,
+        "project_name": "H3_LVM"
+      }
+    }
+  ],
+  "links": [
+    [
+      10,
+      18,
+      0,
+      10,
+      0,
+      "MODEL"
+    ],
+    [
+      11,
+      9,
+      0,
+      10,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      18,
+      3,
+      0,
+      15,
+      1,
+      "VAE"
+    ],
+    [
+      20,
+      1,
+      0,
+      19,
+      0,
+      "MODEL"
+    ],
+    [
+      88,
+      31,
+      0,
+      36,
+      0,
+      "INT"
+    ],
+    [
+      89,
+      31,
+      1,
+      37,
+      0,
+      "INT"
+    ],
+    [
+      92,
+      39,
+      0,
+      40,
+      0,
+      "*"
+    ],
+    [
+      97,
+      43,
+      0,
+      18,
+      0,
+      "MODEL"
+    ],
+    [
+      98,
+      32,
+      0,
+      44,
+      0,
+      "STRING"
+    ],
+    [
+      99,
+      24,
+      0,
+      44,
+      1,
+      "STRING"
+    ],
+    [
+      104,
+      44,
+      0,
+      53,
+      0,
+      "*"
+    ],
+    [
+      116,
+      12,
+      0,
+      56,
+      0,
+      "NOISE"
+    ],
+    [
+      117,
+      10,
+      0,
+      56,
+      1,
+      "GUIDER"
+    ],
+    [
+      118,
+      11,
+      0,
+      56,
+      2,
+      "SAMPLER"
+    ],
+    [
+      119,
+      13,
+      0,
+      56,
+      3,
+      "SIGMAS"
+    ],
+    [
+      120,
+      9,
+      1,
+      56,
+      4,
+      "LATENT"
+    ],
+    [
+      121,
+      56,
+      0,
+      15,
+      0,
+      "LATENT"
+    ],
+    [
+      128,
+      19,
+      0,
+      60,
+      0,
+      "MODEL"
+    ],
+    [
+      129,
+      60,
+      0,
+      42,
+      0,
+      "MODEL"
+    ],
+    [
+      130,
+      15,
+      0,
+      62,
+      0,
+      "IMAGE"
+    ],
+    [
+      131,
+      62,
+      0,
+      39,
+      0,
+      "IMAGE"
+    ],
+    [
+      134,
+      62,
+      0,
+      63,
+      1,
+      "IMAGE"
+    ],
+    [
+      138,
+      65,
+      0,
+      63,
+      0,
+      "IMAGE"
+    ],
+    [
+      95,
+      42,
+      0,
+      43,
+      0,
+      "MODEL"
+    ],
+    [
+      1,
+      2,
+      0,
+      9,
+      0,
+      "CLIP"
+    ],
+    [
+      2,
+      3,
+      0,
+      9,
+      1,
+      "VAE"
+    ],
+    [
+      136,
+      65,
+      0,
+      9,
+      2,
+      "IMAGE"
+    ],
+    [
+      139,
+      65,
+      1,
+      9,
+      3,
+      "IMAGE"
+    ],
+    [
+      141,
+      65,
+      2,
+      9,
+      4,
+      "IMAGE"
+    ],
+    [
+      143,
+      65,
+      3,
+      9,
+      5,
+      "IMAGE"
+    ],
+    [
+      145,
+      65,
+      4,
+      9,
+      6,
+      "IMAGE"
+    ],
+    [
+      146,
+      65,
+      5,
+      9,
+      7,
+      "IMAGE"
+    ],
+    [
+      147,
+      65,
+      6,
+      9,
+      8,
+      "IMAGE"
+    ],
+    [
+      148,
+      65,
+      7,
+      9,
+      9,
+      "IMAGE"
+    ],
+    [
+      149,
+      65,
+      8,
+      9,
+      10,
+      "IMAGE"
+    ],
+    [
+      102,
+      44,
+      0,
+      9,
+      11,
+      "STRING"
+    ],
+    [
+      73,
+      31,
+      0,
+      9,
+      12,
+      "INT"
+    ],
+    [
+      74,
+      31,
+      1,
+      9,
+      13,
+      "INT"
+    ],
+    [
+      75,
+      4,
+      0,
+      32,
+      0,
+      "CLIP"
+    ],
+    [
+      137,
+      65,
+      0,
+      32,
+      1,
+      "IMAGE"
+    ],
+    [
+      77,
+      24,
+      0,
+      32,
+      5,
+      "STRING"
+    ],
+    [
+      140,
+      65,
+      1,
+      32,
+      17,
+      "IMAGE"
+    ],
+    [
+      142,
+      65,
+      2,
+      32,
+      18,
+      "IMAGE"
+    ],
+    [
+      144,
+      65,
+      3,
+      32,
+      19,
+      "IMAGE"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "输入",
+      "bounding": [
+        -510,
+        710,
+        1900,
+        1330
+      ],
+      "color": "#A88",
+      "flags": {}
+    },
+    {
+      "id": 2,
+      "title": "载入模型",
+      "bounding": [
+        -970,
+        710,
+        450,
+        760
+      ],
+      "color": "#3f789e",
+      "flags": {}
+    },
+    {
+      "id": 4,
+      "title": "Sampling",
+      "bounding": [
+        1860,
+        710,
+        850,
+        440
+      ],
+      "color": "#3f789e",
+      "flags": {}
+    },
+    {
+      "id": 6,
+      "title": "Conditioning",
+      "bounding": [
+        1400,
+        710,
+        450,
+        440
+      ],
+      "color": "#3f789e",
+      "flags": {}
+    },
+    {
+      "id": 7,
+      "title": "输出",
+      "bounding": [
+        1400,
+        1160,
+        1310,
+        880
+      ],
+      "color": "#3f789e",
+      "flags": {}
+    },
+    {
+      "id": 8,
+      "title": "Group",
+      "bounding": [
+        -970,
+        1480,
+        450,
+        560
+      ],
+      "color": "#3f789e",
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1.1881013271298795,
+      "offset": [
+        18.09574802460679,
+        -844.0404053129153
+      ]
+    },
+    "frontendVersion": "1.57.6",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true,
+    "ue_links": [],
+    "links_added_by_ue": [],
+    "astrbot": {
+      "name": "PH3_Image_Edit_AstrBot"
+    }
+  },
+  "extensions": {
+    "seed_widgets": {
+      "12": 0
+    }
+  },
+  "version": 0.4
+}

@@ -6,6 +6,7 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 from .detailer import add_feet_to_profile, detailer_workflow
+from .h3_toolbox import toolbox_workflow
 from .lightning import lightning_workflow
 from .minimax_h3 import h3_v3_workflow
 from .parameter_layout import preserve_parameter_layout
@@ -17,13 +18,16 @@ from .workflow import (
     ANIMA_DETAILER_WORKFLOW,
     ANIMA_WORKFLOW,
     DETAILER_WORKFLOW,
+    H3_DUAL,
     H3_SEED_FINAL,
     H3_SEED_FULL,
     H3_SEED_HUNTER,
     LIGHTNING_WORKFLOW,
+    PH3_IMAGE,
     REVERSE_WORKFLOW,
     SDXL_WORKFLOW,
     SVI_WORKFLOW,
+    TOOLBOX_WORKFLOWS,
     WAI_WORKFLOW,
     Workflow,
     WorkflowError,
@@ -52,6 +56,8 @@ WORKFLOW_SHORT_NAMES = {
     H3_SEED_HUNTER: "h3",
     H3_SEED_FINAL: "h3-final",
     H3_SEED_FULL: "h3-v3",
+    H3_DUAL: "h3-dual",
+    PH3_IMAGE: "ph3",
     REVERSE_WORKFLOW: "reverse",
 }
 WORKFLOW_ALIASES = {
@@ -100,6 +106,9 @@ def read_profile(path):
 
 
 def workflow_from_profile(name, data, mapping=None):
+    if name in TOOLBOX_WORKFLOWS:
+        graph, settings = profile_parts(data)
+        return toolbox_workflow(name, graph, settings, mapping)
     if name in V40_WORKFLOWS:
         graph, settings = profile_parts(data)
         if isinstance(settings, dict) and "v40" in settings:

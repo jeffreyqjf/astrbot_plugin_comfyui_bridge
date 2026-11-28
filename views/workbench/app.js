@@ -3,6 +3,7 @@ import { mountPromptLibrary } from "./prompt_library.js";
 import { mountVideos } from "./videos.js";
 import { mountH3Media } from "./h3_media.js";
 import { mountH3Prompt } from "./h3_prompt.js";
+import { mountH3Toolbox } from "./h3_toolbox.js";
 import { mountTaskFeatures } from "./task_features.js";
 import { mountJobDetails, mountTaskPresets } from "./task_inspect.js";
 import { mountReverseHistory } from "./reverse_history.js";
@@ -13,6 +14,18 @@ import { createTaskMemory } from "./task_memory.js";
 const remote = !window.AstrBotPluginView;
 const bridge = window.AstrBotPluginView || (await import("./remote.js")).bridge;
 const get = (id) => document.getElementById(id);
+const h3Toolbox = mountH3Toolbox({
+  bridge, host: get("queue-h3-toolbox"),
+  getPrompt: () => get("queue-positive").value,
+  setPrompt: (text) => {
+    const input = get("queue-positive");
+    if (input.value === text) return;
+    input.value = text;
+    input.dispatchEvent(new Event("input", {bubbles:true}));
+  },
+  status: (text, error) => setStatus("queue-h3-toolbox-status", text, error),
+  submit: (payload) => bridge.apiPost("studio/queue", payload),
+});
 const h3Prompt = mountH3Prompt({
   download: downloadJson,
   bridge, host: get("queue-h3-prompt"), textarea: get("queue-positive"),
@@ -58,6 +71,8 @@ const names = {
   MiniMax_H3_Seed_Hunter_AstrBot: "MiniMax H3 · Seed Hunter",
   MiniMax_H3_Seed_Final_AstrBot: "MiniMax H3 · 放大定稿",
   MiniMax_H3_Seed_Hunter_V3_AstrBot: "MiniMax H3 · Seed Hunter v3 完整版",
+  MiniMax_H3_Dual_Continuation_AstrBot: "H3 双采接续",
+  PH3_Image_Edit_AstrBot: "PH3 图像编辑与生成",
   SDXL_Turbo_T2I_AstrBot: "SDXL Turbo",
 };
 let studio;
@@ -2537,8 +2552,7 @@ function showQueueReference() {
   get("queue-reference-edit").hidden = !taskInputs.mask;
   get("queue-reference-remove-mask").hidden = !taskInputs.mask || !queueMask();
   if (!reference.hidden) {
-    const form = get(queueMode.value === "command" ? "remote-command-form" : "queue-form");
-    form.querySelector("footer").before(reference);
+    get(queueMode.value === "command" ? "remote-command-send" : "queue-add").closest("footer").before(reference);
   }
 }
 
@@ -2573,16 +2587,20 @@ function renderTaskControlnets(selectedName = queueWorkflow.value, inputs) {
   field("remote-command-account", isCommand);
   showQueueReference();
   const reference = get("queue-reference");
-  const position = form.contains(reference) && !reference.hidden ? reference : form.querySelector("footer");
+  const submitFooter = get(isCommand ? "remote-command-send" : "queue-add").closest("footer");
+  const position = form.contains(reference) && !reference.hidden ? reference : submitFooter;
   position.before(get("queue-h3-media"));
   const promptAnchor = get(isCommand ? "queue-command-text" : "queue-positive").closest("label");
   promptAnchor.after(get("queue-h3-prompt"));
   h3Prompt.show(taskInputs.h3_prompt ? selectedName : null);
   h3Media.show(taskInputs.h3_media ? selectedName : null);
+  position.before(get("queue-h3-toolbox"));
+  const toolbox = !isCommand && taskInputs.h3_toolbox;
+  h3Toolbox.show(toolbox ? selectedName : null, toolbox);
   field("queue-positive", taskInputs.positive);
   field("queue-count", workflow?.kind !== "image_to_text");
   get("queue-add").textContent = workflow?.kind === "image_to_text" ? "开始反推" : "加入队列";
-  if (taskInputs.h3_prompt) get("queue-positive").closest("label").hidden = true;
+  if (taskInputs.h3_prompt || toolbox) get("queue-positive").closest("label").hidden = true;
   position.before(get("queue-features"));
   if (selectedName === taskControlWorkflow) return;
   taskControlWorkflow = selectedName;
@@ -2863,6 +2881,9 @@ queueWorkflow.addEventListener("change", () => {
   saveTaskDraft();
   taskMemoryWorkflow = queueWorkflow.value;
   queueVideoDuration.value = "";
+  if (studio.workflows.find(item => item.name === queueWorkflow.value)?.task_inputs?.h3_toolbox) {
+    get("queue-positive").value = "";
+  }
   taskMemory.save("global", {workflow: queueWorkflow.value, mode: queueMode.value});
   renderQueueLoras();
   renderTaskControlnets();
@@ -2943,6 +2964,8 @@ async function restoreTaskDraft() {
       if (!current()) return;
     }
     for (const id of rememberedFields) restore(get(id), value[`field:${id}`] ?? taskFieldDefaults[id]);
+    await h3Toolbox.restorePrompt();
+    if (!current()) return;
     for (const input of get("queue-features").querySelectorAll("[data-feature]")) {
       const checked = value[`feature:${input.dataset.feature}`];
       if (typeof checked === "boolean" && checked !== input.checked) { input.checked = checked; input.dispatchEvent(new Event("change", {bubbles: true})); }
@@ -3062,12 +3085,17 @@ get("queue-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   await queueConfigReady;
   if (queueConfigError) { createTaskMessage(queueConfigError, true); return; }
-  try { await h3Prompt.ready(); }
+  let toolboxPayload;
+  try {
+    await h3Prompt.ready();
+    toolboxPayload = await h3Toolbox.payload();
+  }
   catch (error) { createTaskMessage(error.message, true); return; }
   const preset = taskInputs.presets ? get("queue-preset").value : "";
   const positive = taskInputs.positive ? get("queue-positive").value : "";
   const workflow = queueWorkflow.value;
-  if (taskInputs.positive && !preset && !positive.trim() && ![advancedV40, detailerWorkflow, animaDetailerWorkflow].includes(workflow)) {
+  if (taskInputs.positive && !preset && !positive.trim() && !toolboxPayload.h3_toolbox?.picker?.refine_clip &&
+      ![advancedV40, detailerWorkflow, animaDetailerWorkflow].includes(workflow)) {
     createTaskMessage("请填写正向提示词或选择预设。", true);
     return;
   }
@@ -3109,7 +3137,7 @@ get("queue-form").addEventListener("submit", async (event) => {
       queueConfig.value ? {} : queueControlnetPayload(),
       h3Media.payload(),
     ]);
-    const payload = { ...data, ...reference, ...controlnets, ...media, ...(queueConfig.value ? {} : taskFeatures.payload()) };
+    const payload = { ...data, ...reference, ...controlnets, ...media, ...toolboxPayload, ...(queueConfig.value ? {} : taskFeatures.payload()) };
     const files = [...get("queue-reference-file").files];
     if (taskInputs.reference && files.length > 1) {
       if (files.length > 32) throw new Error("每次最多选择 32 张图片，请分批添加。");
@@ -3118,7 +3146,10 @@ get("queue-form").addEventListener("submit", async (event) => {
       return Promise.all(files.map(async file => ({...payload, count: 1, reference_id: "", mask: "", image: await encodeReference(file), reference_origin: imageReviews.referenceOrigin(file)})));
     }
     return payload;
-  }, get("queue-add"), (result) => `已加入 ${result.jobs.length} 项任务，可在任务队列查看进度。`, { create: true, opensQueue: (result) => result.jobs.length > 0 });
+  }, get("queue-add"), (result) => {
+    if (toolboxPayload.h3_toolbox) void h3Toolbox.watch(result.jobs);
+    return `已加入 ${result.jobs.length} 项任务，可在任务队列查看进度。`;
+  }, { create: true, opensQueue: (result) => !toolboxPayload.h3_toolbox && result.jobs.length > 0 });
 });
 setInterval(refreshQueue, 2500);
 

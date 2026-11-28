@@ -1,0 +1,396 @@
+{
+  "prompt": {
+    "1": {
+      "inputs": {
+        "unet_name": "minimax_h3_fl2va_pruned_w6a8.safetensors",
+        "weight_dtype": "default"
+      },
+      "class_type": "UNETLoader",
+      "_meta": {
+        "title": "Load Diffusion Model"
+      }
+    },
+    "2": {
+      "inputs": {
+        "clip_name": "p-h3-image_text_encoder_int8_convrot.safetensors",
+        "type": "minimax",
+        "device": "default"
+      },
+      "class_type": "CLIPLoader",
+      "_meta": {
+        "title": "Text encoder"
+      }
+    },
+    "3": {
+      "inputs": {
+        "vae_name": "p-h3-image_vae_int8_convrot.safetensors"
+      },
+      "class_type": "VAELoader",
+      "_meta": {
+        "title": "Load VAE"
+      }
+    },
+    "4": {
+      "inputs": {
+        "clip_name": "p-h3-image_prompt_upsampler_w4a8.safetensors",
+        "type": "minimax",
+        "device": "default"
+      },
+      "class_type": "CLIPLoader",
+      "_meta": {
+        "title": "Prompt upsampler model"
+      }
+    },
+    "9": {
+      "inputs": {
+        "clip": [
+          "2",
+          0
+        ],
+        "prompt": [
+          "44",
+          0
+        ],
+        "width": [
+          "31",
+          0
+        ],
+        "height": [
+          "31",
+          1
+        ],
+        "vae": [
+          "3",
+          0
+        ],
+        "images.image_1": [
+          "65",
+          0
+        ],
+        "images.image_2": [
+          "65",
+          1
+        ],
+        "images.image_3": [
+          "65",
+          2
+        ],
+        "images.image_4": [
+          "65",
+          3
+        ],
+        "images.image_5": [
+          "65",
+          4
+        ],
+        "images.image_6": [
+          "65",
+          5
+        ],
+        "images.image_7": [
+          "65",
+          6
+        ],
+        "images.image_8": [
+          "65",
+          7
+        ],
+        "images.image_9": [
+          "65",
+          8
+        ]
+      },
+      "class_type": "PH3ImageConditioning",
+      "_meta": {
+        "title": "p-h3-image Conditioning"
+      }
+    },
+    "18": {
+      "inputs": {
+        "shift_video": 1,
+        "shift_audio": 1,
+        "model": [
+          "43",
+          0
+        ]
+      },
+      "class_type": "MiniMaxH3SigmaShift",
+      "_meta": {
+        "title": "ModelSamplingMiniMaxH3 (keep at 1.0)"
+      }
+    },
+    "10": {
+      "inputs": {
+        "model": [
+          "18",
+          0
+        ],
+        "conditioning": [
+          "9",
+          0
+        ]
+      },
+      "class_type": "BasicGuider",
+      "_meta": {
+        "title": "Basic Guider"
+      }
+    },
+    "11": {
+      "inputs": {
+        "sampler_name": "er_sde"
+      },
+      "class_type": "KSamplerSelect",
+      "_meta": {
+        "title": "KSamplerSelect"
+      }
+    },
+    "12": {
+      "inputs": {
+        "noise_seed": 417861535306459
+      },
+      "class_type": "RandomNoise",
+      "_meta": {
+        "title": "RandomNoise"
+      }
+    },
+    "13": {
+      "inputs": {
+        "sigmas": "1.0, 0.984753, 0.967905, 0.951688, 0.925372, 0.881923, 0.810083, 0.528718, 0.0"
+      },
+      "class_type": "ManualSigmas",
+      "_meta": {
+        "title": "ManualSigmas"
+      }
+    },
+    "15": {
+      "inputs": {
+        "samples": [
+          "56",
+          0
+        ],
+        "vae": [
+          "3",
+          0
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "19": {
+      "inputs": {
+        "lora_name": "MiniMaxH3\\p-h3-image_lora_bf16.safetensors",
+        "strength_model": 1,
+        "model": [
+          "1",
+          0
+        ]
+      },
+      "class_type": "LoraLoaderModelOnly",
+      "_meta": {
+        "title": "Load LoRA"
+      }
+    },
+    "24": {
+      "inputs": {
+        "value": ""
+      },
+      "class_type": "PrimitiveStringMultiline",
+      "_meta": {
+        "title": "输入提示词"
+      }
+    },
+    "31": {
+      "inputs": {
+        "aspect_ratio": "16:9 (Widescreen)",
+        "megapixels": 8,
+        "multiple": 32
+      },
+      "class_type": "ResolutionSelector",
+      "_meta": {
+        "title": "分辨率选择器（像素）"
+      }
+    },
+    "32": {
+      "inputs": {
+        "max_length": 1536,
+        "sampling_mode": "off",
+        "thinking": true,
+        "use_default_template": true,
+        "mtp": "auto",
+        "clip": [
+          "4",
+          0
+        ],
+        "prompt": [
+          "24",
+          0
+        ],
+        "images.image1": [
+          "65",
+          0
+        ],
+        "images.image2": [
+          "65",
+          1
+        ],
+        "images.image3": [
+          "65",
+          2
+        ],
+        "images.image4": [
+          "65",
+          3
+        ]
+      },
+      "class_type": "TextGenerateV2",
+      "_meta": {
+        "title": "Generate Text"
+      }
+    },
+    "42": {
+      "inputs": {
+        "attention": "pytorch attention",
+        "model": [
+          "60",
+          0
+        ]
+      },
+      "class_type": "ModelAttentionBackend",
+      "_meta": {
+        "title": "Model Attention Backend"
+      }
+    },
+    "43": {
+      "inputs": {
+        "selection": "sol-attn",
+        "start_percent": 0.2,
+        "end_percent": 0.9,
+        "dense_blocks": "0-2,-1",
+        "min_tokens": 12288,
+        "extra_tokens": 256,
+        "sink_conditioning": "exact_kv_and_rows",
+        "verbose": false,
+        "model": [
+          "42",
+          0
+        ],
+        "selection.tau": 1
+      },
+      "class_type": "BlockSparseAttention",
+      "_meta": {
+        "title": "Model Sparse Attention"
+      }
+    },
+    "44": {
+      "inputs": {
+        "boolean": false,
+        "on_true": [
+          "32",
+          0
+        ],
+        "on_false": [
+          "24",
+          0
+        ]
+      },
+      "class_type": "easy ifElse",
+      "_meta": {
+        "title": "true = 使用提示词重写器优化输入提示词｜false=直接用输入提示词"
+      }
+    },
+    "56": {
+      "inputs": {
+        "noise": [
+          "12",
+          0
+        ],
+        "guider": [
+          "10",
+          0
+        ],
+        "sampler": [
+          "11",
+          0
+        ],
+        "sigmas": [
+          "13",
+          0
+        ],
+        "latent_image": [
+          "9",
+          1
+        ]
+      },
+      "class_type": "SamplerCustomAdvanced",
+      "_meta": {
+        "title": "SamplerCustomAdvanced"
+      }
+    },
+    "60": {
+      "inputs": {
+        "model": [
+          "19",
+          0
+        ],
+        "lora_1": {
+          "on": false,
+          "lora": "MinimaxH3\\H3_VBVR_Pro_attn_only.safetensors",
+          "strength": 0.9
+        },
+        "lora_2": {
+          "on": false,
+          "lora": "MinimaxH3\\minimax_h3_style_transfer_v1.0_r64.safetensors",
+          "strength": 0.8
+        },
+        "lora_3": {
+          "on": false,
+          "lora": "MinimaxH3\\丝袜质感.safetensors",
+          "strength": 0.6
+        }
+      },
+      "class_type": "Power Lora Loader (rgthree)",
+      "_meta": {
+        "title": "Power Lora Loader (rgthree)"
+      }
+    },
+    "62": {
+      "inputs": {
+        "filename_prefix": "PH3",
+        "images": [
+          "15",
+          0
+        ]
+      },
+      "class_type": "SaveImage",
+      "_meta": {
+        "title": "Save Image"
+      }
+    },
+    "65": {
+      "inputs": {
+        "media_files": "[]",
+        "target_megapixels": 2,
+        "resampling_method": "Lanczos",
+        "upscale_small_images": false,
+        "project_name": "H3_LVM"
+      },
+      "class_type": "AmiaomiaoH3_H3 Image Reference Loader",
+      "_meta": {
+        "title": "H3 图片参考加载器"
+      }
+    }
+  },
+  "astrbot": {
+    "node_mapping": {
+      "positive": [
+        "24.value"
+      ],
+      "negative": [],
+      "seed": [
+        "12.noise_seed"
+      ]
+    }
+  }
+}
