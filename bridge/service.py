@@ -26,6 +26,7 @@ from .workflows.workflow import (
     ANIMA_WORKFLOW,
     DETAILER_WORKFLOW,
     H3_DUAL,
+    PH3_IMAGE,
     SDXL_WORKFLOW,
     WAI_MAPPING,
     WAI_WORKFLOW,
@@ -782,6 +783,7 @@ class ComfyService:
                 else number(self.config, "max_images", 4, 1, 16),
                 video=video,
                 existing_video=self.video_library.original if video else None,
+                **({"existing_image": self.image_reviews.shared_original} if job.workflow == PH3_IMAGE else {}),
             )
             try:
                 refs = output_refs(record, outputs, video=video, include_node=not video)
@@ -881,10 +883,10 @@ class ComfyService:
         originals = await asyncio.to_thread(self.image_reviews.originals, image_folder, job.id, refs)
         caches = list(job.paths)
         for index in range(len(caches), len(refs)):
-            cached = None
+            cached = await asyncio.to_thread(self.image_reviews.shared_original, refs[index]) if job.workflow == PH3_IMAGE else None
             if originals[index] is None:
                 try:
-                    cached = await self.client.download_image(refs[index], directory)
+                    cached = cached or await self.client.download_image(refs[index], directory)
                 except (ComfyError, OSError) as exc:
                     logger.warning("Could not archive image %d for %s: %s", index + 1, job.short_id, exc)
             caches.append(cached)

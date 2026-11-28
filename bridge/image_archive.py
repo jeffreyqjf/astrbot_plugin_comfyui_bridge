@@ -18,7 +18,7 @@ from threading import Lock
 
 from PIL import Image, ImageOps
 
-from .client import image_suffix, output_refs, video_suffix
+from .client import ComfyError, image_suffix, output_refs, video_suffix
 from .controlnet_archive import ASSET_ID, CONTROL_TOKEN
 from .workflows.workflow import WorkflowError, image_loras
 from .workflows.workflow_store import atomic_write, profile_bytes
@@ -252,6 +252,20 @@ class ImageReviews:
             path = self._path(relative) if relative and relative.startswith(directory + "/") else None
             paths.append(path if path is not None and path.is_file() else None)
         return paths
+
+    def shared_original(self, ref):
+        relative = _output_relative_path(ref)
+        if self.local_output is None or relative is None:
+            return None
+        try:
+            path = self._path(relative)
+            if path.is_file():
+                with path.open("rb") as source:
+                    image_suffix(source.read(16))
+                return path
+        except (OSError, ValueError, ComfyError):
+            return None
+        return None
 
     def _record(self, job_id):
         path = self.index / job_id[:2] / f"{job_id}.json"

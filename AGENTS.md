@@ -83,11 +83,12 @@
 ruff check .
 git diff --check
 python -m unittest discover -s tests
-python build_zip.py --output "<ZIP 路径>"
+python build_zip.py
 python tests/check_astrbot_runtime.py --astrbot-core "<本机 AstrBot 实例的 core 路径>" --archive "<ZIP 路径>"
 ```
 
 - 回归测试在隔离目录检查插件行为。`check_astrbot_runtime.py` 用真实 AstrBot 在隔离目录加载 ZIP。分别说明自动测试、真实 ComfyUI 生成和 QQ 实际投递验证到了哪一步。
+- 每次交付都在插件根目录运行 `python build_zip.py`。交付 ZIP 必须与插件文件夹并列，当前路径为 `D:\QQbot\插件\astrbot_plugin_comfyui_bridge.zip`。临时验证包可用 `--output` 单独指定，交付前检查同级 ZIP 并在交付说明中列出路径。
 - 功能发布时按要求更新 `metadata.yaml` 和相关用户文档。`build_zip.py` 使用运行文件白名单，新增模块、模板或前端资源时核对是否进包。测试和本维护指南留在源码目录。
 - 用户要求更新本机时，先检查安装目录是否有独立改动，核对后再同步本次涉及的文件并验证版本。插件重载负责应用 Python 代码和配置，`/comfy wf reload` 用于重读工作流。报告本机文件已同步、插件是否已重载，以及运行图是否已更新。
 

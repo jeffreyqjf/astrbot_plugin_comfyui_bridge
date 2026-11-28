@@ -5,7 +5,7 @@ from stat import S_ISREG
 
 from .client import VIDEO_MIME, video_suffix
 from .image_archive import _output_relative_path
-from .workflows.workflow import VIDEO_FOLDER, WorkflowError
+from .workflows.workflow import H3_DUAL, TOOLBOX_OUTPUT_PREFIXES, VIDEO_FOLDER, WorkflowError
 
 PAGE_SIZE = 24
 
@@ -14,9 +14,17 @@ class VideoLibrary:
     def __init__(self, output_dir, local_output):
         self.cache_dir = output_dir.resolve() / VIDEO_FOLDER
         self.directories = {"cache": self.cache_dir}
+        self.local_output = local_output.resolve() if local_output is not None else None
         if local_output is not None:
-            output = local_output.resolve()
-            self.directories.update({"comfyui": output / VIDEO_FOLDER, "legacy": output / "video"})
+            output = self.local_output
+            prefixes = TOOLBOX_OUTPUT_PREFIXES[H3_DUAL]
+            self.directories.update({
+                "comfyui": output / VIDEO_FOLDER,
+                "legacy": output / "video",
+                "h3_first": output / prefixes["45"].rsplit("/", 1)[0],
+                "h3_second": output / prefixes["46"].rsplit("/", 1)[0],
+                "h3_long": output / "h3_long",
+            })
 
     def cache(self):
         if self.cache_dir.resolve() != self.cache_dir:
@@ -25,17 +33,22 @@ class VideoLibrary:
         return self.cache_dir
 
     def original(self, ref):
-        root = self.directories.get("comfyui")
         relative = _output_relative_path(ref)
-        if root is None or not relative:
+        if self.local_output is None or not relative:
             return None
-        parts = relative.split("/")
-        if len(parts) != 2 or parts[0] != VIDEO_FOLDER:
-            return None
-        try:
-            return self.file("comfyui", parts[1])
-        except (OSError, ValueError):
-            return None
+        path = self.local_output / relative
+        for source, root in self.directories.items():
+            if source != "cache" and path.parent == root:
+                try:
+                    return self.file(source, path.name)
+                except (OSError, ValueError):
+                    return None
+        if path.is_relative_to(self.local_output / "h3_long"):
+            try:
+                return self._video_file(path)
+            except (OSError, ValueError):
+                return None
+        return None
 
     def file(self, source, filename, version=None):
         if (
@@ -45,12 +58,15 @@ class VideoLibrary:
             or any(ord(char) < 32 or char in '<>:"/\\|?*' for char in filename)
         ):
             raise WorkflowError("视频路径无效。")
-        path = self.directories[source] / filename
+        return self._video_file(self.directories[source] / filename, version)
+
+    @staticmethod
+    def _video_file(path, version=None):
         suffix = path.suffix.lower()
         if suffix not in VIDEO_MIME or path.is_symlink() or path.resolve() != path:
             raise WorkflowError("视频路径无效。")
         stat = path.stat()
-        if not S_ISREG(stat.st_mode) or (version is not None and version != self._version(stat)):
+        if not S_ISREG(stat.st_mode) or (version is not None and version != VideoLibrary._version(stat)):
             raise WorkflowError("视频已发生变化，请刷新列表。")
         with path.open("rb") as stream:
             if video_suffix(stream.read(64), suffix) != suffix:

@@ -1,5 +1,7 @@
 # API 契约
 
+v4.1.0 的 `studio/h3/toolbox/rpc` 允许转发 ComfyUI 共享扩展的 `GET /astrbot_h3_shared/prompts/{family}` 和同路径的 POST，family 限定为 `h3-dual` 与 `ph3`。GET 返回 `{entries:[{name,text}],revision}`。POST 接受 `{name,text,revision}`，text 为 null 时删除，revision 过期返回 409。两端共用此接口。
+
 v4.0.0 的 `task_inputs.h3_toolbox` 返回已识别面板的节点 ID、类名及可编辑字面字段。简易 `POST studio/queue` 接受 `h3_toolbox` 对象，按面板名称覆盖固定节点的字面输入。`h3_toolbox_action` 取 `cut` 或 `join` 时只提交对应节点。H3 双采生成显式包括片段保存目标，并按一采或二采取回对应视频。草稿补采继续由原版 Toolbox 的提交处理器恢复。
 
 `POST studio/h3/toolbox/rpc` 转发白名单内的素材项目、片段库、文件元数据和预览操作。`POST studio/h3/toolbox/upload` 接受单个文件，视频投放池以 `pool=1&project=…` 指定项目。`GET studio/h3/toolbox/result?id=…` 返回本账号工具箱任务的状态及指定节点的结果事件。缩略图与视频预览复用当前来源和工作台权限限制。

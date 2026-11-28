@@ -15,7 +15,7 @@ from posixpath import dirname, join, normpath
 from subprocess import CompletedProcess
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from zipfile import ZipFile
 
 PLUGIN = "astrbot_plugin_comfyui_bridge"
@@ -167,9 +167,12 @@ async def check_h3_toolbox(instance):
                 assert graph["50"]["inputs"]["link"] == ["6108", 2]
                 assert graph["41"]["inputs"]["template"] == ["40", 0]
                 assert "6103" not in graph and "6104" not in graph
+                assert graph["45"]["inputs"]["filename_prefix"] == "最终版万物皆可接续/1采/1采"
+                assert graph["46"]["inputs"]["filename_prefix"] == "最终版万物皆可接续/2采/2采"
                 assert graph["21"]["inputs"]["seconds"] == values.get("settings", {}).get("seconds", 6)
             else:
                 assert graph["24"]["inputs"]["value"] == positive
+                assert graph["62"]["inputs"]["filename_prefix"] == "鸣潮画风测试/wuwa_style"
                 assert json.loads(graph["65"]["inputs"]["media_files"])[0]["filename"] == "fixture.png"
         assert service.workflows[dual].graph["21"]["inputs"]["seconds"] == 6
         assert service.workflows[ph3].graph["65"]["inputs"]["media_files"] == "[]"
@@ -182,6 +185,16 @@ async def check_h3_toolbox(instance):
     assert (await call("POST", route, {"method": "GET", "path": "/history"}, owner=None)).status_code == 401
     assert (await call("POST", route, {"method": "GET", "path": "/history"})).status_code == 400
     assert (await call("POST", route, {"method": "GET", "path": "/view?filename=../escape.mp4"})).status_code == 400
+    with patch.object(service.client, "request", new=AsyncMock(return_value={"entries": [], "revision": "fixture"})) as request:
+        for family in ("h3-dual", "ph3"):
+            path = "/astrbot_h3_shared/prompts/" + family
+            response = await call("POST", route, {"method": "GET", "path": path})
+            assert response.status_code == 200
+            request.assert_awaited_with("GET", path, params={})
+            body = {"name": "Example", "text": "A prompt", "revision": "fixture"}
+            response = await call("POST", route, {"method": "POST", "path": path, "body": body})
+            assert response.status_code == 200
+            request.assert_awaited_with("POST", path, params={}, payload=body)
     print("PASS: native H3 Toolbox task settings, draft/refine routing, PH3 reference, tool isolation and RPC guards")
 
 

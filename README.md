@@ -1,6 +1,6 @@
 # ComfyUI 工作台
 
-AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、WAN 2.2 和 H3 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v4.0.0。
+AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、WAN 2.2 和 H3 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v4.1.0。
 
 v3 新建任务按工作流选择本次启用的功能，支持 Advanced Gemma V40 的 RGB 区域遮罩与整套区域提示词预设。见[使用教程](user%20docs/REGIONAL_PROMPT.md)。
 
@@ -183,7 +183,7 @@ Detailer V40 和 Anima Detailer 的新任务保存输入原图与结果的关联
 
 插件入口为 `main.py`。内部代码在 [bridge/](bridge/)，其中 `workflows/` 管理工作流，`qq/` 处理 QQ 指令和消息，`studio/` 提供网页工作台。使用文档在 [user docs/](user%20docs/)，页面资源在 [views/workbench/](views/workbench/)。
 
-- 生成安装 ZIP：`python build_zip.py`。
+- 每次交付都在插件根目录运行 `python build_zip.py`。生成的 `astrbot_plugin_comfyui_bridge.zip` 与插件文件夹并列，当前位于 `D:\QQbot\插件\`。
 - 回归测试使用 `python -m unittest discover -s tests`。
 - 隔离安装验证先用 `python build_zip.py --output <ZIP 路径>` 打包，再在 AstrBot 的 Python 环境运行 `python tests/check_astrbot_runtime.py --astrbot-core <AstrBot core 路径> --archive <ZIP 路径>`。
 

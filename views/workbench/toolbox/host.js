@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 import { app, extensions } from "./scripts/app.js";
 import { api, connect } from "./scripts/api.js";
+import { createSharedPrompts } from "./shared_prompt.js";
 import "./extensions/ximiao/refs/hub.js";
 import "./extensions/ximiao/long_video/ref_loader.js";
 import "./extensions/ximiao/long_video/video_v3.js";
@@ -128,6 +129,23 @@ export async function mountPanels({bridge, host, panels, run, initialPrompt, isI
   } else {
     await mount("prompt", {node:"27", class_type:"AmiaomiaoH3_Prompt", values:{text:initialPrompt}});
   }
+  function setPrompt(value) {
+    const node = nodes.get("prompt");
+    if (node.textarea) node.textarea.value = value;
+    else if (node.widgets[0].value !== value) {
+      node.widgets[0].value = value;
+      node.h3Prompt.setValue(value);
+    }
+  }
+  const promptNode = nodes.get("prompt");
+  host.querySelector('[data-h3-role="prompt"] > summary').after(createSharedPrompts({
+    api, family: isImage ? "ph3" : "h3-dual",
+    read: () => promptNode.textarea?.value ?? promptNode.widgets[0].value,
+    write(value) {
+      setPrompt(value);
+      if (promptNode.textarea) onPromptChange(value);
+    },
+  }));
   for (const role of ["cut", "join"]) if (panels[role]) await mount(role, panels[role]);
   return {
     values(action) {
@@ -137,14 +155,7 @@ export async function mountPanels({bridge, host, panels, run, initialPrompt, isI
         [name, nodes.get(role).widgets.find(widget => widget.name === name).value],
       ))]));
     },
-    setPrompt(value) {
-      const node = nodes.get("prompt");
-      if (node.textarea) node.textarea.value = value;
-      else if (node.widgets[0].value !== value) {
-        node.widgets[0].value = value;
-        node.h3Prompt.setValue(value);
-      }
-    },
+    setPrompt,
     result(outputs) {
       const saved = outputs["50"]?.h3_clip_v2?.[0];
       if (saved) {

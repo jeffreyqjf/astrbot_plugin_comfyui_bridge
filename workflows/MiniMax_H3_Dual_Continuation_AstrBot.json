@@ -553,7 +553,7 @@
       "inputs": {
         "frame_rate": 24,
         "loop_count": 0,
-        "filename_prefix": "vedio/H3_一采",
+        "filename_prefix": "最终版万物皆可接续/1采/1采",
         "format": "video/h264-mp4",
         "pingpong": false,
         "save_output": true,
@@ -579,7 +579,7 @@
       "inputs": {
         "frame_rate": 24,
         "loop_count": 0,
-        "filename_prefix": "vedio/H3_二采",
+        "filename_prefix": "最终版万物皆可接续/2采/2采",
         "format": "video/h264-mp4",
         "pingpong": false,
         "save_output": true,

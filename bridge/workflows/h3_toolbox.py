@@ -5,7 +5,7 @@ import re
 from copy import copy, deepcopy
 from pathlib import Path
 
-from .workflow import H3_DUAL, PH3_IMAGE, Workflow, WorkflowError, is_link
+from .workflow import H3_DUAL, PH3_IMAGE, TOOLBOX_OUTPUT_PREFIXES, Workflow, WorkflowError, is_link
 
 PANEL_NODES = {
     H3_DUAL: {
@@ -23,11 +23,17 @@ DECIMAL_FIELDS = {"seconds", "megapixels", "target_megapixels", "upscale", "segm
                   "scale_percent", "fps", "playback_speed_custom"}
 TOOLBOX_CUT = "AmiaomiaoH3_H3VideoCutterV3"
 TOOLBOX_OUTPUTS = {"50": "h3_clip_v2", "6103": "h3v3_cut", "6104": "h3v3_film"}
+PREVIOUS_PREFIXES = {H3_DUAL: {"45": "vedio/H3_一采", "46": "vedio/H3_二采"}, PH3_IMAGE: {"62": "PH3"}}
 
 
 def toolbox_workflow(name, graph, settings, mapping=None):
     operations = {PANEL_NODES[name][role][0] for role in OPERATIONS & PANEL_NODES[name].keys()}
     selected = {key: node for key, node in graph.items() if key not in operations}
+    for key, old in PREVIOUS_PREFIXES[name].items():
+        node = selected.get(key, {})
+        inputs = node.get("inputs", {})
+        if inputs.get("filename_prefix") == old:
+            selected[key] = {**node, "inputs": {**inputs, "filename_prefix": TOOLBOX_OUTPUT_PREFIXES[name][key]}}
     if name == PH3_IMAGE and "32" in selected and selected["44"]["inputs"]["boolean"] is False:
         # Keep the optional rewriter editable in the saved profile, but detach it from
         # the active output to avoid validating its model when rewriting is disabled.

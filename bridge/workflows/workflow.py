@@ -34,6 +34,10 @@ H3_WORKFLOWS = {H3_SEED_HUNTER, H3_SEED_FINAL, H3_SEED_FULL}
 H3_DUAL = "MiniMax_H3_Dual_Continuation_AstrBot"
 PH3_IMAGE = "PH3_Image_Edit_AstrBot"
 TOOLBOX_WORKFLOWS = {H3_DUAL, PH3_IMAGE}
+TOOLBOX_OUTPUT_PREFIXES = {
+    H3_DUAL: {"45": "最终版万物皆可接续/1采/1采", "46": "最终版万物皆可接续/2采/2采"},
+    PH3_IMAGE: {"62": "鸣潮画风测试/wuwa_style"},
+}
 TOOLBOX_PROMPT_LIMIT = 32000
 VIDEO_OUTPUT_NODES = frozenset({"SaveVideo", "SaveWEBM", "VHS_VideoCombine", "VideoCombineV2"})
 
@@ -403,6 +407,8 @@ class Workflow:
             folder = image_folder if node_type == "SaveImage" else None
             if node_type in VIDEO_OUTPUT_NODES:
                 folder = VIDEO_FOLDER
+            if self.name in TOOLBOX_WORKFLOWS:
+                folder = None
             if folder:
                 prefix = node["inputs"].get("filename_prefix")
                 filename = prefix.replace("\\", "/").rsplit("/", 1)[-1] if isinstance(prefix, str) else ""

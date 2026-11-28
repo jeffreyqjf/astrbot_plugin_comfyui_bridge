@@ -67,8 +67,8 @@ def export(source, name, schemas):
         widgets(nodes[27], text="")
         widgets(nodes[5994], references='{"version":1,"images":[],"audios":[],"videos":[]}')
         widgets(nodes[31], guides="[]")
-        widgets(nodes[45], filename_prefix="vedio/H3_一采", save_output=True)
-        widgets(nodes[46], filename_prefix="vedio/H3_二采", save_output=True)
+        for key in (45, 46):
+            widgets(nodes[key], save_output=True)
         for key in (45, 46, 47):
             values = nodes[key]["widgets_values"]
             if isinstance(values, dict):
@@ -81,7 +81,6 @@ def export(source, name, schemas):
     else:
         widgets(nodes[24], value="")
         widgets(nodes[65], media_files="[]")
-        widgets(nodes[62], filename_prefix="PH3")
         positive, seed = "24.value", "12.noise_seed"
     executable = deepcopy(canvas)
     materialize_variables(executable)

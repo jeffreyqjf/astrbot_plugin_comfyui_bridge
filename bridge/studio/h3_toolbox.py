@@ -30,6 +30,9 @@ WRITE = {LVM + path for path in (
 THUMBNAIL = LVM + "image_thumbnail"
 SOURCE_PREVIEW = LVM + "source_preview"
 PREVIEW = {"/view", THUMBNAIL, SOURCE_PREVIEW}
+PROMPT_LIBRARIES = {"/astrbot_h3_shared/prompts/" + family for family in ("h3-dual", "ph3")}
+READ |= PROMPT_LIBRARIES
+WRITE |= PROMPT_LIBRARIES
 
 
 def split_path(path):
@@ -92,7 +95,11 @@ class ToolboxStudio:
                     file_query(entry)
             result = await self.service.client.request("POST", route, params=params, payload=body)
             return json_response(result)
-        except (OSError, ValueError, TypeError, KeyError, AttributeError, ComfyError) as exc:
+        except ComfyError as exc:
+            if route in PROMPT_LIBRARIES and str(exc).startswith("ComfyUI HTTP 404"):
+                return json_response({"error": "请安装 ComfyUI 的 AstrBot H3 共享扩展并重启。"}, status_code=404)
+            return json_response({"error": str(exc)}, status_code=400)
+        except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
             return json_response({"error": str(exc)}, status_code=400)
 
     async def upload(self):

@@ -262,6 +262,7 @@ class ComfyClient:
 
     async def download_outputs(
         self, record, output_nodes, directory: Path, max_images=4, video=False, *, existing_video=None,
+        existing_image=None,
     ):
         refs = output_refs(record, output_nodes, video=video)
         if not refs:
@@ -276,7 +277,12 @@ class ComfyClient:
                     raise ComfyError("视频超过回传大小限制，原片已保存。")
                 paths.append(local)
                 continue
-            paths.append(await self.download_image(ref, directory))
+            local = await asyncio.to_thread(existing_image, ref) if existing_image else None
+            if local is None:
+                local = await self.download_image(ref, directory)
+            elif local.stat().st_size > self.max_image_bytes:
+                raise ComfyError("图片超过回传大小限制，原图已保存。")
+            paths.append(local)
         return paths, len(refs)
 
     async def download_video(self, ref, directory):

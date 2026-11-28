@@ -1,0 +1,21 @@
+/* SPDX-License-Identifier: MIT */
+.astrbot-shared-prompts {
+  box-sizing: border-box;
+  display: grid;
+  gap: 4px;
+  padding: 6px 8px;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  color: var(--input-text, #e2edf8);
+  background: var(--comfy-menu-bg, #151c27);
+  font: 12px/1.4 system-ui, sans-serif;
+}
+.astrbot-shared-prompts > div { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.astrbot-shared-prompts :is(input, select, button) {
+  min-height: 24px; padding: 2px 6px; margin: 0; color: inherit; background: var(--comfy-input-bg, #202a38);
+  border: 1px solid var(--border-color, #334358); border-radius: 4px; font: inherit;
+}
+.astrbot-shared-prompts :is(input, select) { flex: 1 1 90px; width: auto; min-width: 0; }
+.astrbot-shared-prompts button:disabled { opacity: .5; }
+.astrbot-shared-prompts small:empty { display: none; }

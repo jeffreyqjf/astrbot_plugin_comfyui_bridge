@@ -80,6 +80,8 @@ def build(target=None):
         "views/workbench/h3_media.js",
         "views/workbench/h3_toolbox.js",
         "views/workbench/h3_toolbox.css",
+        "comfyui/ComfyUI-AstrBot-H3-Shared/__init__.py",
+        "comfyui/ComfyUI-AstrBot-H3-Shared/web/extension.js",
         "views/workbench/h3_media_transport.js",
         "views/workbench/h3_media_vendor.js",
         "views/workbench/h3_media_vendor.css",
@@ -119,6 +121,10 @@ def build(target=None):
     with zipfile.ZipFile(temp, "w", compression=zipfile.ZIP_DEFLATED) as archive:
         for relative in files:
             archive.write(root / relative, f"{root.name}/{relative}")
+        for name in ("shared_prompt.js", "shared_prompt.css"):
+            archive.write(root / "views/workbench/toolbox" / name,
+                          f"{root.name}/comfyui/ComfyUI-AstrBot-H3-Shared/web/{name}")
+        archive.write(root / "LICENSE", f"{root.name}/comfyui/ComfyUI-AstrBot-H3-Shared/LICENSE")
         for path in sorted((root / "workflows").glob("*.json")):
             json.loads(path.read_text(encoding="utf-8-sig"))
             archive.write(path, f"{root.name}/workflows/{path.name}")
