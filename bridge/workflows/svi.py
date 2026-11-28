@@ -158,8 +158,11 @@ def video_options(settings, overrides, family, limit, sampler_choices):
     return values
 
 
+MAX_VIDEO_FRAMES = 16381
+
+
 def validate_video_frames(frames):
-    if type(frames) is not int or not 1 <= frames <= 16381 or frames % 4 != 1:
+    if type(frames) is not int or not 1 <= frames <= MAX_VIDEO_FRAMES or frames % 4 != 1:
         raise WorkflowError("每段帧数必须为 4n+1，例如 17、49 或 81。")
 
 

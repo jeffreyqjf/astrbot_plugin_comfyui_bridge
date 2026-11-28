@@ -682,6 +682,10 @@
               <div class="grid">
                 <label class="field">工作流<select id="queue-workflow" required></select></label>
                 <label class="field">工作流配置<select id="queue-workflow-config"><option value="">当前参数（自行调整）</option></select><small>记住此浏览器中每条工作流的选择。选用配置会更新工作流默认参数，并沿用其中的分支设置。</small></label>
+                <label class="field" hidden><span id="queue-video-duration-title">视频时长（秒）</span>
+                  <input type="number" id="queue-video-duration" step="any" inputmode="decimal" aria-describedby="queue-video-duration-note" disabled>
+                  <small id="queue-video-duration-note">留空沿用工作流默认值。实际时长按模型支持的帧数对齐。</small>
+                </label>
                 <label class="field">预设所属用户<select id="queue-preset-account"></select></label>
                 <label class="field">提示词预设
                   <select id="queue-preset" hidden></select>

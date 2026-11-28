@@ -49,4 +49,6 @@
 
 bridge/studio/model_links.py 维护用户按工作流保存的有序模型网页链接、revision 与 JSON 导入导出，以及仅 AstrBot 面板使用的 Windows 浏览器打开入口。链接不参与后台自动下载 URL 解析。
 
-views/workbench/page_memory.js 统一处理图集上下文页码、本地备用与插件记忆同步，app.js 在工作台初始化前载入。studio_settings.gallery_pages 负责按账号持久化，image_review／videos／reverse_history 在成功加载后记忆有效页。
+`views/workbench/page_memory.js` 统一处理图集页码和选图入口的上次选择，`app.js` 在工作台初始化前载入。`studio_settings.gallery_pages` 负责按账号保存，图片、视频和反推记录在成功加载后记忆有效页。选图入口在切换图集时记忆选择。
+
+`bridge/workflows/video_duration.py` 读取当前视频图的有效帧数、帧率、分段拼接和时长滑块。`studio_settings.add_jobs` 在简易添加时应用按秒提交的任务参数。

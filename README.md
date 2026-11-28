@@ -1,6 +1,6 @@
 # ComfyUI 工作台
 
-AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v3.24.1。
+AstrBot 插件，支持 QQ（aiocqhttp / OneBot V11）文生图、附图重绘、WAN 2.2 视频、手机工作台和自动回传。适用于 AstrBot 4.29.0+、Python 3.10+。插件 v3.25.0。
 
 v3 新建任务按工作流选择本次启用的功能，支持 Advanced Gemma V40 的 RGB 区域遮罩与整套区域提示词预设。见[使用教程](user%20docs/REGIONAL_PROMPT.md)。
 
@@ -91,6 +91,8 @@ Detailer V40 和 Anima Detailer 的新任务保存输入原图与结果的关联
 两条 V40 的修脚均默认关闭。可在工作流的「局部修复 → 修脚」启用，也可在 QQ 指令加 `--feet on` 临时开启。使用 Impact Subpack 的 `models/ultralytics/bbox/foot_anime_yolo11m_v3.pt` 检测脚部，再以当前模型重绘检测区域。
 
 ### 手机访问
+
+在「管理 → 新建任务 → 简易添加」选择视频工作流后，可以直接输入「视频时长（秒）」。留空使用工作流默认值。选图窗口和控制图集会分别恢复上次选择的图集或状态。
 
 1. 在 AstrBot 插件配置的「手机远程工作台」中开启功能，设置 6 位随机数字或长口令，保存后重载插件。默认监听 `0.0.0.0:8790`。
 2. 手机与电脑连接同一局域网或 VPN。在手机浏览器打开 `http://电脑实际IP:8790/`，输入工作台口令。若 Windows 防火墙拦截，只对受信任的局域网或 VPN 放行该 TCP 端口。

@@ -183,6 +183,10 @@ studio/model-links 的 save 和导入模型行增加可选 note 字符串，最�
 
 GET studio/gallery-pages 返回当前登录身份的 `{pages:{context_key:page}}`。POST 接受 `{key,page}`，key 以 comfy-gallery-page: 开头且最长 4096 字，page 为 1..1000000 的整数，正文最多 8192 字节。未登录 401、非法／读取错误 400。记录按账号摘要隔离，使用 state_lock 和原子写入，保留最近 1000 个上下文并限制数据 5 MiB。前端成功加载有效页后写入，当前页未变不重复写入；保存失败保留本地记忆并提示。
 
+v3.25.0 扩展 `GET studio/gallery-pages`，新增 `selections` 字典。POST 支持 `{key,selection}`，key 为 `comfy-gallery-selection:<scope>`，scope 和 selection 按选图入口白名单校验。图集选择与旧页码记录共用原子保存文件。前端在用户切换图集时写入，打开时以当前账号记录和入口可用选项恢复。
+
+`GET studio` 的工作流能力新增可空的 `task_inputs.video_duration`。对象包含 `default`、`min`、`max`（秒），H3 v3 另有 `continuation`。简易 `POST studio/queue` 接受可选的数字 `video_duration`，超范围或图不支持时返回 400。普通 WAN／H3 简化版换算为模型帧数，分段图沿用配置和顺序重新构建，H3 v3 写入当前模式的时长滑块。覆盖仅应用于当次队列提交。
+
 v3.18.1：GET studio/images?facets=1 的 preset label 不再追加所属用户；同名预设使用 ID 前六位区分，历史同名项使用「历史」。完整 id、筛选参数及页码上下文保持不变，不合并不同用户的预设。
 
 ## 原图选用与解除关联（v3.19.0）

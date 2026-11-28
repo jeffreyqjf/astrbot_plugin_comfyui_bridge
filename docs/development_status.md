@@ -1,5 +1,13 @@
 # 开发状态
 
+## v3.25.0 · 图集选择记忆与视频任务时长
+
+- 选图弹窗按账号和入口恢复上次使用的图集，覆盖任务参考图、ControlNet、H3 素材、区域绘制、LoRA 与预设效果图。控制图集恢复上次状态。旧页码继续按图集和筛选恢复，保存文件兼容既有记录。
+- 简易添加支持按秒设置 WAN、SVI、Lightning 与 H3 视频时长。WAN 与 H3 简化版按有效帧数对齐。SVI 与 Lightning 沿用段数、段序及插帧配置，SVI 另计段间重叠。H3 v3 沿用当前模式的时长滑块，视频续写显示片段时长。提交的时长直接进入该次任务图。
+- 基线 `601889e`。隔离 AstrBot 安装包通过 15 条工作流、89 个网页路由及视频任务实际入队参数检查。验证 SVI 和 Lightning 单段、`3,1` 段序、插帧启停，以及 H3 v3 所有模式。Edge 在 360px 与 1200px 视口通过图集切换记忆、工作流切换和视频时长表单提交。Node、Ruff、差异和 ZIP 检查通过。
+- Python 全量 102 项中 99 项通过、2 项跳过。模型下载测试因当前沙箱的硬链接操作返回 WinError 5 失败，基线同样复现。此次交付源码，本机安装同步和重载、真实 ComfyUI 生成及 QQ 投递待验证。
+- Git Commit Message `feat: remember gallery selections and set video duration in new tasks`
+
 ## v3.24.1 · 修复独立网页端模块加载失败
 
 - 根因是 v3.24.0 的 task_memory.js 已进入 ZIP 并由 app.js 静态导入，但遗漏 RemoteStudio.ASSETS，独立网页请求该模块为 404，ES 模块图无法启动。补齐明确资源路由，未扩大任意路径访问范围。

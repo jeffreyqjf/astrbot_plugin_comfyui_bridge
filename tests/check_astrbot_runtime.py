@@ -48,7 +48,7 @@ async def check_h3_final_inputs(instance):
             return await instance.studio.add_jobs()
 
     with patch.object(instance.service, "_run") as run:
-        response = await post({"workflow": name, "positive": "Final scene", "count": 2, "h3_final": settings})
+        response = await post({"workflow": name, "positive": "Final scene", "count": 2, "h3_final": settings, "video_duration": 5})
         assert response.status_code == 200, response.body
         await asyncio.sleep(0)
         assert run.call_count == 2
@@ -57,10 +57,70 @@ async def check_h3_final_inputs(instance):
             assert job.seed == 9007199254740999 and graph["16"]["inputs"]["value"] == job.seed
             assert graph["63"]["inputs"]["noise_seed"] == 9007199254740997
             assert graph["61"]["inputs"]["width"] == 960 and graph["62"]["inputs"]["steps"] == 4
+            assert graph["5"]["inputs"]["length"] == 124
         response = await post({"workflow": name, "positive": "Final scene", "h3_final": {**settings, "width": 111}})
         assert response.status_code == 400 and run.call_count == 2
     assert path.read_bytes() == before
     print("PASS: H3 final task inputs, exact base/second seeds, dimensions, validation and saved defaults")
+
+
+async def check_video_duration(instance):
+    from astrbot.api.web import PluginRequest, bind_request_context
+    from PIL import Image
+    from starlette.requests import Request
+
+    service = instance.service
+    assert all(
+        bool(instance.studio.task_inputs(workflow)["video_duration"]) == workflow.is_video
+        for workflow in service.workflows.values()
+    )
+    image = io.BytesIO()
+    Image.new("RGB", (16, 16)).save(image, "PNG")
+    reference = base64.b64encode(image.getvalue()).decode()
+
+    async def post(name, **params):
+        payload = {"workflow": name, "positive": "Video duration test", **params}
+
+        async def receive():
+            return {"type": "http.request", "body": json.dumps(payload).encode()}
+
+        incoming = Request({"type": "http", "method": "POST", "path": "/studio/queue", "headers": [],
+                            "query_string": b""}, receive)
+        with bind_request_context(PluginRequest(incoming, username="duration-test")):
+            return await instance.studio.add_jobs()
+
+    wan = "WAN22_T2V_AstrBot"
+    h3 = "MiniMax_H3_Seed_Hunter_V3_AstrBot"
+    with patch.object(service, "_run") as run:
+        for name, duration, expected, params in (
+            (wan, 5, (81,), {}),
+            (wan, None, (49,), {}),
+            ("WAN22_I2V_AstrBot", 5, (81,), {"image": reference}),
+            ("WAN22_SVI_I2V_AstrBot", 3, (49,), {"image": reference}),
+            ("WAN22_Lightning_Long_I2V_AstrBot", 3, (49,), {"image": reference}),
+            ("MiniMax_H3_Seed_Hunter_AstrBot", 5, (124,), {}),
+            (h3, 6, (), {}),
+        ):
+            before = service.workflows[name].graph
+            if duration is not None:
+                params["video_duration"] = duration
+            response = await post(name, **params)
+            assert response.status_code == 200, response.body
+            await asyncio.sleep(0)
+            graph = run.call_args.args[1]
+            if name == h3:
+                assert json.loads(graph["597"]["inputs"]["SlidersState"])["sliders"][5]["value"] == 6
+            else:
+                classes = {"WanImageToVideo", "EmptyHunyuanLatentVideo", "WanImageToVideoSVIPro",
+                           "PainterI2VAdvanced", "PainterLongVideo", "MiniMaxH3ReferenceToVideo"}
+                assert tuple(node["inputs"]["length"] for node in graph.values() if node["class_type"] in classes) == expected
+            assert service.workflows[name].graph is before
+        for invalid in (0, -1, True, None, "5", 100000):
+            assert (await post(wan, video_duration=invalid)).status_code == 400
+        assert (await post("SDXL_Turbo_T2I_AstrBot", video_duration=5)).status_code == 400
+        assert run.call_count == 7
+    assert service.workflows[wan].graph["7"]["inputs"]["length"] == 49
+    print("PASS: simple queue video duration, default frames, invalid inputs and saved workflow isolation")
 
 
 async def check_refinement_pairs(instance, root):
@@ -693,6 +753,7 @@ async def check(root, archive, core, *, anima_workspace=None, anima_schemas=None
         assert service.data_dir.is_relative_to(root)
         assert not service.errors, service.errors
         await check_h3_final_inputs(instance)
+        await check_video_duration(instance)
         await check_refinement_pairs(instance, root)
         await check_model_catalog(instance)
         await check_reverse_history(instance)

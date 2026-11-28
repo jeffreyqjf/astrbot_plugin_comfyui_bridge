@@ -25,7 +25,7 @@ const h3Prompt = mountH3Prompt({
 const h3Media = mountH3Media({
   bridge, host: get("queue-h3-media"),
   pickGallery: (select) => imageReviews.pickResource("gallery", select, {
-    useControls: Boolean(studio.input_available), title: "从图集导入 H3 参考图",
+    useControls: Boolean(studio.input_available), galleryScope: "h3-media", title: "从图集导入 H3 参考图",
   }),
   onChange: (items) => h3Prompt.references(items),
   status: (text, error = false) => {
@@ -1295,7 +1295,7 @@ async function renderLoraPreview() {
 }
 get("lora-preview-select").addEventListener("click", () => imageReviews.pickResource("gallery", ({entry}) => {
   loraPreview = entry.id; renderLoraPreview();
-}, {gallery: "images/favourite", title: "选择 LoRA 效果图"}));
+}, {galleryScope: "lora-preview", title: "选择 LoRA 效果图"}));
 get("lora-preview-clear").addEventListener("click", () => { loraPreview = ""; renderLoraPreview(); });
 get("lora-preview-open").addEventListener("click", () => openLoraPreview(loraPreview, get("lora-tag-name").textContent));
 get("open-lora-order").addEventListener("click", openLoraOrder);
@@ -1944,7 +1944,7 @@ get("preset-preview-select").addEventListener("click", () => {
     presetPreview = entry.id;
     renderPresetPreview();
     updatePresetDraft();
-  }, {gallery: "images/favourite", title: "从图集选择预设效果图"});
+  }, {galleryScope: "preset-preview", title: "从图集选择预设效果图"});
 });
 get("preset-preview-clear").addEventListener("click", () => {
   presetPreview = "";
@@ -2263,7 +2263,8 @@ let queueConfigError = "";
 const queueConfigKey = name => `comfy-task-config:${name}`;
 const taskMemory = createTaskMemory(bridge, text => notify(text, true));
 let taskMemoryWorkflow, restoringTaskMemory = false, taskMemoryVersion = 0;
-const rememberedFields = ["queue-positive", "queue-negative", "queue-count", "queue-preset-account", "queue-preset", "queue-lora-mode", "queue-command-text", "remote-command-account"];
+const queueVideoDuration = get("queue-video-duration");
+const rememberedFields = ["queue-positive", "queue-negative", "queue-count", "queue-preset-account", "queue-preset", "queue-lora-mode", "queue-command-text", "remote-command-account", "queue-video-duration"];
 const taskFieldDefaults = Object.fromEntries(rememberedFields.map(id => [id, get(id).value]));
 function rememberedQueueConfig(name) {
   const saved = taskMemory.read(`workflow:${name}`);
@@ -2341,7 +2342,9 @@ let queueLoraEntries;
 const taskControlnets = new Map();
 const taskFeatures = mountTaskFeatures({
   bridge, host: get("queue-features"),
-  pickGallery: select => imageReviews.pickResource("gallery", select, {useControls: true, gallery: "images/favourite", title: "选择区域绘制参考底图"}),
+  pickGallery: select => imageReviews.pickResource("gallery", select, {
+    useControls: true, gallery: "images/favourite", galleryScope: "regional", title: "选择区域绘制参考底图",
+  }),
   onControlChange(branch, checked) {
     const settings = taskControlnets.get(branch);
     if (!settings) return;
@@ -2558,6 +2561,14 @@ function renderTaskControlnets(selectedName = queueWorkflow.value, inputs) {
     input.disabled = !visible || queueAccountLoads.has(input);
   }
   field("queue-negative", taskInputs.negative);
+  const duration = !isCommand && taskInputs.video_duration;
+  field("queue-video-duration", duration);
+  if (duration) {
+    queueVideoDuration.min = duration.min;
+    queueVideoDuration.max = duration.max;
+    queueVideoDuration.placeholder = `默认约 ${Number(duration.default.toFixed(2))} 秒`;
+    get("queue-video-duration-title").textContent = duration.continuation ? "续写片段时长（秒）" : "视频时长（秒）";
+  }
   for (const id of ["queue-preset", "queue-preset-account"]) field(id, taskInputs.presets);
   field("remote-command-account", isCommand);
   showQueueReference();
@@ -2672,7 +2683,10 @@ function renderTaskControlnets(selectedName = queueWorkflow.value, inputs) {
     chooseGallery.addEventListener("click", () => imageReviews.pickResource("gallery", ({ entry, kind, state, src, label }) => {
       const source = kind === "controls" ? { asset_id: entry.asset_id ?? entry.id } : { gallery: { id: entry.id, state } };
       setSource({ ...source, label }, src);
-    }, { type: type.value, useControls: studio.input_available && mode.value === "direct" }));
+    }, {
+      type: type.value, useControls: studio.input_available && mode.value === "direct",
+      galleryScope: mode.value === "direct" ? "controlnet-direct" : "controlnet-source",
+    }));
     upload.addEventListener("click", () => file.click());
     file.addEventListener("change", () => {
       const image = file.files[0];
@@ -2848,6 +2862,7 @@ queueWorkflow.addEventListener("change", () => {
   clearTimeout(draftTimer);
   saveTaskDraft();
   taskMemoryWorkflow = queueWorkflow.value;
+  queueVideoDuration.value = "";
   taskMemory.save("global", {workflow: queueWorkflow.value, mode: queueMode.value});
   renderQueueLoras();
   renderTaskControlnets();
@@ -2980,6 +2995,7 @@ function openCreateTask() {
   message("");
   createTaskMessage("");
   if (!queueWorkflow.options.length) {
+    queueVideoDuration.value = "";
     for (const workflow of studio.workflows.filter((item) => item.task_inputs?.simple)) {
       queueWorkflow.add(new Option(workflowTitle(workflow.name), workflow.name));
     }
@@ -3068,6 +3084,10 @@ get("queue-form").addEventListener("submit", async (event) => {
     ...(taskInputs.negative && (!queueConfig.value || get("queue-negative").value.trim()) ? {negative: get("queue-negative").value} : {}),
     count: studio.workflows.find(item => item.name === workflow)?.kind === "image_to_text" ? 1 : get("queue-count").valueAsNumber,
   };
+  if (taskInputs.video_duration && queueVideoDuration.value) {
+    if (!queueVideoDuration.reportValidity()) return;
+    data.video_duration = queueVideoDuration.valueAsNumber;
+  }
   if (taskInputs.h3_final) {
     data.h3_final = Object.fromEntries([...get("queue-h3-final").querySelectorAll("input")].map(input => [
       input.dataset.final, input.type === "number" ? input.valueAsNumber : input.value,

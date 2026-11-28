@@ -55,6 +55,7 @@ def build(target=None):
         "bridge/workflows/minimax_h3.py",
         "bridge/workflows/parameter_layout.py",
         "bridge/workflows/svi.py",
+        "bridge/workflows/video_duration.py",
         "bridge/workflows/v40.py",
         "bridge/workflows/workflow.py",
         "bridge/workflows/workflow_archive.py",

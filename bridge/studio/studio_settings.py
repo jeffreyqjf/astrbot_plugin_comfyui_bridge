@@ -114,6 +114,7 @@ from ..workflows.v40 import (
     v40_branches,
     v40_workflow,
 )
+from ..workflows.video_duration import validate_seconds, video_timing, with_video_duration
 from ..workflows.workflow import (
     ADVANCED_V40_WORKFLOW,
     ANIMA_DETAILER_WORKFLOW,
@@ -304,34 +305,63 @@ class StudioSettings:
             owner = hashlib.sha256(str(request.username).encode()).hexdigest()
             path = self.service.data_dir / "gallery_pages" / f"{owner}.json"
             if path.resolve() != path.absolute():
-                raise WorkflowError("页码记忆目录不能使用链接。")
+                raise WorkflowError("图集记忆目录不能使用链接。")
             def read():
                 if not path.exists():
                     return {}
                 if path.stat().st_size > 5 * 1024**2:
-                    raise WorkflowError("页码记忆数据过大。")
+                    raise WorkflowError("图集记忆数据过大。")
                 data = json.loads(path.read_bytes())
                 if not isinstance(data, dict):
-                    raise WorkflowError("页码记忆格式无效。")
+                    raise WorkflowError("图集记忆格式无效。")
                 return data
             if request.method == "GET":
-                return json_response({"pages": await asyncio.to_thread(read)})
+                saved = await asyncio.to_thread(read)
+                return json_response({
+                    "pages": {key: value for key, value in saved.items() if key.startswith("comfy-gallery-page:")},
+                    "selections": {key: value for key, value in saved.items() if key.startswith("comfy-gallery-selection:")},
+                })
             body = await request.body()
             if len(body) > 8192:
-                raise WorkflowError("页码记忆请求过大。")
+                raise WorkflowError("图集记忆请求过大。")
             data = json.loads(body)
-            key, page = data.get("key"), data.get("page")
-            if not isinstance(key, str) or not key.startswith("comfy-gallery-page:") or len(key) > 4096 or type(page) is not int or not 1 <= page <= 1000000:
-                raise WorkflowError("页码记忆参数无效。")
+            key = data.get("key")
+            if not isinstance(key, str) or len(key) > 4096:
+                raise WorkflowError("图集记忆参数无效。")
+            if key.startswith("comfy-gallery-selection:"):
+                value = data.get("selection")
+                scope = key.removeprefix("comfy-gallery-selection:")
+                controls = ("favourite", "pass", "unevaluated")
+                images = ("images/favourite", "images/pass", "images/hd", "images/unevaluate")
+                if scope == "control-library":
+                    choices = controls
+                elif scope in ("h3-media", "reference", "regional", "controlnet-direct"):
+                    choices = (*images, *(f"controls/{state}" for state in controls))
+                elif scope in ("lora-preview", "preset-preview", "controlnet-source"):
+                    choices = images
+                else:
+                    choices = ()
+                if value not in choices or "page" in data:
+                    raise WorkflowError("图集选择无效。")
+            else:
+                value = data.get("page")
+                if not key.startswith("comfy-gallery-page:") or type(value) is not int or not 1 <= value <= 1000000:
+                    raise WorkflowError("页码记忆参数无效。")
             async with self.service.state_lock:
                 saved = await asyncio.to_thread(read)
                 saved.pop(key, None)
-                saved[key] = page
-                saved = dict(list(saved.items())[-1000:])
+                saved[key] = value
+                pages = [key for key in saved if key.startswith("comfy-gallery-page:")]
+                for old_key in pages[:-1000]:
+                    del saved[old_key]
                 raw = profile_bytes(saved)
-                while len(raw) > 5 * 1024**2:
-                    saved.pop(next(iter(saved)))
+                for oldest_page in pages[-1000:]:
+                    if len(raw) <= 5 * 1024**2:
+                        break
+                    del saved[oldest_page]
                     raw = profile_bytes(saved)
+                if len(raw) > 5 * 1024**2:
+                    raise WorkflowError("图集记忆数据过大。")
                 path.parent.mkdir(parents=True, exist_ok=True)
                 await asyncio.to_thread(atomic_write, path, raw)
             return json_response({})
@@ -759,6 +789,7 @@ class StudioSettings:
             for field in image_workflow.image_inputs
         )
         prompt_workflow = image_workflow if workflow.name in DETAILER_WORKFLOWS else workflow
+        timing = video_timing(workflow) if simple else None
         return {
             "simple": simple, "positive": bool(prompt_workflow.positive) and workflow.kind != "image_to_text", "negative": bool(prompt_workflow.negative) and workflow.kind != "image_to_text",
             "presets": bool(prompt_workflow.positive) and not full_h3 and workflow.kind != "image_to_text",
@@ -766,6 +797,7 @@ class StudioSettings:
             "h3_prompt": full_h3 and bool(workflow.positive),
             "h3_media": full_h3 and "416" in workflow.active,
             "h3_final": h3_final_defaults(workflow),
+            "video_duration": timing.describe() if timing else None,
             "features": feature_catalog(workflow),
         }
 
@@ -1606,6 +1638,15 @@ class StudioSettings:
             if workflow is None:
                 raise WorkflowError("请选择可直接生成的工作流。需要参考图时可用命令表单上传。")
             inputs = self.task_inputs(workflow)
+            if "video_duration" in data:
+                limits = inputs.get("video_duration")
+                if limits is None:
+                    raise WorkflowError("当前工作流不支持在新建任务中设置视频时长。")
+                validate_seconds(data["video_duration"], limits)
+                if workflow.name in SEGMENTED_VIDEO_WORKFLOWS:
+                    workflow = await self.segmented_video_generation(workflow.name, {}, duration=data["video_duration"])
+                else:
+                    workflow = with_video_duration(workflow, video_timing(workflow), data["video_duration"])
             if workflow.kind == "image_to_text":
                 if type(data.get("count", 1)) is not int or data.get("count", 1) != 1:
                     raise WorkflowError("反推每张图片仅执行一次。")
@@ -2442,8 +2483,13 @@ class StudioSettings:
     async def svi_lora_catalog(self):
         return svi_lora_files(await self.service.client.node_schemas({"LoraLoaderModelOnly"}))
 
-    async def segmented_video_generation(self, name, options):
-        _, _, graph, settings, _, mapping = await asyncio.to_thread(self._read, name)
+    async def segmented_video_generation(self, name, options, *, duration=None):
+        _, _, graph, settings, current, mapping = await asyncio.to_thread(self._read, name)
+        if duration is not None:
+            timing = video_timing(current)
+            if timing is None:
+                raise WorkflowError("当前分段配置不支持按秒设置视频时长。")
+            options = {**options, "frames": timing.frames(duration)}
         parse, build = (lightning_options, lightning_workflow) if name == LIGHTNING_WORKFLOW else (
             svi_options, svi_workflow
         )

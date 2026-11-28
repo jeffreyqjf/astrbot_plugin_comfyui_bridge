@@ -26,9 +26,18 @@ class GalleryPageTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((await call(owner=None)).status_code, 401)
             self.assertEqual((await call({"key":key,"page":3}, method="POST")).status_code, 200)
             self.assertEqual(json.loads((await call()).body)["pages"][key], 3)
+            selection = {"key": "comfy-gallery-selection:reference", "selection": "controls/pass"}
+            self.assertEqual((await call(selection, method="POST")).status_code, 200)
+            other = {"key": "comfy-gallery-selection:lora-preview", "selection": "images/hd"}
+            self.assertEqual((await call(other, method="POST")).status_code, 200)
+            self.assertEqual((await call({**other, "selection": "controls/pass"}, method="POST")).status_code, 400)
+            self.assertEqual((await call({**selection, "key": "comfy-gallery-selection:unknown"}, method="POST")).status_code, 400)
             self.assertEqual(json.loads((await call(owner="other")).body)["pages"], {})
+            self.assertEqual(json.loads((await call(owner="other")).body)["selections"], {})
             self.assertEqual(len(list((Path(folder) / "gallery_pages").glob("*.json"))), 1)
             for data in ({"key":"../escape", "page":2}, {"key":key, "page":0}, {"key":key,"page":True}, {"key":key,"page":1.5}):
                 self.assertEqual((await call(data, method="POST")).status_code, 400)
             studio.service = SimpleNamespace(data_dir=Path(folder), state_lock=asyncio.Lock())
-            self.assertEqual(json.loads((await call()).body)["pages"][key], 3)
+            saved = json.loads((await call()).body)
+            self.assertEqual(saved["pages"], {key: 3})
+            self.assertEqual(saved["selections"], {item["key"]: item["selection"] for item in (selection, other)})

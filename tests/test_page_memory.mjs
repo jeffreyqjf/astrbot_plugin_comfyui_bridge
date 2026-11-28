@@ -30,4 +30,27 @@ assert.equal(memory.readPage(favourite), 7, "server memory restores embedded vie
 memory.savePage(favourite, 2);
 await new Promise(resolve => setTimeout(resolve, 0));
 assert.equal(posted.at(-1).page, 2);
-console.log("PASS: gallery page isolation, reload, invalid values and storage-denied fallback");
+const options = ["images/favourite", "images/hd", "controls/pass"].map(value => ({
+  value, closest: () => ({disabled: value.startsWith("controls/") && !allowControls}),
+}));
+let allowControls = true;
+const select = {options};
+memory.saveGallerySelection("reference", "controls/pass");
+await new Promise(resolve => setTimeout(resolve, 0));
+const selection = posted.at(-1);
+assert.deepEqual(selection, {key: "comfy-gallery-selection:reference", selection: "controls/pass"});
+memory = await import(`${moduleUrl}#selection`);
+await memory.initializePageMemory({
+  apiGet: async () => ({pages: {}, selections: {[selection.key]: selection.selection}}),
+});
+for (const scope of ["reference", "lora-preview"]) {
+  memory.restoreGallerySelection(scope, select, "images/favourite");
+  assert.equal(select.value, scope === "reference" ? "controls/pass" : "images/favourite");
+}
+allowControls = false;
+memory.restoreGallerySelection("reference", select, "images/favourite");
+assert.equal(select.value, "images/favourite");
+allowControls = true;
+memory.restoreGallerySelection("reference", select, "images/favourite");
+assert.equal(select.value, "controls/pass", "temporary fallback keeps the remembered selection");
+console.log("PASS: page memory and per-entry gallery selection, including unavailable options and disabled storage");

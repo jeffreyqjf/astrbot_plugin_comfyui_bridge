@@ -114,6 +114,8 @@ H3 Prompt IDE 和 Fantastic H3 Media Loader 默认折叠，点击各自标题展
 
 宽高使用 32 的倍数。帧数使用 `17n + 5`，例如 107、124 或 141。H3 使用一段综合描述，可写进镜头、动作、台词和环境声。使用提示词预设时，把负向提示词留空。
 
+在「新建任务 → 简易添加」可按秒为本次任务设置时长。H3 v3 沿用当前模式的时长范围和帧数对齐规则。「视频续写」的输入控制新生成片段，成片时长还取决于原片和重叠量。
+
 ## 在 ComfyUI 打开 AstrBot 画布
 
 分别打开 `AstrBot/MiniMax_H3_Seed_Hunter_AstrBot.json` 和 `AstrBot/MiniMax_H3_Seed_Final_AstrBot.json`。画布上的 Base Seed 对应 QQ 的 `--seed`。手动接参考图时，将 `LoadImage` 的 IMAGE 输出连接到 H3 节点的首个参考图插槽。

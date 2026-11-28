@@ -1,4 +1,4 @@
-import { pageKey, readPage, savePage } from "./page_memory.js";
+import { pageKey, readPage, restoreGallerySelection, saveGallerySelection, savePage } from "./page_memory.js";
 
 const controlBranches = { openpose: "OpenPose", any: "Any", lllite: "LLLite" };
 const controlTypes = { openpose: "OpenPose", canny: "Canny", depth: "Depth" };
@@ -462,7 +462,7 @@ export function mountImageReviews({
         updateReference(`已选择 ${files.files.length} 张图集图片，每张一个任务`);
       } catch (error) { notify(error.message, true); }
       finally { buttons.forEach((button, index) => { button.disabled = disabled[index]; }); }
-    }, {useControls: true, gallery: "images/favourite", title: "从图集选择参考图（支持多选）", multiple: true});
+    }, {useControls: true, gallery: "images/favourite", galleryScope: "reference", title: "从图集选择参考图（支持多选）", multiple: true});
   });
   get("queue-reference-close").addEventListener("click", () => referencePicker.close());
   get("queue-reference-rating").addEventListener("change", () => loadReferences());
@@ -783,14 +783,16 @@ export function mountImageReviews({
     }
   }
 
-  function pickResource(source, select, { type, useControls = false, title, gallery, multiple = false } = {}) {
-    resourceRequest = { source, select, type, multiple, selected: new Map(), path: [{ name: "ComfyUI input", id: "" }] };
+  function pickResource(source, select, { type, useControls = false, title, gallery, galleryScope, multiple = false } = {}) {
+    resourceRequest = { source, select, type, galleryScope, multiple, selected: new Map(), path: [{ name: "ComfyUI input", id: "" }] };
     resourceChoose.textContent = "确认";
     resourceChoose.setAttribute("aria-label", multiple ? "确认选择图片" : "确认使用此图");
     get("task-resource-title").textContent = title || (source === "input" ? "浏览 ComfyUI input" : "从图集选择控制图");
     get("task-resource-gallery-field").hidden = source === "input";
     get("task-resource-control-galleries").disabled = !useControls;
-    resourceGallery.value = gallery || (useControls ? "controls/favourite" : "images/favourite");
+    if (source === "gallery") {
+      restoreGallerySelection(galleryScope, resourceGallery, gallery || (useControls ? "controls/favourite" : "images/favourite"));
+    }
     resourcePicker.showModal();
     changeResourceGallery();
   }
@@ -803,7 +805,10 @@ export function mountImageReviews({
     loadResources();
   }
 
-  resourceGallery.addEventListener("change", changeResourceGallery);
+  resourceGallery.addEventListener("change", () => {
+    saveGallerySelection(resourceRequest.galleryScope, resourceGallery.value);
+    changeResourceGallery();
+  });
   get("task-resource-rating").addEventListener("change", changeResourceGallery);
   get("task-resource-back").addEventListener("click", () => loadResources(resourceRequest.page));
   resourceChoose.addEventListener("click", () => {
@@ -1004,12 +1009,16 @@ export function mountImageReviews({
 
   get("open-control-gallery").addEventListener("click", () => {
     if (!canOpen()) return;
+    restoreGallerySelection("control-library", get("control-gallery-state"), "unevaluated");
     showPanel("control-gallery", get("open-control-gallery"));
     message("");
     loadControlGallery();
   });
   get("control-gallery-refresh").addEventListener("click", () => loadControlGallery());
-  get("control-gallery-state").addEventListener("change", () => loadControlGallery());
+  get("control-gallery-state").addEventListener("change", event => {
+    saveGallerySelection("control-library", event.target.value);
+    loadControlGallery();
+  });
 
   function renderOriginalControls() {
     if (!openedImage) return;
